@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="700" viewBox="0 0 1100 700" role="img" aria-labelledby="title desc">
+  <title id="title">社区和管理台展示</title>
+  <desc id="desc">展示社区卡片、详情互动和管理台监控模块。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7faf8"/>
+      <stop offset="100%" stop-color="#eaf4ef"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2e8866"/>
+      <stop offset="100%" stop-color="#176747"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#143c2e" flood-opacity=".14"/>
+    </filter>
+    <style>
+      .zh{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+      .h{font-size:34px;font-weight:800;fill:#10231c}
+      .t{font-size:17px;font-weight:700;fill:#65746e}
+      .s{font-size:13px;font-weight:700;fill:#7b8984}
+      .label{font-size:20px;font-weight:800;fill:#132820}
+    </style>
+  </defs>
+  <rect width="1100" height="700" rx="34" fill="url(#bg)"/>
+  <g class="zh">
+    <text x="70" y="86" class="h">社区动态与后台治理</text>
+    <text x="72" y="124" class="t">社区侧关注互动和变化展示，管理台侧关注账户治理、接口额度、服务器状态与审计。</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="70" y="174" width="430" height="440" rx="26" fill="#fff"/>
+    <text x="104" y="222" class="zh label">社区卡片</text>
+    <rect x="104" y="252" width="120" height="160" rx="18" fill="#dbece4"/>
+    <circle cx="164" cy="315" r="38" fill="#6fa98f"/>
+    <rect x="126" y="360" width="76" height="34" rx="17" fill="#fff" opacity=".55"/>
+    <rect x="104" y="430" width="54" height="54" rx="13" fill="#f2e3d2"/>
+    <rect x="168" y="430" width="54" height="54" rx="13" fill="#d8eadf"/>
+    <rect x="104" y="494" width="54" height="54" rx="13" fill="#e9d7c8"/>
+    <rect x="168" y="494" width="54" height="54" rx="13" fill="#e6f2ec"/>
+    <rect x="254" y="260" width="132" height="16" rx="8" fill="#d7e9df"/>
+    <rect x="254" y="292" width="194" height="12" rx="6" fill="#edf4f1"/>
+    <rect x="254" y="326" width="184" height="76" rx="16" fill="#f7faf8" stroke="#d9e8e1"/>
+    <line x1="276" y1="374" x2="276" y2="348" stroke="#568f76" stroke-width="8" stroke-linecap="round"/>
+    <line x1="312" y1="388" x2="312" y2="356" stroke="#568f76" stroke-width="8" stroke-linecap="round"/>
+    <line x1="348" y1="380" x2="348" y2="344" stroke="#568f76" stroke-width="8" stroke-linecap="round"/>
+    <line x1="384" y1="390" x2="384" y2="364" stroke="#d18b79" stroke-width="8" stroke-linecap="round"/>
+    <line x1="420" y1="372" x2="420" y2="350" stroke="#568f76" stroke-width="8" stroke-linecap="round"/>
+    <line x1="254" y1="430" x2="448" y2="430" stroke="#e4eee9"/>
+    <text x="254" y="466" class="zh s">记录 18</text>
+    <text x="344" y="466" class="zh s">评论 12</text>
+    <text x="418" y="466" class="zh s">赞 49</text>
+    <rect x="254" y="506" width="154" height="42" rx="21" fill="url(#green)"/>
+    <text x="310" y="533" class="zh s" fill="#fff">回放</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="546" y="174" width="484" height="440" rx="26" fill="#fff"/>
+    <text x="580" y="222" class="zh label">管理台</text>
+    <rect x="580" y="252" width="418" height="58" rx="18" fill="#f5faf7" stroke="#dcebe4"/>
+    <text x="606" y="287" class="zh t" fill="#143c2e">运营概览</text>
+    <rect x="580" y="338" width="124" height="86" rx="18" fill="#f7faf8" stroke="#dcebe4"/>
+    <rect x="728" y="338" width="124" height="86" rx="18" fill="#f7faf8" stroke="#dcebe4"/>
+    <rect x="876" y="338" width="122" height="86" rx="18" fill="#f7faf8" stroke="#dcebe4"/>
+    <text x="610" y="370" class="zh s">全部账户</text>
+    <text x="760" y="370" class="zh s">照片数量</text>
+    <text x="908" y="370" class="zh s">安全事件</text>
+    <text x="610" y="404" class="zh label">128</text>
+    <text x="760" y="404" class="zh label">2.4k</text>
+    <text x="908" y="404" class="zh label">36</text>
+    <rect x="580" y="456" width="418" height="100" rx="20" fill="#fbfdfc" stroke="#dcebe4"/>
+    <text x="606" y="491" class="zh t" fill="#143c2e">服务器状态</text>
+    <rect x="606" y="512" width="344" height="14" rx="7" fill="#e9f2ee"/>
+    <rect x="606" y="512" width="214" height="14" rx="7" fill="#6ba88f"/>
+  </g>
+</svg>

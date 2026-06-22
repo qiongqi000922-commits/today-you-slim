@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">今天你瘦了吗功能总览</title>
+  <desc id="desc">展示体重记录、饮食识别、社区互动和管理台能力的项目总览图。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#eef8f2"/>
+      <stop offset="48%" stop-color="#f8fbf8"/>
+      <stop offset="100%" stop-color="#eaf3ef"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2f8e6b"/>
+      <stop offset="100%" stop-color="#176747"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e7f5ee"/>
+      <stop offset="100%" stop-color="#d6ebe1"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#0c3d2d" flood-opacity=".14"/>
+    </filter>
+    <style>
+      .zh{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+      .title{font-size:54px;font-weight:800;fill:#10231c}
+      .subtitle{font-size:22px;font-weight:500;fill:#62746d}
+      .label{font-size:22px;font-weight:800;fill:#143c2e}
+      .small{font-size:15px;font-weight:600;fill:#6b7c75}
+      .tiny{font-size:13px;font-weight:600;fill:#7c8a84}
+      .num{font-size:31px;font-weight:800;fill:#15372b}
+      .greenText{fill:#176747}
+    </style>
+  </defs>
+  <rect width="1200" height="620" rx="36" fill="url(#bg)"/>
+  <circle cx="1030" cy="110" r="150" fill="#ffffff" opacity=".56"/>
+  <circle cx="120" cy="520" r="190" fill="#cfe7dc" opacity=".34"/>
+  <g class="zh">
+    <text x="70" y="96" class="title">今天你瘦了吗?</text>
+    <text x="74" y="134" class="subtitle">个人减重记录、饮食识别、AI 建议与社区分享的一体化 Web 应用</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="74" y="188" width="250" height="304" rx="24" fill="#fff"/>
+    <text x="104" y="235" class="zh label">我的记录</text>
+    <text x="104" y="264" class="zh small">体重高低图 · 照片回放</text>
+    <rect x="104" y="300" width="178" height="122" rx="18" fill="#f7faf8" stroke="#dbece4"/>
+    <line x1="124" y1="390" x2="265" y2="390" stroke="#e2ece8" stroke-width="2"/>
+    <line x1="124" y1="355" x2="265" y2="355" stroke="#e2ece8" stroke-width="2"/>
+    <line x1="124" y1="320" x2="265" y2="320" stroke="#e2ece8" stroke-width="2"/>
+    <line x1="146" y1="367" x2="146" y2="331" stroke="#4f9d82" stroke-width="13" stroke-linecap="round"/>
+    <line x1="180" y1="381" x2="180" y2="339" stroke="#d98976" stroke-width="13" stroke-linecap="round"/>
+    <line x1="214" y1="363" x2="214" y2="323" stroke="#4f9d82" stroke-width="13" stroke-linecap="round"/>
+    <line x1="248" y1="351" x2="248" y2="317" stroke="#4f9d82" stroke-width="13" stroke-linecap="round"/>
+    <rect x="104" y="444" width="176" height="34" rx="17" fill="url(#mint)" stroke="#c9e2d7"/>
+    <text x="146" y="467" class="zh small greenText">回放 0.3s/张</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="354" y="188" width="250" height="304" rx="24" fill="#fff"/>
+    <text x="384" y="235" class="zh label">饮食识别</text>
+    <text x="384" y="264" class="zh small">拍照识别 · 营养估算</text>
+    <rect x="384" y="298" width="78" height="78" rx="18" fill="#f2e8dc"/>
+    <circle cx="423" cy="337" r="24" fill="#d48f56"/>
+    <path d="M406 344c22-28 45-13 38 10-10 10-27 11-38-10z" fill="#f6c77f"/>
+    <rect x="476" y="304" width="98" height="12" rx="6" fill="#d8ece2"/>
+    <rect x="476" y="330" width="78" height="12" rx="6" fill="#eef4f1"/>
+    <rect x="476" y="356" width="88" height="12" rx="6" fill="#eef4f1"/>
+    <rect x="384" y="406" width="190" height="56" rx="18" fill="#f6fbf8" stroke="#dceee5"/>
+    <text x="406" y="432" class="zh small">420 kcal</text>
+    <text x="406" y="454" class="zh tiny">蛋白质 · 脂肪 · 碳水</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="634" y="188" width="250" height="304" rx="24" fill="#fff"/>
+    <text x="664" y="235" class="zh label">社区互动</text>
+    <text x="664" y="264" class="zh small">共享变化 · 点赞评论</text>
+    <rect x="664" y="302" width="76" height="100" rx="18" fill="url(#mint)"/>
+    <circle cx="702" cy="334" r="20" fill="#6da68c"/>
+    <rect x="682" y="364" width="40" height="24" rx="12" fill="#fff" opacity=".62"/>
+    <rect x="756" y="304" width="96" height="13" rx="6.5" fill="#d6e9df"/>
+    <rect x="756" y="332" width="72" height="11" rx="5.5" fill="#edf4f1"/>
+    <rect x="756" y="358" width="82" height="11" rx="5.5" fill="#edf4f1"/>
+    <rect x="664" y="430" width="48" height="30" rx="15" fill="#fff6dc" stroke="#ecd99a"/>
+    <text x="682" y="451" class="zh tiny">赞</text>
+    <rect x="724" y="430" width="48" height="30" rx="15" fill="#f5faf7" stroke="#d6e8df"/>
+    <text x="739" y="451" class="zh tiny">评</text>
+    <rect x="784" y="430" width="48" height="30" rx="15" fill="#f5faf7" stroke="#d6e8df"/>
+    <text x="799" y="451" class="zh tiny">榜</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="914" y="188" width="214" height="304" rx="24" fill="#fff"/>
+    <text x="944" y="235" class="zh label">管理台</text>
+    <text x="944" y="264" class="zh small">治理 · 监控 · 审计</text>
+    <rect x="944" y="304" width="154" height="44" rx="16" fill="url(#green)"/>
+    <text x="977" y="333" class="zh small" fill="#fff">服务器状态</text>
+    <rect x="944" y="370" width="154" height="16" rx="8" fill="#eaf4ef"/>
+    <rect x="944" y="370" width="94" height="16" rx="8" fill="#64aa8e"/>
+    <rect x="944" y="408" width="68" height="54" rx="16" fill="#f7faf8" stroke="#dcebe4"/>
+    <rect x="1030" y="408" width="68" height="54" rx="16" fill="#f7faf8" stroke="#dcebe4"/>
+    <text x="962" y="442" class="zh small">账号</text>
+    <text x="1048" y="442" class="zh small">审计</text>
+  </g>
+</svg>
