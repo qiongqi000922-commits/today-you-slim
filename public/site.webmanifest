@@ -1,0 +1,22 @@
+{
+  "name": "今天你瘦了吗?",
+  "short_name": "今天瘦了吗",
+  "description": "记录照片与体重变化",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#edf6f1",
+  "theme_color": "#edf6f1",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

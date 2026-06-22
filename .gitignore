@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Runtime data and private user content
+data/
+uploads/
+photos/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.mobileprovision
+
+# Logs and backups
+*.log
+logs/
+backups/
+*.tgz
+*.tar
+*.tar.gz
+*.zip
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Coverage/build output
+coverage/
+dist/
+
+# Local iOS wrapper experiments and Xcode build output
+ios/

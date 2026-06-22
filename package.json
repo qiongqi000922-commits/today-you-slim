@@ -1,0 +1,15 @@
+{
+  "name": "jin-tian-ni-shou-le-ma",
+  "version": "1.0.0",
+  "description": "A lightweight web app for body-weight, photo, food and community tracking.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "NODE_ENV=development node server.mjs",
+    "check": "node scripts/verify.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

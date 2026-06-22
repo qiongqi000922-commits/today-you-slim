@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f6f5">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <title>管理台 · 今天你瘦了吗?</title>
+    <link rel="stylesheet" href="./styles.css?v=20260621-qwenonly1">
+  </head>
+  <body>
+    <div class="admin-pull-refresh" id="adminPullRefresh" aria-live="polite" aria-hidden="true">
+      <svg class="admin-pull-refresh-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 12a9 9 0 0 1-15.22 6.49L3 16"></path>
+        <path d="M3 21v-5h5"></path>
+        <path d="M3 12A9 9 0 0 1 18.22 5.51L21 8"></path>
+        <path d="M21 3v5h-5"></path>
+      </svg>
+      <span id="adminPullRefreshText">下拉刷新</span>
+    </div>
+    <main class="admin-root">
+      <section class="admin-login" id="adminLoginView">
+        <div class="login-title">
+          <p class="eyebrow">今天你瘦了吗?</p>
+          <h1>管理台</h1>
+        </div>
+        <form class="login-form" id="adminLoginForm">
+          <div class="passkey-panel" aria-label="Passkey 登录">
+            <button class="passkey-primary-button" id="passkeyLoginButton" type="button">使用 Passkey 登录</button>
+            <p id="passkeyStatusText" aria-live="polite"></p>
+          </div>
+          <div class="password-divider" id="passwordDivider"><span>密码登录</span></div>
+          <div class="login-fields">
+            <label for="adminUsername">管理员账号</label>
+            <input id="adminUsername" type="text" autocomplete="username" inputmode="text" value="admin" placeholder="admin" required autofocus>
+            <label for="adminPassword">登录密码</label>
+            <input id="adminPassword" type="password" autocomplete="current-password" required>
+            <button type="submit">登录</button>
+          </div>
+          <p class="form-message" id="adminLoginMessage" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="admin-shell hidden" id="adminShell">
+        <header class="admin-header">
+          <div>
+            <p class="eyebrow">今天你瘦了吗?</p>
+            <h1>管理台</h1>
+          </div>
+          <div class="header-actions">
+            <span class="readonly-badge" id="adminIdentity">管理员</span>
+            <button class="secondary-button" id="refreshButton" type="button">刷新</button>
+            <button class="secondary-button" id="adminLogoutButton" type="button">退出</button>
+          </div>
+        </header>
+
+        <nav class="admin-section-nav" aria-label="管理台模块">
+          <button class="admin-section-tab is-active" type="button" data-admin-section="overview">运营概览</button>
+          <button class="admin-section-tab" type="button" data-admin-section="server">服务器状态</button>
+          <button class="admin-section-tab" type="button" data-admin-section="quota">接口额度</button>
+          <button class="admin-section-tab" type="button" data-admin-section="accounts">账户数据</button>
+          <button class="admin-section-tab" type="button" data-admin-section="moderation">治理中心</button>
+          <button class="admin-section-tab" type="button" data-admin-section="security">安全审计</button>
+        </nav>
+
+        <section class="admin-panel" data-admin-section-panel="overview" aria-labelledby="overviewTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>Overview</span>
+              <h2 id="overviewTitle">运营概览</h2>
+            </div>
+          </div>
+          <div class="summary-strip" aria-label="总体数据">
+            <div><span>全部账户</span><strong id="accountCount">0</strong></div>
+            <div><span>有记录账户</span><strong id="activeAccountCount">0</strong></div>
+            <div><span>全部记录</span><strong id="totalRecordCount">0</strong></div>
+            <div><span>照片数量</span><strong id="totalPhotoCount">0</strong></div>
+            <div><span>完整模式</span><strong id="fullModeCount">0</strong></div>
+            <div><span>基础模式</span><strong id="basicModeCount">0</strong></div>
+            <div><span>待签署</span><strong id="pendingConsentCount">0</strong></div>
+            <div><span>冻结</span><strong id="frozenAccountCount">0</strong></div>
+            <div><span>封禁</span><strong id="bannedAccountCount">0</strong></div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-section-panel="server" aria-labelledby="serverTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>Server</span>
+              <h2 id="serverTitle">服务器状态</h2>
+            </div>
+            <span class="panel-meta" id="serverStatusUpdatedAt">等待刷新</span>
+          </div>
+          <div class="server-status-layout">
+            <section class="server-status-card" aria-labelledby="serverRuntimeTitle">
+              <div class="records-header">
+                <h3 id="serverRuntimeTitle">运行状态</h3>
+                <span id="serverRuntimeMeta">-</span>
+              </div>
+              <div class="server-metric-grid" id="serverRuntimeGrid"></div>
+            </section>
+            <section class="server-status-card" aria-labelledby="serverStorageTitle">
+              <div class="records-header">
+                <h3 id="serverStorageTitle">存储与内存</h3>
+                <span id="serverStorageMeta">-</span>
+              </div>
+              <div class="server-metric-grid" id="serverStorageGrid"></div>
+            </section>
+            <section class="server-status-card server-capacity-card" aria-labelledby="serverCapacityTitle">
+              <div class="records-header">
+                <h3 id="serverCapacityTitle">容量阈值</h3>
+                <span id="serverCapacityMeta">-</span>
+              </div>
+              <div class="capacity-progress" aria-hidden="true">
+                <span id="serverCapacityProgress"></span>
+              </div>
+              <div class="server-metric-grid" id="serverCapacityGrid"></div>
+              <p class="server-capacity-message" id="serverCapacityMessage"></p>
+              <div class="server-action-row">
+                <button class="secondary-button" id="pauseRegistrationButton" type="button">暂停新用户注册</button>
+                <button class="secondary-button" id="openRegistrationButton" type="button">开放新用户注册</button>
+              </div>
+            </section>
+            <section class="server-status-card server-food-config-card" aria-labelledby="foodRecognitionConfigTitle">
+              <div class="records-header">
+                <h3 id="foodRecognitionConfigTitle">食物识别</h3>
+                <span id="foodRecognitionConfigMeta">-</span>
+              </div>
+              <p class="server-config-copy">当前食物识别固定使用千问视觉，支持一张图片返回多个食物及基础营养。</p>
+              <div class="food-priority-list" id="foodRecognitionPriorityList"></div>
+              <p class="server-capacity-message" id="foodRecognitionConfigMessage"></p>
+              <div class="server-action-row">
+                <button class="secondary-button" id="saveFoodRecognitionPriorityButton" type="button">保存优先级</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-section-panel="quota" aria-labelledby="quotaTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>API Quota</span>
+              <h2 id="quotaTitle">接口额度</h2>
+            </div>
+            <span class="panel-meta" id="apiQuotaUpdatedAt">等待刷新</span>
+          </div>
+          <div class="quota-layout">
+            <section class="quota-card quota-hero-card" aria-labelledby="qwenUsageTitle">
+              <div class="records-header">
+                <h3 id="qwenUsageTitle">千问用量</h3>
+                <span id="qwenUsageMeta">-</span>
+              </div>
+              <p class="quota-card-meta" id="qwenUsageUpdatedAt">等待刷新</p>
+              <div class="quota-progress qwen-progress" aria-hidden="true">
+                <span id="qwenUsageProgress"></span>
+              </div>
+              <div class="quota-main-grid" id="qwenUsageGrid"></div>
+              <p class="quota-message" id="qwenUsageMessage"></p>
+              <div class="quota-limit-list" id="qwenUsageRecentList"></div>
+              <div class="server-action-row">
+                <button class="secondary-button" id="refreshQwenUsageButton" type="button">刷新用量</button>
+              </div>
+            </section>
+            <section class="quota-card quota-hero-card" aria-labelledby="deepseekBalanceTitle">
+              <div class="records-header">
+                <h3 id="deepseekBalanceTitle">DeepSeek 用量</h3>
+                <span id="deepseekBalanceMeta">-</span>
+              </div>
+              <p class="quota-card-meta" id="deepseekBalanceUpdatedAt">等待刷新</p>
+              <div class="quota-progress deepseek-progress" aria-hidden="true">
+                <span id="deepseekBalanceProgress"></span>
+              </div>
+              <div class="quota-main-grid" id="deepseekBalanceGrid"></div>
+              <p class="quota-message" id="deepseekBalanceMessage"></p>
+              <div class="server-action-row">
+                <button class="secondary-button" id="refreshDeepseekBalanceButton" type="button">刷新用量</button>
+              </div>
+            </section>
+            <section class="quota-card" aria-labelledby="qwenUsageNoteTitle">
+              <div class="records-header">
+                <h3 id="qwenUsageNoteTitle">监控说明</h3>
+                <span>本地统计</span>
+              </div>
+              <div class="quota-limit-list">
+                <article class="quota-limit-item">
+                  <span>千问识别策略</span>
+                  <strong>食物识别现在只调用千问视觉，支持一张图片返回多个食品及热量、蛋白质、脂肪、碳水。</strong>
+                </article>
+                <article class="quota-limit-item">
+                  <span>用量来源</span>
+                  <strong>阿里云百炼用量接口不提供直接余额查询；本站按每次响应中的 usage 字段记录调用和 Token。</strong>
+                </article>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-section-panel="moderation" aria-labelledby="moderationTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>Governance</span>
+              <h2 id="moderationTitle">治理中心</h2>
+            </div>
+          </div>
+          <div class="moderation-summary-strip" aria-label="反馈和举报概览">
+            <div><span>待处理</span><strong id="moderationPendingCount">0</strong></div>
+            <div><span>处理中</span><strong id="moderationReviewingCount">0</strong></div>
+            <div><span>举报</span><strong id="moderationReportCount">0</strong></div>
+            <div><span>反馈</span><strong id="moderationFeedbackCount">0</strong></div>
+          </div>
+          <div class="auth-event-panel moderation-queue-panel">
+            <div class="records-header auth-event-heading">
+              <h2>用户反馈与举报</h2>
+              <span id="moderationQueueMeta">暂无数据</span>
+            </div>
+            <div class="moderation-queue-list" id="moderationQueueList"></div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-section-panel="security" aria-labelledby="securityTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>Security</span>
+              <h2 id="securityTitle">安全审计</h2>
+            </div>
+          </div>
+          <div class="security-current">
+            <div>
+              <span>当前会话</span>
+              <strong id="adminSessionMeta">已登录</strong>
+            </div>
+            <div>
+              <span>请求保护</span>
+              <strong id="csrfStatus">CSRF 已启用</strong>
+            </div>
+          </div>
+          <div class="auth-event-panel">
+            <div class="records-header auth-event-heading">
+              <h2>最近认证事件</h2>
+              <span>只显示摘要</span>
+            </div>
+            <div class="auth-event-list" id="authEventList"></div>
+          </div>
+          <div class="auth-event-panel user-audit-panel">
+            <div class="records-header auth-event-heading">
+              <h2>用户登录轨迹</h2>
+              <span id="userAuditMeta">暂无数据</span>
+            </div>
+            <div class="user-audit-list" id="userAuditList"></div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-section-panel="accounts" aria-labelledby="accountsTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>Accounts</span>
+              <h2 id="accountsTitle">账户数据</h2>
+            </div>
+          </div>
+          <div class="management-layout">
+          <aside class="account-pane">
+            <div class="pane-header">
+              <h2>账户</h2>
+              <span id="accountMeta">0 个</span>
+            </div>
+            <label class="search-field" for="accountSearch">
+              <span>搜索账户</span>
+              <input id="accountSearch" type="search" autocomplete="off" placeholder="输入账户ID、QQ昵称或绑定ID">
+            </label>
+            <div class="account-list" id="accountList"></div>
+          </aside>
+
+          <section class="detail-pane" id="detailPane">
+            <div class="empty-detail" id="emptyDetail">
+              <strong>选择一个账户</strong>
+              <span>右侧将显示该账户的完整记录。</span>
+            </div>
+
+            <div class="account-detail hidden" id="accountDetail">
+              <div class="detail-header">
+                <div>
+                  <div class="detail-title-row">
+                    <h2 id="detailCode"></h2>
+                    <span class="source-badge" id="detailSource"></span>
+                  </div>
+                  <p id="detailActivity"></p>
+                  <div class="detail-identity">
+                    <span class="detail-qq-avatar" id="detailQqAvatar" aria-hidden="true"></span>
+                    <span>
+                      <small>用户唯一ID</small>
+                      <code id="detailUniqueId">-</code>
+                    </span>
+                    <span>
+                      <small>绑定QQ</small>
+                      <strong id="detailQqBindId">-</strong>
+                    </span>
+                    <span>
+                      <small>UnionID摘要</small>
+                      <code id="detailQqUnionId">-</code>
+                    </span>
+                  </div>
+                </div>
+                <button class="danger-button" id="deleteAccountButton" type="button">删除账户</button>
+              </div>
+
+              <div class="account-metrics">
+                <div><span>最新体重</span><strong id="detailLatestWeight">-</strong></div>
+                <div><span>累计变化</span><strong id="detailWeightChange">-</strong></div>
+                <div><span>记录</span><strong id="detailRecordCount">0</strong></div>
+                <div><span>照片</span><strong id="detailPhotoCount">0</strong></div>
+              </div>
+
+              <section class="account-moderation-detail" aria-labelledby="accountModerationTitle">
+                <div class="records-header">
+                  <h3 id="accountModerationTitle">账号治理</h3>
+                  <span id="moderationStatusBadge">正常</span>
+                </div>
+                <div class="moderation-status-card">
+                  <div>
+                    <small>当前状态</small>
+                    <strong id="moderationStatusText">正常</strong>
+                    <em id="moderationStatusDescription">账号可正常使用。</em>
+                  </div>
+                  <div class="moderation-actions">
+                    <button class="secondary-button" type="button" data-account-moderation-action="freeze">冻结</button>
+                    <button class="danger-button" type="button" data-account-moderation-action="ban">封禁</button>
+                    <button class="secondary-button" type="button" data-account-moderation-action="restore">恢复</button>
+                  </div>
+                </div>
+                <div class="moderation-form-grid">
+                  <label for="moderationReason">
+                    <span>原因分类</span>
+                    <select id="moderationReason">
+                      <option value="spam">垃圾信息/刷屏</option>
+                      <option value="harassment">骚扰攻击</option>
+                      <option value="illegal">违法违规</option>
+                      <option value="privacy">隐私侵权</option>
+                      <option value="impersonation">冒用身份</option>
+                      <option value="security">安全风险</option>
+                      <option value="underage">未成年人保护</option>
+                      <option value="other">其他原因</option>
+                    </select>
+                  </label>
+                  <label for="moderationDuration">
+                    <span>时长</span>
+                    <select id="moderationDuration">
+                      <option value="1">1 天</option>
+                      <option value="3">3 天</option>
+                      <option value="7" selected>7 天</option>
+                      <option value="30">30 天</option>
+                      <option value="">永久/手动恢复</option>
+                    </select>
+                  </label>
+                  <label class="moderation-note-field" for="moderationNote">
+                    <span>处理备注</span>
+                    <textarea id="moderationNote" maxlength="240" rows="2" placeholder="记录必要事实、证据来源或处理依据"></textarea>
+                  </label>
+                </div>
+                <p class="moderation-message" id="moderationActionMessage" aria-live="polite"></p>
+                <div class="moderation-history" id="moderationHistoryList"></div>
+                <div class="moderation-related" id="moderationRelatedList"></div>
+              </section>
+
+              <section class="privacy-detail" aria-labelledby="adminPrivacyTitle">
+                <div class="records-header">
+                  <h3 id="adminPrivacyTitle">隐私与协议</h3>
+                  <span id="detailPrivacyStatus">-</span>
+                </div>
+                <div class="privacy-metrics">
+                  <div><span>当前模式</span><strong id="detailPrivacyMode">-</strong></div>
+                  <div><span>签署时间</span><strong id="detailConsentTime">-</strong></div>
+                  <div><span>协议版本</span><strong id="detailAgreementVersion">-</strong></div>
+                  <div><span>敏感信息同意</span><strong id="detailSensitiveConsent">-</strong></div>
+                </div>
+                <div class="consent-event-list" id="consentEventList"></div>
+              </section>
+
+              <section class="admin-passkey-detail" aria-labelledby="adminPasskeyTitle">
+                <div class="records-header">
+                  <h3 id="adminPasskeyTitle">Passkey 绑定</h3>
+                  <span id="adminPasskeyMeta">0 个</span>
+                </div>
+                <div class="admin-passkey-list" id="adminPasskeyList"></div>
+              </section>
+
+              <div class="records-header">
+                <h3>记录明细</h3>
+                <span id="recordMeta"></span>
+              </div>
+              <div class="record-list" id="adminRecordList"></div>
+            </div>
+          </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <dialog class="photo-dialog" id="photoDialog">
+      <button type="button" id="closePhotoDialog" aria-label="关闭照片">关闭</button>
+      <img id="dialogPhoto" alt="记录照片大图">
+      <p id="dialogCaption"></p>
+    </dialog>
+
+    <dialog class="delete-dialog" id="deleteAccountDialog">
+      <form id="deleteAccountForm">
+        <div class="delete-dialog-heading">
+          <span>危险操作</span>
+          <h2>删除账户</h2>
+        </div>
+        <p>该账户的全部记录、照片和现有登录会话都会永久删除，无法恢复。</p>
+        <label for="deleteConfirmInput">输入 <span class="confirmation-phrase"><strong id="deleteAccountCode"></strong><button class="copy-phrase-button" id="deleteAccountCodeCopyButton" type="button" data-copy-text="" aria-label="复制确认文字"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="10" height="10" rx="2"></rect><path d="M5 15V7a2 2 0 0 1 2-2h8"></path></svg></button></span> 以确认</label>
+        <input id="deleteConfirmInput" type="text" autocomplete="off" spellcheck="false" required>
+        <p class="delete-message" id="deleteAccountMessage" aria-live="polite"></p>
+        <div class="delete-dialog-actions">
+          <button class="secondary-button" id="cancelDeleteAccount" type="button">取消</button>
+          <button class="danger-confirm-button" type="submit">永久删除</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="../shared.js?v=20260621-arch1" defer></script>
+    <script src="./app.js?v=20260621-qwenonly1" defer></script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+[Unit]
+Description=Jin Tian Ni Shou Le Ma test environment
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/jin-tian-ni-shou-le-ma-test
+ExecStart=/usr/bin/node /opt/jin-tian-ni-shou-le-ma-test/server.mjs
+Environment=NODE_ENV=production
+EnvironmentFile=-/etc/jin-tian-ni-shou-le-ma-test/admin.env
+Environment=DATA_DIR=/opt/jin-tian-ni-shou-le-ma-test/data
+Environment=ALLOWED_HOSTS=furby.top,www.furby.top,127.0.0.1
+Environment=BASE_PATH=/test
+Environment=SESSION_COOKIE_NAME=jf_test_session
+Environment=ADMIN_SESSION_COOKIE_NAME=jf_test_admin
+Environment=HOST=127.0.0.1
+Environment=PORT=3101
+Restart=always
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/opt/jin-tian-ni-shou-le-ma-test/data
+LimitNOFILE=4096
+TasksMax=96
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

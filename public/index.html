@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#edf6f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+    <title>今天你瘦了吗?</title>
+    <style>
+      .initial-loader{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:24px;background:#edf6f1;color:#145f45;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:opacity .28s ease,visibility .28s ease}.initial-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}.initial-loader-card{display:grid;place-items:center;gap:14px;text-align:center}.initial-loader-mark{width:44px;height:44px;border:3px solid rgba(31,122,90,.14);border-top-color:#1f7a5a;border-radius:50%;animation:initial-loader-spin .85s linear infinite}.initial-loader strong{font-size:18px;letter-spacing:0}.initial-loader span{font-size:13px;color:#65716c}@keyframes initial-loader-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.initial-loader-mark{animation:none}}
+    </style>
+    <link rel="stylesheet" href="styles.css?v=20260622-orientation2">
+  </head>
+  <body>
+    <div class="initial-loader" id="initialLoader" role="status" aria-live="polite">
+      <div class="initial-loader-card">
+        <span class="initial-loader-mark" aria-hidden="true"></span>
+        <strong>正在加载</strong>
+        <span>首次打开会准备登录和记录数据</span>
+      </div>
+    </div>
+    <div class="pull-refresh" id="pullRefresh" aria-live="polite" aria-hidden="true">
+      <svg class="pull-refresh-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 12a9 9 0 0 1-15.22 6.49L3 16"></path>
+        <path d="M3 21v-5h5"></path>
+        <path d="M3 12A9 9 0 0 1 18.22 5.51L21 8"></path>
+        <path d="M21 3v5h-5"></path>
+      </svg>
+      <span id="pullRefreshText">下拉刷新</span>
+    </div>
+    <main class="app-shell">
+      <section class="login-view" id="loginView">
+        <div class="login-copy">
+          <p class="eyebrow">每日记录</p>
+          <h1>今天你瘦了吗?</h1>
+        </div>
+
+        <form class="login-panel qq-only-login-panel" id="loginForm">
+          <div class="login-options">
+            <a class="qq-login-entry" id="qqLoginButton" href="api/auth/qq/start" aria-label="QQ登录">
+              <span class="qq-login-mark" aria-hidden="true">
+                <img src="qq-login-icon.png?v=20260617-symbol1" alt="" width="160" height="192">
+              </span>
+              <span>qq登录</span>
+            </a>
+            <button class="passkey-login-entry" id="passkeyLoginButton" type="button">
+              <span class="passkey-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M7.5 12.4a4.6 4.6 0 1 1 3.4 4.4"></path>
+                  <path d="M10.9 16.8 8.7 19H6.4v-2.3l4.2-4.2"></path>
+                  <path d="M15.3 9.3h.1"></path>
+                </svg>
+              </span>
+              <span>Passkey 登录</span>
+            </button>
+          </div>
+          <p class="form-message" id="loginMessage" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="dashboard hidden" id="dashboardView">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">今天你瘦了吗?</p>
+            <div class="profile-title-row">
+              <span class="profile-avatar" id="profileAvatar" aria-hidden="true"></span>
+              <h1 id="profileTitle"><span id="profileName">我的</span> 的减肥记录</h1>
+            </div>
+          </div>
+        </header>
+
+        <section class="chart-section" aria-label="体重变化图">
+          <div id="weightChart" class="weight-chart"></div>
+        </section>
+
+        <section class="action-zone" aria-label="功能按钮区">
+          <div class="record-entry-grid" aria-label="新增记录">
+            <button class="record-entry-button body-record-entry" id="startBodyRecordButton" type="button">
+              <span class="action-label">拍照记录</span>
+              <span class="action-meta">打开摄像头，登记体重和心情</span>
+            </button>
+            <button class="record-entry-button food-record-entry" id="startFoodRecordButton" type="button">
+              <span class="action-label">食物记录</span>
+              <span class="action-meta">拍食物照片，识别营养并估算重量</span>
+            </button>
+          </div>
+          <button class="replay-launch-button" id="replayButton" type="button" disabled>回放</button>
+        </section>
+
+        <section class="history-section">
+          <div id="weightCalendar" class="weight-calendar" aria-label="最近体重涨跌日历"></div>
+          <button class="ai-advice-button" id="aiAdviceButton" type="button">
+            <span>
+              <small>AI建议</small>
+              <strong>总结我的变化</strong>
+              <em>根据体重和心情生成简短分析</em>
+            </span>
+            <span class="ai-advice-action">总结</span>
+          </button>
+          <div class="section-heading">
+            <h2>全部记录</h2>
+            <div class="history-heading-actions">
+              <span id="historyMeta">正在加载记录</span>
+              <button class="history-toggle-button" id="historyToggleButton" type="button" aria-expanded="true">收起</button>
+            </div>
+          </div>
+          <div class="history-list" id="historyList"></div>
+          <div class="history-loader hidden" id="historyLoader" aria-live="polite">向下滚动加载更多</div>
+          <div class="history-sentinel" id="historySentinel" aria-hidden="true"></div>
+        </section>
+      </section>
+
+      <section class="community-view hidden" id="communityView">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">今天你瘦了吗?</p>
+            <h1>社区</h1>
+          </div>
+        </header>
+
+        <section class="community-share-panel" aria-labelledby="communityShareTitle">
+          <div>
+            <p class="community-share-title" id="communityShareTitle">共享我的变化</p>
+            <p class="community-share-copy" id="communityShareCopy">关闭时，其他人无法查看你的记录。</p>
+          </div>
+          <label class="share-switch" for="communityShareToggle">
+            <input id="communityShareToggle" type="checkbox" role="switch">
+            <span class="share-switch-track" aria-hidden="true"><span></span></span>
+            <span class="share-switch-text" id="communityShareStatus">未共享</span>
+          </label>
+        </section>
+
+        <div class="community-content-tabs" role="tablist" aria-label="社区内容">
+          <button class="community-content-tab is-active" id="communityFeedTabButton" type="button" role="tab" aria-selected="true" aria-controls="communityFeedPanel" data-community-panel="feed">大家的变化</button>
+          <button class="community-content-tab" id="communityRankingTabButton" type="button" role="tab" aria-selected="false" aria-controls="communityRankingPanel" data-community-panel="ranking">人气榜</button>
+        </div>
+
+        <section class="community-section community-panel" id="communityFeedPanel" aria-labelledby="communityTitle">
+          <div class="section-heading community-heading">
+            <div>
+              <h2 id="communityTitle" class="visually-hidden">大家的变化</h2>
+            </div>
+            <span id="communityMeta" class="visually-hidden" aria-live="polite">正在载入...</span>
+          </div>
+          <div class="community-grid" id="communityGrid"></div>
+          <p class="community-message" id="communityMessage" aria-live="polite"></p>
+        </section>
+
+        <section class="community-ranking community-panel hidden" id="communityRankingPanel" aria-labelledby="communityRankingTitle">
+          <div class="community-ranking-header">
+            <div>
+              <p class="community-ranking-kicker" id="communityRankingTitle">持续行动，也彼此鼓励</p>
+            </div>
+            <div class="ranking-periods" role="tablist" aria-label="排行榜周期">
+              <button class="ranking-period is-active" type="button" role="tab" aria-selected="true" data-ranking-period="week">周榜</button>
+              <button class="ranking-period" type="button" role="tab" aria-selected="false" data-ranking-period="month">月榜</button>
+              <button class="ranking-period" type="button" role="tab" aria-selected="false" data-ranking-period="year">年榜</button>
+              <button class="ranking-period" type="button" role="tab" aria-selected="false" data-ranking-period="all">总榜</button>
+            </div>
+          </div>
+          <div class="ranking-list" id="communityRankingList"></div>
+        </section>
+      </section>
+
+      <section class="settings-view hidden" id="settingsView">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">今天你瘦了吗?</p>
+            <h1>设置</h1>
+          </div>
+        </header>
+
+        <div class="settings-content">
+          <div class="settings-panel" id="settingsOverviewPanel">
+            <section class="settings-group" aria-labelledby="accountSettingsTitle">
+              <div class="settings-group-heading">
+                <div>
+                  <p class="settings-kicker">账户</p>
+                  <h2 id="accountSettingsTitle">账户信息</h2>
+                </div>
+                <span class="account-mode-badge" id="settingsModeBadge">待选择</span>
+              </div>
+              <div class="account-info-row account-profile-row">
+                <span class="settings-account-avatar" id="settingsAccountAvatar" aria-hidden="true"></span>
+                <span class="settings-account-text">
+                  <small>登录档案</small>
+                  <strong id="settingsAccountLabel">-</strong>
+                  <em id="settingsQqBinding">口令账户</em>
+                </span>
+              </div>
+              <p class="account-status-notice" id="accountStatusNotice" hidden></p>
+            </section>
+
+            <section class="settings-group settings-options" aria-label="设置选项">
+              <button class="settings-option-button" id="accountProfileOption" type="button">
+                <span>
+                  <small>账户</small>
+                  <strong>账户资料</strong>
+                  <em id="accountProfileSummary">查看 QQ 资料、性别和生日。</em>
+                </span>
+                <span class="settings-option-arrow" aria-hidden="true">›</span>
+              </button>
+              <button class="settings-option-button" id="privacySettingsOption" type="button">
+                <span>
+                  <small>隐私与数据</small>
+                  <strong>隐私协议与使用模式</strong>
+                  <em id="privacySettingsSummary">查看签署状态、协议文件和使用模式。</em>
+                </span>
+                <span class="privacy-status" id="privacySignatureStatus">尚未签署</span>
+              </button>
+              <button class="settings-option-button" id="passkeySettingsOption" type="button">
+                <span>
+                  <small>安全登录</small>
+                  <strong>Passkey 登录</strong>
+                  <em id="passkeySettingsSummary">先绑定 QQ 后，可添加手机 Passkey。</em>
+                </span>
+                <span class="privacy-status" id="passkeySettingsStatus">未设置</span>
+              </button>
+              <button class="settings-option-button" id="accountDeletionOption" type="button">
+                <span>
+                  <small>账户</small>
+                  <strong>注销账户</strong>
+                  <em>进入后可查看影响范围并确认操作。</em>
+                </span>
+                <span class="settings-option-arrow" aria-hidden="true">›</span>
+              </button>
+              <button class="settings-option-button" id="feedbackOption" type="button">
+                <span>
+                  <small>帮助与安全</small>
+                  <strong>意见反馈与举报</strong>
+                  <em>反馈问题、建议，或提交社区内容举报。</em>
+                </span>
+                <span class="settings-option-arrow" aria-hidden="true">›</span>
+              </button>
+            </section>
+
+            <section class="settings-footer-actions" aria-label="退出登录">
+              <button class="ghost-button settings-logout-button" id="settingsLogoutButton" type="button">退出账户</button>
+            </section>
+          </div>
+
+          <div class="settings-panel settings-detail-panel hidden" id="accountProfilePanel">
+            <button class="settings-back-button" type="button" data-settings-panel="overview">返回设置</button>
+            <section class="settings-group" aria-labelledby="accountProfileTitle">
+              <div class="settings-group-heading">
+                <div>
+                  <p class="settings-kicker">账户</p>
+                  <h2 id="accountProfileTitle">账户资料</h2>
+                </div>
+                <span class="account-mode-badge" id="accountProfileBadge">只读</span>
+              </div>
+
+              <div class="account-profile-card">
+                <span class="settings-account-avatar" id="accountProfileAvatar" aria-hidden="true"></span>
+                <span class="settings-account-text">
+                  <small>当前账户</small>
+                  <strong id="accountProfileName">-</strong>
+                  <em id="accountProfileBinding">-</em>
+                </span>
+                <button class="qq-sync-button" id="syncQqProfileButton" type="button">同步 QQ 资料</button>
+              </div>
+              <p class="settings-message qq-sync-message" id="qqSyncMessage" aria-live="polite"></p>
+
+              <div class="account-profile-readonly" id="accountProfileReadonly">
+                <span>
+                  <small>性别</small>
+                  <strong id="profileGenderText">未设置</strong>
+                </span>
+                <span>
+                  <small>生日</small>
+                  <strong id="profileBirthdayText">未设置</strong>
+                </span>
+              </div>
+
+              <div class="account-profile-form hidden" id="accountProfileForm">
+                <div class="account-profile-field">
+                  <span>性别</span>
+                  <div class="profile-gender-options" role="radiogroup" aria-label="性别">
+                    <button type="button" data-profile-gender="">未设置</button>
+                    <button type="button" data-profile-gender="male">男</button>
+                    <button type="button" data-profile-gender="female">女</button>
+                    <button type="button" data-profile-gender="other">其他</button>
+                  </div>
+                </div>
+
+                <div class="account-profile-field">
+                  <span>生日</span>
+                  <button class="birthday-picker-toggle" id="profileBirthdayToggle" type="button">选择生日</button>
+                  <div class="birthday-picker hidden" id="profileBirthdayPicker" aria-label="生日选择器">
+                    <div class="birthday-picker-head">
+                      <strong id="profileBirthdayDraftText">未设置</strong>
+                      <button type="button" id="profileBirthdayClearButton">清除</button>
+                    </div>
+                    <div class="birthday-picker-columns">
+                      <div class="birthday-picker-column" id="profileBirthdayYear" aria-label="选择年份"></div>
+                      <div class="birthday-picker-column" id="profileBirthdayMonth" aria-label="选择月份"></div>
+                      <div class="birthday-picker-column" id="profileBirthdayDay" aria-label="选择日期"></div>
+                    </div>
+                    <button class="birthday-picker-done" id="profileBirthdayDoneButton" type="button">完成选择</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="account-profile-actions">
+                <button class="secondary-button" id="editProfileButton" type="button">编辑资料</button>
+                <button class="secondary-button hidden" id="cancelProfileEditButton" type="button">取消</button>
+                <button class="record-submit-button hidden" id="saveProfileButton" type="button">保存资料</button>
+              </div>
+              <p class="settings-message profile-settings-message" id="profileSettingsMessage" aria-live="polite"></p>
+            </section>
+          </div>
+
+          <div class="settings-panel settings-detail-panel hidden" id="privacySettingsPanel">
+            <button class="settings-back-button" type="button" data-settings-panel="overview">返回设置</button>
+            <section class="settings-group" aria-labelledby="privacySettingsTitle">
+              <div class="settings-group-heading">
+                <div>
+                  <p class="settings-kicker">隐私与数据</p>
+                  <h2 id="privacySettingsTitle">隐私协议与使用模式</h2>
+                </div>
+              </div>
+              <p class="settings-description" id="privacyStatusDescription">选择使用模式后，可在这里随时查看和调整。</p>
+
+              <div class="mode-selector" role="group" aria-label="账户使用模式">
+                <button id="fullModeButton" type="button" data-privacy-mode="full">
+                  <strong>完整模式</strong>
+                  <span>记录照片、体重和心情，可参与社区互动</span>
+                </button>
+                <button id="basicModeButton" type="button" data-privacy-mode="basic">
+                  <strong>基础模式</strong>
+                  <span>仅浏览社区，不使用个人记录功能</span>
+                </button>
+              </div>
+
+              <div class="document-links" aria-label="协议文件">
+                <button class="document-link" type="button" data-policy-document="privacy">查看隐私政策</button>
+                <button class="document-link" type="button" data-policy-document="agreement">查看用户协议</button>
+              </div>
+
+              <div class="privacy-audit-summary" id="privacyAuditSummary"></div>
+              <button class="withdraw-button" id="withdrawConsentButton" type="button">撤销签署并清除个人数据</button>
+              <p class="settings-message" id="settingsMessage" aria-live="polite"></p>
+            </section>
+          </div>
+
+          <div class="settings-panel settings-detail-panel hidden" id="passkeySettingsPanel">
+            <button class="settings-back-button" type="button" data-settings-panel="overview">返回设置</button>
+            <section class="settings-group" aria-labelledby="passkeySettingsTitle">
+              <div class="settings-group-heading">
+                <div>
+                  <p class="settings-kicker">安全登录</p>
+                  <h2 id="passkeySettingsTitle">Passkey 登录</h2>
+                </div>
+                <span class="account-mode-badge" id="passkeyDetailBadge">未设置</span>
+              </div>
+              <p class="settings-description" id="passkeyStatusDescription">Passkey 会绑定当前 QQ 账户，之后可用手机解锁直接登录本站。</p>
+              <div class="passkey-card" id="passkeyCard">
+                <div>
+                  <small>绑定条件</small>
+                  <strong id="passkeyBindingState">正在检查...</strong>
+                  <em id="passkeyBindingHint">必须先通过 QQ 登录并绑定账户。</em>
+                </div>
+                <button class="passkey-add-button" id="addPasskeyButton" type="button">添加 Passkey</button>
+              </div>
+              <div class="passkey-list" id="passkeyList" aria-label="已登记的 Passkey"></div>
+              <p class="settings-message" id="passkeySettingsMessage" aria-live="polite"></p>
+            </section>
+          </div>
+
+          <div class="settings-panel settings-detail-panel hidden" id="accountDeletionPanel">
+            <button class="settings-back-button" type="button" data-settings-panel="overview">返回设置</button>
+            <section class="settings-group danger-zone" aria-labelledby="accountDangerTitle">
+              <div>
+                <p class="settings-kicker">账户操作</p>
+                <h2 id="accountDangerTitle">注销账户</h2>
+                <p>注销会永久删除该账户、照片、体重、心情、社区身份及全部签署记录。完成后会退出登录，数据无法恢复。</p>
+              </div>
+              <button class="account-delete-button" id="deleteOwnAccountButton" type="button">继续注销账户</button>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="capture-view hidden" id="captureView">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="captureKicker">拍照记录</p>
+            <h1 id="captureTitle">对齐拍照</h1>
+          </div>
+          <button class="ghost-button" id="backToDashboardButton" type="button">返回</button>
+        </header>
+
+        <section class="capture-flow">
+          <div class="camera-stage" id="cameraStage" role="button" tabindex="0" aria-label="点击打开摄像头">
+            <video id="cameraVideo" playsinline muted></video>
+            <img id="photoPreview" class="hidden" alt="刚拍下的照片预览">
+            <div class="empty-camera" id="emptyCamera">
+              <span>点击打开摄像头</span>
+            </div>
+            <button class="camera-switch-button" id="switchCameraButton" type="button" disabled>切换镜头</button>
+          </div>
+
+          <p class="capture-hint" id="cameraHint">点击拍照画面打开摄像头，拍照时会在本机自动识别五官点位并校正。</p>
+
+          <div class="control-row">
+            <button class="secondary-button" id="retakeButton" type="button" disabled>重拍</button>
+            <button id="captureButton" type="button" disabled>拍照</button>
+          </div>
+          <p class="form-message capture-message" id="recordMessage" aria-live="polite"></p>
+
+          <form class="record-form hidden" id="recordForm">
+            <div class="record-fields">
+              <div class="record-field">
+                <label for="weightInput">今日体重 kg</label>
+                <input id="weightInput" type="number" inputmode="decimal" min="1" max="500" step="0.01" placeholder="例如 68.50">
+              </div>
+              <div class="record-field record-field-mood">
+                <div class="field-label-row">
+                  <label for="moodInput">一句话心情 <span>选填</span></label>
+                  <button class="mood-ai-button" id="bodyMoodAiButton" type="button" disabled>AI</button>
+                </div>
+                <input id="moodInput" type="text" maxlength="60" autocomplete="off" placeholder="今天感觉不错，继续坚持">
+              </div>
+            </div>
+            <button class="record-submit-button" type="submit">确认生成记录</button>
+          </form>
+
+          <section class="food-record-panel hidden" id="foodRecordPanel">
+            <div class="food-panel-head">
+              <div>
+                <h2>食物热量列表</h2>
+                <p id="foodResultMeta">拍照后会自动识别，并在弹窗中选择食物和重量。</p>
+              </div>
+              <button class="record-submit-button" id="saveFoodRecordButton" type="button" disabled>保存食物记录</button>
+            </div>
+            <div class="food-mood-field">
+              <div class="field-label-row">
+                <label for="foodMoodInput">一句话心情 <span>选填</span></label>
+                <button class="mood-ai-button food-mood-ai-button" id="foodMoodAiButton" type="button" disabled>AI</button>
+              </div>
+              <input id="foodMoodInput" type="text" maxlength="60" autocomplete="off" placeholder="这餐控制得还不错">
+            </div>
+            <div class="food-photo-carousel" id="foodPhotoStack" aria-label="已添加食物照片，可横向滑动"></div>
+            <div class="food-result-list" id="foodResultList"></div>
+          </section>
+        </section>
+      </section>
+
+      <footer class="site-footer">
+        <p>Copyright © 2026 furby.com. All Rights Reserved.</p>
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">陇ICP备2025016411号-1</a>
+        <button class="footer-policy-link" type="button" data-policy-document="privacy">隐私政策</button>
+        <button class="footer-policy-link" type="button" data-policy-document="agreement">用户协议</button>
+      </footer>
+    </main>
+
+    <nav class="bottom-tabs hidden" id="bottomTabs" role="tablist" aria-label="主页页签">
+      <button class="bottom-tab is-active" id="personalTabButton" type="button" role="tab" aria-selected="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="3.5"></circle>
+          <path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path>
+        </svg>
+        <span>我的</span>
+      </button>
+      <button class="bottom-tab" id="communityTabButton" type="button" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="9" cy="8" r="3"></circle>
+          <circle cx="17" cy="9" r="2.5"></circle>
+          <path d="M3.5 20c.6-4 2.5-6 5.5-6s5 2 5.5 6"></path>
+          <path d="M14 15c3.7-.8 6 1 6.5 4.5"></path>
+        </svg>
+        <span>社区</span>
+      </button>
+      <button class="bottom-tab" id="settingsTabButton" type="button" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"></path>
+        </svg>
+        <span>设置</span>
+      </button>
+    </nav>
+
+    <div class="consent-backdrop privacy-consent-backdrop hidden" id="privacyConsentModal" role="dialog" aria-modal="true" aria-labelledby="privacyConsentTitle">
+      <section class="consent-dialog privacy-consent-dialog">
+        <p class="eyebrow">隐私选择</p>
+        <h2 id="privacyConsentTitle">隐私协议确认</h2>
+        <p id="privacyConsentDescription">完整模式会在服务器保存你的照片、体重、心情、记录时间和社区互动；五官点位只在本机用于照片校正，不会上传或保存。</p>
+        <div class="privacy-highlights" id="privacyHighlights">
+          <span>基础模式可浏览社区</span>
+          <span>社区公开共享会再次询问</span>
+          <span>可随时撤销并清除数据</span>
+        </div>
+        <div class="consent-document-row">
+          <button type="button" data-policy-document="privacy">《隐私政策》</button>
+          <button type="button" data-policy-document="agreement">《用户协议》</button>
+        </div>
+        <div id="fullConsentFields">
+          <label class="consent-check" for="agreementConsentCheck">
+            <input id="agreementConsentCheck" type="checkbox">
+            <span>我已阅读并同意《用户协议》和《隐私政策》</span>
+          </label>
+          <label class="consent-check" for="sensitiveConsentCheck">
+            <input id="sensitiveConsentCheck" type="checkbox">
+            <span>我单独同意为个人记录、趋势、回放和社区共享功能处理照片、体重及健康变化等敏感个人信息</span>
+          </label>
+        </div>
+        <p class="privacy-consent-message" id="privacyConsentMessage" aria-live="polite"></p>
+        <div class="consent-actions">
+          <button class="secondary-button" id="chooseBasicModeButton" type="button">不同意并退出</button>
+          <button id="acceptFullModeButton" type="button" disabled>同意并进入</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="consent-backdrop passkey-prompt-backdrop hidden" id="passkeyPromptModal" role="dialog" aria-modal="true" aria-labelledby="passkeyPromptTitle">
+      <section class="consent-dialog passkey-prompt-dialog">
+        <p class="eyebrow">安全登录</p>
+        <h2 id="passkeyPromptTitle">添加 Passkey</h2>
+        <p>你已经绑定 QQ，可以添加手机或电脑的 Passkey。之后用系统解锁即可登录，不需要再次跳转 QQ。</p>
+        <div class="passkey-prompt-visual" aria-hidden="true">
+          <span class="passkey-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M7.5 12.4a4.6 4.6 0 1 1 3.4 4.4"></path>
+              <path d="M10.9 16.8 8.7 19H6.4v-2.3l4.2-4.2"></path>
+              <path d="M15.3 9.3h.1"></path>
+            </svg>
+          </span>
+          <span>更快进入你的账户</span>
+        </div>
+        <p class="privacy-consent-message" id="passkeyPromptMessage" aria-live="polite"></p>
+        <div class="consent-actions">
+          <button class="secondary-button" id="dismissPasskeyPromptButton" type="button">稍后再说</button>
+          <button id="startPasskeyPromptButton" type="button">添加 Passkey</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="consent-backdrop hidden" id="communityConsentModal" role="dialog" aria-modal="true" aria-labelledby="communityConsentTitle">
+      <section class="consent-dialog">
+        <p class="eyebrow">隐私选择</p>
+        <h2 id="communityConsentTitle">要共享你的变化吗?</h2>
+        <p>同意后，社区中的其他登录用户可以通过匿名昵称查看你的照片回放、体重、心情和记录时间。</p>
+        <ul>
+          <li>QQ 绑定 ID 和内部标识不会公开</li>
+          <li>你可以随时在社区顶部关闭共享</li>
+          <li>选择仅浏览，也可以查看其他人主动共享的记录</li>
+        </ul>
+        <div class="consent-actions">
+          <button class="secondary-button" id="declineCommunityShareButton" type="button">仅浏览</button>
+          <button id="acceptCommunityShareButton" type="button">同意共享</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="community-detail-backdrop hidden" id="communityDetailModal" role="dialog" aria-modal="true" aria-labelledby="communityDetailTitle">
+      <section class="community-detail-panel">
+        <header class="community-detail-header">
+          <div>
+            <p>社区资料</p>
+            <div class="community-detail-title-row">
+              <span class="community-detail-avatar" id="communityDetailAvatar" aria-hidden="true">Q</span>
+              <h2 id="communityDetailTitle">QQ用户</h2>
+            </div>
+          </div>
+          <button class="community-detail-close" id="closeCommunityDetailButton" type="button">关闭</button>
+        </header>
+        <div class="community-detail-content" id="communityDetailContent">
+          <div class="community-detail-loading">正在载入社区资料...</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="community-comments-backdrop hidden" id="communityCommentsModal" role="dialog" aria-modal="true" aria-labelledby="communityCommentsModalTitle">
+      <section class="community-comments-panel">
+        <header class="community-comments-modal-header">
+          <div>
+            <p>社区留言</p>
+            <h2 id="communityCommentsModalTitle">评论</h2>
+          </div>
+          <button class="community-comments-close" id="closeCommunityCommentsButton" type="button">关闭</button>
+        </header>
+        <div class="community-comments-content" id="communityCommentsContent">
+          <div class="community-detail-loading">正在载入留言...</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="ai-summary-backdrop hidden" id="aiSummaryModal" role="dialog" aria-modal="true" aria-labelledby="aiSummaryTitle">
+      <section class="ai-summary-panel">
+        <header class="ai-summary-header">
+          <div>
+            <p>AI建议</p>
+            <h2 id="aiSummaryTitle">总结我的变化</h2>
+          </div>
+          <button class="ai-summary-close" id="closeAiSummaryButton" type="button">关闭</button>
+        </header>
+        <div class="ai-summary-content" id="aiSummaryContent">
+          <p class="ai-summary-status" id="aiSummaryStatus">正在准备数据...</p>
+          <div class="ai-summary-output" id="aiSummaryOutput" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="policy-backdrop hidden" id="policyModal" role="dialog" aria-modal="true" aria-labelledby="policyTitle">
+      <section class="policy-panel">
+        <header class="policy-header">
+          <div>
+            <p>今天你瘦了吗?</p>
+            <h2 id="policyTitle">隐私政策</h2>
+          </div>
+          <button class="secondary-button" id="closePolicyButton" type="button">关闭</button>
+        </header>
+        <article class="policy-content" id="policyContent"></article>
+      </section>
+    </div>
+
+    <div class="consent-backdrop hidden" id="withdrawConsentModal" role="dialog" aria-modal="true" aria-labelledby="withdrawConsentTitle">
+      <form class="confirmation-dialog" id="withdrawConsentForm">
+        <p class="danger-kicker">敏感操作</p>
+        <h2 id="withdrawConsentTitle">撤销签署并清除数据</h2>
+        <p>照片、缩略图、体重、心情、个人记录、社区共享身份、点赞和评论将立即删除。账户会保留并切换到基础模式。</p>
+        <label for="withdrawConsentInput">请输入 <span class="confirmation-phrase"><strong>撤销并清除我的数据</strong><button class="copy-phrase-button" type="button" data-copy-text="撤销并清除我的数据" aria-label="复制确认文字"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="10" height="10" rx="2"></rect><path d="M5 15V7a2 2 0 0 1 2-2h8"></path></svg></button></span></label>
+        <input id="withdrawConsentInput" type="text" autocomplete="off" required>
+        <p class="confirmation-message" id="withdrawConsentMessage" aria-live="polite"></p>
+        <div class="consent-actions">
+          <button class="secondary-button" id="cancelWithdrawConsentButton" type="button">取消</button>
+          <button class="danger-confirm-button" type="submit">确认撤销并清除</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="consent-backdrop hidden" id="deleteOwnAccountModal" role="dialog" aria-modal="true" aria-labelledby="deleteOwnAccountTitle">
+      <form class="confirmation-dialog" id="deleteOwnAccountForm">
+        <p class="danger-kicker">不可恢复</p>
+        <h2 id="deleteOwnAccountTitle">注销账户</h2>
+        <p>这会永久清除全部账户数据和签署记录。完成后当前登录立即失效，并返回登录页。</p>
+        <label for="deleteOwnAccountInput">请输入 <span class="confirmation-phrase"><strong id="deleteOwnAccountPhrase"></strong><button class="copy-phrase-button" id="deleteOwnAccountCopyButton" type="button" data-copy-text="" aria-label="复制确认文字"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="10" height="10" rx="2"></rect><path d="M5 15V7a2 2 0 0 1 2-2h8"></path></svg></button></span></label>
+        <input id="deleteOwnAccountInput" type="text" autocomplete="off" spellcheck="false" required>
+        <p class="confirmation-message" id="deleteOwnAccountMessage" aria-live="polite"></p>
+        <div class="consent-actions">
+          <button class="secondary-button" id="cancelDeleteOwnAccountButton" type="button">取消</button>
+          <button class="danger-confirm-button" type="submit">永久注销</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="consent-backdrop hidden" id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
+      <form class="feedback-dialog" id="feedbackForm">
+        <p class="eyebrow" id="feedbackKicker">帮助与安全</p>
+        <h2 id="feedbackTitle">意见反馈</h2>
+        <p id="feedbackDescription">告诉我们遇到的问题或建议。涉及社区内容时，请尽量描述具体原因。</p>
+        <label for="feedbackCategory">
+          <span>类型</span>
+          <select id="feedbackCategory">
+            <option value="suggestion">建议优化</option>
+            <option value="bug">功能异常</option>
+            <option value="account">账户问题</option>
+            <option value="content">内容问题</option>
+            <option value="privacy">隐私侵权</option>
+            <option value="harassment">骚扰攻击</option>
+            <option value="illegal">违法违规</option>
+            <option value="other">其他</option>
+          </select>
+        </label>
+        <label for="feedbackText">
+          <span>说明</span>
+          <textarea id="feedbackText" maxlength="500" rows="5" placeholder="请填写具体情况，最多 500 字。"></textarea>
+        </label>
+        <p class="feedback-message" id="feedbackMessage" aria-live="polite"></p>
+        <div class="consent-actions">
+          <button class="secondary-button" id="cancelFeedbackButton" type="button">取消</button>
+          <button id="submitFeedbackButton" type="submit">提交</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="consent-backdrop food-selection-backdrop hidden" id="foodSelectionModal" role="dialog" aria-modal="true" aria-labelledby="foodSelectionTitle">
+      <section class="food-selection-dialog">
+        <div class="food-selection-head">
+          <div>
+            <p class="eyebrow">识别结果</p>
+            <h2 id="foodSelectionTitle">选择食物和重量</h2>
+          </div>
+          <div class="food-selection-head-actions">
+            <button class="food-selection-manual-button" id="addManualFoodButton" type="button">手动新增</button>
+            <button class="modal-icon-button" id="closeFoodSelectionButton" type="button" aria-label="关闭选择窗">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12"></path>
+                <path d="M18 6 6 18"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <p class="food-selection-copy" id="foodSelectionCopy">识别和重量选择在同一个页面完成。重量按 50g 对齐，可选择识别结果并微调。</p>
+        <div class="food-selection-list" id="foodSelectionList"></div>
+        <div class="food-selection-summary" id="foodSelectionSummary">请选择食物</div>
+        <p class="food-selection-message" id="foodSelectionMessage" aria-live="polite"></p>
+        <div class="consent-actions">
+          <button class="secondary-button" id="cancelFoodSelectionButton" type="button">暂不添加</button>
+          <button id="applyFoodSelectionButton" type="button" disabled>加入记录</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="consent-backdrop manual-food-backdrop hidden" id="manualFoodModal" role="dialog" aria-modal="true" aria-labelledby="manualFoodTitle">
+      <form class="manual-food-dialog" id="manualFoodForm" autocomplete="off">
+        <p class="eyebrow">手动新增</p>
+        <h2 id="manualFoodTitle">添加食物名称</h2>
+        <p>输入后会优先匹配你的个人营养库，自动套用保存过的热量、营养和分量。</p>
+        <label class="manual-food-field" for="manualFoodNameInput">
+          <span>食物名称</span>
+          <input id="manualFoodNameInput" type="text" maxlength="60" inputmode="text" placeholder="例如 毛血旺">
+        </label>
+        <p class="manual-food-message" id="manualFoodMessage" aria-live="polite"></p>
+        <div class="consent-actions manual-food-actions">
+          <button class="secondary-button" id="cancelManualFoodButton" type="button">取消</button>
+          <button id="submitManualFoodButton" type="submit">添加</button>
+        </div>
+      </form>
+    </div>
+
+    <template id="privacyPolicyTemplate">
+      <p class="policy-version">版本：2026-06-19 · 生效日期：2026年6月19日</p>
+      <h3>一、我们是谁</h3>
+      <p>“今天你瘦了吗?”由 furby.top 的运营者提供。页面底部展示的备案信息为网站主体信息。隐私相关事项可通过 <a href="mailto:privacy@furby.top">privacy@furby.top</a> 联系我们。</p>
+      <h3>二、适用范围与模式</h3>
+      <p>本政策适用于 furby.top 及其测试环境中的登录、记录、回放、社区、设置和管理台相关功能。你可以选择基础模式或完整模式：基础模式仅用于登录、浏览社区、查看协议和管理账户；完整模式会启用拍照记录、体重趋势、回放、社区共享、点赞和评论等功能。</p>
+      <h3>三、我们处理的信息</h3>
+      <p>登录与账户信息：QQ 登录返回的 OpenID/UnionID 会在服务器端生成不可逆摘要，另保存 QQ 昵称、头像、绑定标识、登录会话 Cookie。Passkey 登录仅保存凭据 ID、公钥、设备标签、创建和使用时间，不保存你的生物识别原始信息或系统解锁凭据。</p>
+      <p>账户与记录信息：完整模式下，我们会处理你主动设置的性别、生日等账户资料，以及你主动提交的 JPG 照片、缩略图、体重、心情、饮食照片、识别食物、热量营养、记录时间，并由这些信息生成体重高低图、涨跌日历、回放数据和本地缓存索引。</p>
+      <p>社区互动信息：当你主动开启共享后，会展示你的 QQ 头像、昵称、最新照片、心情、记录数量、点赞数、评论数、人气榜信息和不显示具体数值的体重高低变化。你发布的评论、点赞、分享、举报、反馈和删除操作会被记录以实现互动、安全治理和争议处理功能。</p>
+      <p>安全与审计信息：为防止攻击、滥用和非法内容，我们会处理 IP 地址、User-Agent、请求时间、接口路径、认证事件、限流事件、隐私签署事件、网络和设备信息的不可逆摘要、文本安全审核结果、举报反馈工单及账号冻结、封禁、恢复等治理记录。管理台可查看账户、记录、签署状态和必要审计信息。</p>
+      <h3>四、敏感个人信息与端侧处理</h3>
+      <p>照片可能包含可识别的人脸信息，体重和健康变化可能反映健康状况，属于需要更谨慎保护的信息。完整模式会单独请求你同意处理这些信息。拍照时的五官点位识别、旋转、裁切和一寸比例校正在你的设备本地完成，五官点位数据不会上传或保存；上传的是你确认后的照片、缩略图和记录信息。</p>
+      <h3>五、使用目的</h3>
+      <p>我们仅为以下目的处理信息：完成 QQ 或 Passkey 登录；保存和展示个人减重记录；生成体重趋势、日历和回放；实现社区共享、点赞、评论、排行榜和分享；处理隐私签署、撤销和注销；进行文本安全审核、反作弊、反攻击、故障排查和安全审计；履行法律法规要求。</p>
+      <h3>六、第三方服务和对外提供</h3>
+      <p>QQ 互联用于登录、头像和昵称获取；腾讯云文本安全用于审核心情和社区评论；阿里云百炼千问用于食物照片识别、营养估算和你主动触发的 AI 心情生成；浏览器会从 jsDelivr 加载 MediaPipe 视觉任务库，站内模型文件用于端侧人脸点位识别。上述第三方仅在实现相应功能所必需的范围内处理数据。我们不会出售个人信息，也不会在未经你同意的情况下向无关第三方提供可识别个人的信息。</p>
+      <h3>七、社区公开范围</h3>
+      <p>社区共享默认关闭。开启后，其他登录用户可查看你共享的照片、头像、昵称、心情、记录数量、互动数量、回放和高低变化图。关闭共享后，你的档案会从社区展示中隐藏；你此前发布在他人档案下的评论、点赞、举报反馈等互动和安全记录仍可能按功能、风控和争议处理需要保留，除非你主动删除或注销账户且法律法规未要求继续保存。</p>
+      <h3>八、保存期限与删除</h3>
+      <p>账户存续期间，我们保存实现服务所需的数据。你删除记录、撤销签署并清除数据或注销账户后，我们会按页面说明删除对应照片、体重、心情、社区足迹、Passkey 和签署记录；为安全审计、争议处理或法律法规要求必须保留的信息，将在必要范围和期限内保存。</p>
+      <h3>九、你的权利</h3>
+      <p>你可以在设置页查看签署状态、查看协议版本、切换基础或完整模式、撤销同意并清除个人数据、删除记录、删除评论、移除 Passkey 或注销账户。撤销同意不影响撤销前基于同意进行处理的效力。如需访问、更正、复制或进一步删除信息，可通过隐私联系邮箱提出请求。</p>
+      <h3>十、安全措施</h3>
+      <p>我们采取 HTTPS、HttpOnly Cookie、CSRF 校验、Passkey 公钥认证、访问限流、Host 白名单、输入校验、照片格式校验、服务器运行隔离、管理台审计和文本安全审核等措施保护数据。但互联网服务无法保证绝对安全，请谨慎开启社区共享并妥善保管登录设备。</p>
+      <h3>十一、未成年人</h3>
+      <p>本服务不面向未满十四周岁的未成年人。未满十四周岁请勿创建账户、上传照片或提交体重等信息；未满十八周岁的用户应在监护人同意和指导下使用。</p>
+      <h3>十二、政策更新</h3>
+      <p>当处理目的、方式、信息种类、共享范围或第三方服务发生重要变化时，我们会更新本政策并以弹窗、设置页提示或其他合理方式通知你；依法需要重新同意或单独同意的，我们会再次请求确认。</p>
+    </template>
+
+    <template id="userAgreementTemplate">
+      <p class="policy-version">版本：2026-06-19 · 生效日期：2026年6月19日</p>
+      <h3>一、服务内容</h3>
+      <p>“今天你瘦了吗?”提供 QQ 登录、Passkey 登录、拍照记录、体重和心情记录、趋势展示、变化回放、社区共享、点赞、评论、分享、排行榜、隐私设置和账户管理等功能。你使用本服务即表示同意本协议和隐私政策；如不同意，可选择基础模式浏览或退出登录。</p>
+      <h3>二、健康免责声明</h3>
+      <p>本服务仅用于个人生活记录和变化展示，不构成医疗诊断、减重处方、营养建议、运动处方或任何专业健康服务。体重趋势、回放、排行榜和社区内容仅供参考。减重、饮食、运动或疾病相关决策请咨询医生、营养师或其他具备资质的专业人士。</p>
+      <h3>三、账户与登录安全</h3>
+      <p>QQ 登录状态、浏览器会话和 Passkey 均视为账户凭证。你应妥善保管设备、浏览器登录状态和系统解锁方式，不应将账户借给他人使用。因共用设备、主动泄露、设备遗失或管理不当导致的风险由你自行承担；发现异常时请及时退出登录、移除 Passkey 或联系我们。</p>
+      <h3>四、用户内容与授权</h3>
+      <p>你应确保上传照片、心情、评论和其他内容由本人合法提供，或已获得必要授权。为提供记录、回放、社区展示、审核、备份、缓存和安全防护功能，你授予我们在服务范围内存储、展示、复制、处理和传输相关内容的必要许可。你保留对自己合法内容的权利。</p>
+      <h3>五、禁止行为</h3>
+      <p>你不得上传、发布或传播违法违规、侵权、色情低俗、暴力恐怖、诈骗、骚扰、侮辱诽谤、侵犯隐私或肖像权、诱导极端减重或危害健康的内容；不得冒用他人身份；不得攻击、扫描、爬取、绕过限流、干扰网站运行、批量注册或以自动化方式滥用服务。</p>
+      <h3>六、社区规则</h3>
+      <p>社区共享由你自愿开启。开启后，你的头像、昵称、照片、心情、回放和部分变化信息会被其他登录用户看到。评论应友善、尊重事实和他人感受。你不得鼓励危险减重、羞辱他人身材或发布医疗误导内容。用户可对社区档案或留言进行举报；我们可以对违反规则的内容或账户采取拒绝发布、删除、隐藏、限制互动、账号冻结、封禁或恢复等治理措施，并保留必要处理记录。</p>
+      <h3>七、文本审核与安全风控</h3>
+      <p>为维护社区安全，心情和评论会经过文本安全审核；疑似违规内容可能被拒绝发布。短时间多次触发风险或高频请求时，系统可能自动限流、禁言或阻断访问。我们也会记录必要安全日志，用于排查攻击、滥用、登录异常和服务故障。</p>
+      <h3>八、数据操作与账户注销</h3>
+      <p>你可以删除单条记录、删除自己的评论、撤销签署并清除个人数据、切换基础模式、移除 Passkey 或注销账户。注销账户将清除账户数据和签署记录，且通常无法恢复。因法律法规、司法或行政机关要求必须保留的信息，将在必要范围和期限内处理。</p>
+      <h3>九、服务可用性和变更</h3>
+      <p>我们会尽力保障服务稳定，但不承诺服务永不中断。服务可能因维护、升级、网络故障、第三方服务异常、安全事件、不可抗力或合规要求暂停、限制或调整。涉及你权益的重要变化会以合理方式提示。</p>
+      <h3>十、责任限制</h3>
+      <p>在法律允许的范围内，我们不对因你依据记录、趋势、社区内容自行作出的健康、饮食、运动或减重决策承担责任；不对因第三方服务、网络故障、设备问题、用户自行公开或账号保管不当造成的损失承担超出法律规定的责任。</p>
+      <h3>十一、协议更新</h3>
+      <p>我们可能根据功能变化、合规要求或运营需要更新本协议。重大变化会以弹窗、设置页或其他合理方式提示；依法需要重新同意的，我们会再次请求确认。你不同意更新的，可以停止使用完整模式并按页面入口清除数据或注销账户。</p>
+      <h3>十二、适用法律与争议解决</h3>
+      <p>本协议适用中华人民共和国法律。发生争议时，双方应先友好协商；协商不成的，可依法向有管辖权的人民法院提起诉讼。</p>
+    </template>
+
+    <div class="replay-modal-backdrop hidden" id="replayModal" role="dialog" aria-modal="true" aria-label="变化回放">
+      <section class="replay-modal-panel" id="replayModalPanel">
+        <iframe id="replayFrame" title="变化回放" loading="eager"></iframe>
+      </section>
+    </div>
+
+    <canvas id="captureCanvas" class="hidden"></canvas>
+    <canvas id="analysisCanvas" class="hidden"></canvas>
+    <script src="shared.js?v=20260621-arch1" defer></script>
+    <script src="app.js?v=20260622-moodinput1" defer></script>
+  </body>
+</html>

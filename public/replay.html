@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101615">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <title>变化回放 · 今天你瘦了吗?</title>
+    <link rel="stylesheet" href="replay.css?v=20260621-arch1">
+  </head>
+  <body>
+    <main class="replay-shell">
+      <header class="replay-header">
+        <div>
+          <p>今天你瘦了吗?</p>
+          <h1 id="replayTitle">变化回放</h1>
+        </div>
+        <button class="close-button" id="closeReplayButton" type="button">关闭</button>
+      </header>
+
+      <section class="replay-loading" id="replayLoading" aria-live="polite">正在载入记录...</section>
+
+      <section class="replay-content hidden" id="replayContent">
+        <div class="replay-layout">
+          <figure class="photo-frame">
+            <img id="replayPhoto" alt="记录照片">
+            <div class="mood-danmaku-layer" id="moodDanmakuLayer" aria-live="polite"></div>
+          </figure>
+
+          <div class="replay-data">
+            <div class="frame-position" aria-label="照片张数"><span id="frameCurrent">1</span><span>/</span><span id="frameTotal">1</span></div>
+            <time id="replayDate" aria-label="记录时间"></time>
+            <strong id="replayWeight" aria-label="体重">-</strong>
+            <span class="weight-change" id="weightChange" aria-label="体重变化">-</span>
+          </div>
+        </div>
+
+        <section class="timeline-panel" aria-label="回放时间轴">
+          <input id="replayTimeline" type="range" min="0" max="0" step="1" value="0" aria-label="拖动查看记录变化">
+          <div class="timeline-labels">
+            <span id="timelineStart"></span>
+            <span id="timelineCurrent"></span>
+            <span id="timelineEnd"></span>
+          </div>
+          <button id="playbackButton" type="button">暂停</button>
+        </section>
+      </section>
+
+      <section class="replay-empty hidden" id="replayEmpty">
+        <strong id="emptyMessage">暂无可回放照片</strong>
+        <button id="returnButton" type="button">返回记录</button>
+      </section>
+    </main>
+    <script src="shared.js?v=20260621-arch1" defer></script>
+    <script src="replay.js?v=20260621-arch1" defer></script>
+  </body>
+</html>
