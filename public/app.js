@@ -250,6 +250,10 @@ const state = {
   nativeHealthLoadedDays: 0,
   nativeHealthWeightRecords: [],
   nativeHealthHeartRateRecords: [],
+  weightPrediction: null,
+  weightPredictionQueue: null,
+  weightPredictionLoading: false,
+  weightPredictionPollTimer: null,
   privacyPromptReason: "initial",
   privacyConsentStep: "full",
   replaySourceElement: null,
@@ -2966,6 +2970,108 @@ function chartWeightRecords() {
     .filter((record) => record.type !== "food" && Number.isFinite(record.weight));
 }
 
+function clearWeightPredictionPoll() {
+  if (!state.weightPredictionPollTimer) return;
+  window.clearTimeout(state.weightPredictionPollTimer);
+  state.weightPredictionPollTimer = null;
+}
+
+function predictionDayTimestamp(dateKey) {
+  const text = String(dateKey || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+  const time = new Date(`${text}T00:00:00+08:00`).getTime();
+  return Number.isFinite(time) ? localDayStart(time) : null;
+}
+
+function chartWeightPrediction() {
+  const prediction = state.weightPrediction;
+  const tomorrow = prediction?.tomorrow;
+  if (prediction?.status !== "ready" || !tomorrow?.date) return null;
+  const day = predictionDayTimestamp(tomorrow.date);
+  const lower = Number(tomorrow.lowerKg ?? tomorrow.lower);
+  const upper = Number(tomorrow.upperKg ?? tomorrow.upper);
+  const expected = Number(tomorrow.expectedKg ?? tomorrow.expected);
+  const confidence = Number(tomorrow.confidence);
+  if (!Number.isFinite(day) || !Number.isFinite(lower) || !Number.isFinite(upper)) return null;
+  return {
+    day,
+    date: tomorrow.date,
+    min: Math.min(lower, upper),
+    max: Math.max(lower, upper),
+    expected: Number.isFinite(expected) ? expected : (lower + upper) / 2,
+    confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : null
+  };
+}
+
+function applyWeightPredictionResponse(data) {
+  if (!data?.ok) return;
+  state.weightPrediction = data.prediction || null;
+  state.weightPredictionQueue = data.queue || null;
+  if (els.weightChart) {
+    renderChart();
+  }
+}
+
+function scheduleWeightPredictionPoll(delay = 2400) {
+  clearWeightPredictionPoll();
+  state.weightPredictionPollTimer = window.setTimeout(() => {
+    state.weightPredictionPollTimer = null;
+    loadWeightPrediction().catch((error) => {
+      console.warn("Weight prediction poll failed:", error);
+    });
+  }, delay);
+}
+
+function shouldPollWeightPrediction(data) {
+  const status = data?.prediction?.status || state.weightPrediction?.status;
+  return Boolean(
+    data?.queue?.queued
+    || data?.queue?.activeWorkers
+    || status === "queued"
+    || status === "updating"
+  );
+}
+
+async function loadWeightPrediction({ force = false } = {}) {
+  if (!state.profile || !hasFullMode() || state.weightPredictionLoading) {
+    return state.weightPrediction;
+  }
+  state.weightPredictionLoading = true;
+  try {
+    const data = await api(force ? "/api/weight-prediction/refresh" : "/api/weight-prediction", {
+      method: force ? "POST" : "GET"
+    });
+    applyWeightPredictionResponse(data);
+    if (shouldPollWeightPrediction(data)) {
+      scheduleWeightPredictionPoll();
+    } else {
+      clearWeightPredictionPoll();
+    }
+    return data.prediction || null;
+  } catch (error) {
+    console.warn("Weight prediction load failed:", error);
+    return state.weightPrediction;
+  } finally {
+    state.weightPredictionLoading = false;
+  }
+}
+
+async function syncNativeHealthSnapshotToCloud(snapshot) {
+  if (!snapshot?.ok || !state.profile || !hasFullMode()) return null;
+  try {
+    const data = await api("/api/native-health/sync", {
+      method: "POST",
+      body: JSON.stringify({ snapshot })
+    });
+    applyWeightPredictionResponse(data);
+    if (shouldPollWeightPrediction(data)) scheduleWeightPredictionPoll();
+    return data;
+  } catch (error) {
+    console.warn("Native health cloud sync failed:", error);
+    return null;
+  }
+}
+
 function nativeHealthDescriptionText(bridge) {
   if (!bridge) {
     return APP_LOCALE_ENGLISH
@@ -3054,6 +3160,7 @@ async function syncNativeHealthData({ days = NATIVE_HEALTH_INITIAL_DAYS, force =
       Number(snapshot.range?.days) || requestedDays
     );
     applyNativeHealthSnapshot(snapshot);
+    void syncNativeHealthSnapshotToCloud(snapshot);
     renderAll();
     return snapshot;
   } catch (error) {
@@ -4779,6 +4886,7 @@ async function loadRecords({ force = false } = {}) {
     } else {
       renderHistoryCollapsed();
     }
+    void loadWeightPrediction();
     return;
   }
 
@@ -4791,6 +4899,7 @@ async function loadRecords({ force = false } = {}) {
   } else {
     renderHistoryCollapsed();
   }
+  void loadWeightPrediction();
 }
 
 const PULL_REFRESH_THRESHOLD = 72;
@@ -5652,8 +5761,8 @@ function weightRangeChartMarkup({
       </div>
       <div class="chart-detail" role="status" aria-live="polite" aria-hidden="true">
         <span class="chart-detail-date"></span>
-        <span>最高 <strong class="chart-detail-max"></strong></span>
-        <span>最低 <strong class="chart-detail-min"></strong></span>
+        <span><span class="chart-detail-max-label">最高</span> <strong class="chart-detail-max"></strong></span>
+        <span><span class="chart-detail-min-label">最低</span> <strong class="chart-detail-min"></strong></span>
       </div>
     </div>
   `;
@@ -5700,6 +5809,7 @@ function bindWeightRangeChartInteractions(container, {
     if (!detail.classList.contains("is-visible")) return;
     syncBarSelection(null);
     detail.classList.remove("is-visible");
+    detail.classList.remove("is-prediction");
     detail.setAttribute("aria-hidden", "true");
 
     if (detailHideTimer) window.clearTimeout(detailHideTimer);
@@ -5715,10 +5825,18 @@ function bindWeightRangeChartInteractions(container, {
     const day = Number(target.dataset.day);
     const min = Number(target.dataset.min);
     const max = Number(target.dataset.max);
+    const isPrediction = target.dataset.kind === "prediction";
+    const confidence = Number(target.dataset.confidence);
 
     syncBarSelection(day);
 
-    detail.querySelector(".chart-detail-date").textContent = dateFormatter(day);
+    const dateText = isPrediction
+      ? `${APP_LOCALE_ENGLISH ? "Forecast" : "预测"} ${dateFormatter(day)}${Number.isFinite(confidence) ? ` · ${Math.round(confidence * 100)}%` : ""}`
+      : dateFormatter(day);
+    detail.classList.toggle("is-prediction", isPrediction);
+    detail.querySelector(".chart-detail-date").textContent = dateText;
+    detail.querySelector(".chart-detail-max-label").textContent = isPrediction ? (APP_LOCALE_ENGLISH ? "Upper" : "上限") : (APP_LOCALE_ENGLISH ? "High" : "最高");
+    detail.querySelector(".chart-detail-min-label").textContent = isPrediction ? (APP_LOCALE_ENGLISH ? "Lower" : "下限") : (APP_LOCALE_ENGLISH ? "Low" : "最低");
     detail.querySelector(".chart-detail-max").textContent = Number.isFinite(max) ? `${max.toFixed(2)} kg` : "--";
     detail.querySelector(".chart-detail-min").textContent = Number.isFinite(min) ? `${min.toFixed(2)} kg` : "--";
     revealDetail();
@@ -5770,6 +5888,7 @@ function renderChart(highlightId = null) {
     els.weightChart.innerHTML = '<div class="chart-empty">至少保存两次体重后会出现变化图。</div>';
     return;
   }
+  const prediction = chartWeightPrediction();
 
   const viewportWidth = Math.max(320, Math.floor(els.weightChart.clientWidth || 680));
   const height = 276;
@@ -5781,7 +5900,8 @@ function renderChart(highlightId = null) {
   const padBottom = 38;
   const dayMs = 24 * 60 * 60 * 1000;
   const firstDay = localDayStart(new Date(weights[0].timestamp).getTime());
-  const lastDay = localDayStart(new Date(weights.at(-1).timestamp).getTime());
+  const lastActualDay = localDayStart(new Date(weights.at(-1).timestamp).getTime());
+  const lastDay = Math.max(lastActualDay, prediction?.day || lastActualDay);
   const dayCount = Math.max(1, Math.round((lastDay - firstDay) / dayMs) + 1);
   const visibleDays = Math.max(10, Math.round((plotViewportWidth / 390) * 10));
   const dayStep = (plotViewportWidth - padLeft - padRight) / visibleDays;
@@ -5817,7 +5937,14 @@ function renderChart(highlightId = null) {
     : fallbackGroup?.recordIds?.at(-1) || null;
   const chartBottom = height - padBottom;
   const chartHeight = chartBottom - padTop;
-  const axis = calculateWeightAxis(weights);
+  const axisRecords = prediction
+    ? [
+        ...weights,
+        { timestamp: `${prediction.date}T12:00:00+08:00`, weight: prediction.min },
+        { timestamp: `${prediction.date}T12:00:00+08:00`, weight: prediction.max }
+      ]
+    : weights;
+  const axis = calculateWeightAxis(axisRecords);
   const yForWeight = (weight) => {
     const normalizedWeight = Math.max(axis.min, Math.min(axis.max, weight));
     return chartBottom - ((normalizedWeight - axis.min) / (axis.max - axis.min)) * chartHeight;
@@ -5835,7 +5962,7 @@ function renderChart(highlightId = null) {
   }).join("");
 
   let previousLatest = null;
-  const bars = groups.map((group) => {
+  const actualBars = groups.map((group) => {
     const x = padLeft + (group.index + 0.5) * dayStep;
     const active = defaultHighlightId ? group.recordIds.includes(defaultHighlightId) : false;
     const isLoss = previousLatest === null || group.latest <= previousLatest;
@@ -5858,6 +5985,31 @@ function renderChart(highlightId = null) {
       <rect class="chart-hit-area" data-day="${group.day}" data-min="${group.min}" data-max="${group.max}" x="${x - hitWidth / 2}" y="${padTop}" width="${hitWidth}" height="${chartHeight}" fill="transparent" role="button" tabindex="0" aria-label="${escapeAttribute(title)}"></rect>
     `;
   }).join("");
+
+  const predictionBar = prediction && prediction.day >= firstDay && prediction.day <= lastDay
+    ? (() => {
+        const index = Math.round((prediction.day - firstDay) / dayMs);
+        const x = padLeft + (index + 0.5) * dayStep;
+        let topY = yForWeight(prediction.max);
+        let bottomY = yForWeight(prediction.min);
+        if (Math.abs(bottomY - topY) < 8) {
+          const centerY = (topY + bottomY) / 2;
+          topY = Math.max(padTop, centerY - 4);
+          bottomY = Math.min(chartBottom, centerY + 4);
+        }
+        const hitWidth = Math.max(24, dayStep * 0.72);
+        const confidenceLabel = Number.isFinite(prediction.confidence) ? `，置信度 ${Math.round(prediction.confidence * 100)}%` : "";
+        const dateLabel = new Date(prediction.day).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" });
+        const title = `${dateLabel} 预测，下限 ${prediction.min.toFixed(2)} kg，上限 ${prediction.max.toFixed(2)} kg${confidenceLabel}`;
+        return `
+          <line class="chart-weight-bar is-prediction" data-kind="prediction" data-day="${prediction.day}" data-min="${prediction.min}" data-max="${prediction.max}" data-confidence="${prediction.confidence ?? ""}" data-color="var(--chart-prediction)" data-base-width="7.8" data-selected-width="10" x1="${x}" y1="${topY}" x2="${x}" y2="${bottomY}" stroke="var(--chart-prediction)" stroke-width="7.8" stroke-linecap="round" opacity="0.9">
+            <title>${escapeAttribute(title)}</title>
+          </line>
+          <rect class="chart-hit-area" data-kind="prediction" data-day="${prediction.day}" data-min="${prediction.min}" data-max="${prediction.max}" data-confidence="${prediction.confidence ?? ""}" x="${x - hitWidth / 2}" y="${padTop}" width="${hitWidth}" height="${chartHeight}" fill="transparent" role="button" tabindex="0" aria-label="${escapeAttribute(title)}"></rect>
+        `;
+      })()
+    : "";
+  const bars = `${actualBars}${predictionBar}`;
 
   const activeGroup = defaultHighlightId ? groups.find((group) => group.recordIds.includes(defaultHighlightId)) : fallbackGroup;
 

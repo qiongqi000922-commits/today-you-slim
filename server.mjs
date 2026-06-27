@@ -7,6 +7,15 @@ import crypto from "node:crypto";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { createCosMediaStorage, mediaStorageConfigFromEnv } from "./lib/cos-media.mjs";
+import {
+  WEIGHT_PREDICTION_MODEL_VERSION,
+  buildWeightPredictionInput,
+  compactNativeHealthSnapshot,
+  computeWeightPrediction,
+  publicWeightPrediction,
+  sanitizeNativeHealthStore,
+  sanitizeWeightPredictionStore
+} from "./lib/weight-predictor.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, "public");
@@ -35,6 +44,8 @@ const AI_SUMMARY_CACHE_PATH = path.join(DATA_DIR, "ai-summary-cache.json");
 const APP_CONFIG_PATH = path.join(DATA_DIR, "app-config.json");
 const QWEN_USAGE_PATH = path.join(DATA_DIR, "qwen-usage.json");
 const RUNTIME_EVENTS_PATH = path.join(DATA_DIR, "runtime-events.json");
+const WEIGHT_PREDICTIONS_PATH = path.join(DATA_DIR, "weight-predictions.json");
+const NATIVE_HEALTH_SNAPSHOTS_PATH = path.join(DATA_DIR, "native-health-snapshots.json");
 const BASE_PATH = normalizeBasePath(process.env.BASE_PATH || "");
 const ADMIN_PATH = normalizeAdminPath(process.env.ADMIN_PATH || "/admin");
 const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || "admin").trim();
@@ -66,6 +77,9 @@ const MAX_MODERATION_QUEUE_ITEMS = positiveNumber(process.env.MAX_MODERATION_QUE
 const MAX_ACCOUNT_MODERATION_EVENTS = positiveNumber(process.env.MAX_ACCOUNT_MODERATION_EVENTS, 200);
 const MAX_QWEN_USAGE_EVENTS = positiveNumber(process.env.MAX_QWEN_USAGE_EVENTS, 200);
 const MAX_RUNTIME_EVENTS = positiveNumber(process.env.MAX_RUNTIME_EVENTS, 3000);
+const MAX_NATIVE_HEALTH_SYNC_DAYS = Math.min(60, Math.max(7, positiveNumber(process.env.MAX_NATIVE_HEALTH_SYNC_DAYS, 30)));
+const WEIGHT_PREDICTION_QUEUE_MAX = positiveNumber(process.env.WEIGHT_PREDICTION_QUEUE_MAX, 2000);
+const WEIGHT_PREDICTION_QUEUE_CONCURRENCY = Math.min(2, Math.max(1, positiveNumber(process.env.WEIGHT_PREDICTION_QUEUE_CONCURRENCY, 1)));
 const MAX_PHOTO_BYTES = positiveNumber(process.env.MAX_PHOTO_BYTES, 10 * 1024 * 1024);
 const MAX_DAILY_BODY_RECORDS_PER_USER = positiveNumber(process.env.MAX_DAILY_BODY_RECORDS_PER_USER, 20);
 const MAX_DAILY_FOOD_RECORDS_PER_USER = positiveNumber(process.env.MAX_DAILY_FOOD_RECORDS_PER_USER, 20);
@@ -231,6 +245,8 @@ let aiSummaryCache = { users: {} };
 let appConfig = { foodRecognitionPriority: DEFAULT_FOOD_RECOGNITION_PRIORITY, updatedAt: null, updatedBy: "" };
 let qwenUsage = { totals: {}, daily: {}, recent: [] };
 let runtimeEvents = [];
+let weightPredictions = { users: {} };
+let nativeHealthSnapshots = { users: {} };
 let logmealQuotaCache = null;
 let deepseekBalanceCache = null;
 const adminSessions = new Map();
@@ -243,6 +259,9 @@ const userPasskeyChallenges = new Map();
 const jsonWriteQueues = new Map();
 const rateLimitBuckets = new Map();
 const rateLimitPenalties = new Map();
+const weightPredictionQueue = [];
+const weightPredictionQueuedCodes = new Set();
+let weightPredictionActiveWorkers = 0;
 let baiduDishTokenCache = { token: "", expiresAt: 0 };
 let appleJwksCache = { keys: [], expiresAt: 0 };
 
@@ -273,6 +292,8 @@ async function initializeStorage() {
   appConfig = sanitizeAppConfig(await readJson(APP_CONFIG_PATH, {}));
   qwenUsage = sanitizeQwenUsage(await readJson(QWEN_USAGE_PATH, {}));
   runtimeEvents = sanitizeRuntimeEvents(await readJson(RUNTIME_EVENTS_PATH, []));
+  weightPredictions = sanitizeWeightPredictionStore(await readJson(WEIGHT_PREDICTIONS_PATH, {}));
+  nativeHealthSnapshots = sanitizeNativeHealthStore(await readJson(NATIVE_HEALTH_SNAPSHOTS_PATH, {}));
   deletedAccessCodes = sanitizeAccessCodes(await readJson(DELETED_ACCESS_CODES_PATH, []));
   customAccessCodes = sanitizeAccessCodes(await readJson(ACCESS_CODES_PATH, []))
     .filter((code) => !DEFAULT_ACCESS_CODES.includes(code) && !deletedAccessCodes.includes(code));
@@ -312,6 +333,8 @@ async function initializeStorage() {
   await writeJson(APP_CONFIG_PATH, appConfig);
   await writeJson(QWEN_USAGE_PATH, qwenUsage);
   await writeJson(RUNTIME_EVENTS_PATH, runtimeEvents);
+  await writeJson(WEIGHT_PREDICTIONS_PATH, weightPredictions);
+  await writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots);
 }
 
 async function readJson(filePath, fallback) {
@@ -3166,6 +3189,141 @@ function runtimeEventsSummary() {
     byEvent,
     recent
   };
+}
+
+function weightPredictionQueueStatus(code = "") {
+  const normalizedCode = String(code || "").trim();
+  return {
+    queued: normalizedCode ? weightPredictionQueuedCodes.has(normalizedCode) : false,
+    queueLength: weightPredictionQueue.length,
+    activeWorkers: weightPredictionActiveWorkers,
+    maxQueued: WEIGHT_PREDICTION_QUEUE_MAX,
+    concurrency: WEIGHT_PREDICTION_QUEUE_CONCURRENCY
+  };
+}
+
+function enqueueWeightPrediction(code, reason = "data_update") {
+  const normalizedCode = String(code || "").trim();
+  if (!CODE_PATTERN.test(normalizedCode) || !isKnownAccessCode(normalizedCode)) {
+    return false;
+  }
+  if (weightPredictionQueuedCodes.has(normalizedCode)) {
+    return true;
+  }
+  if (weightPredictionQueue.length >= WEIGHT_PREDICTION_QUEUE_MAX) {
+    void recordRuntimeEvent(null, {
+      level: "warning",
+      area: "weight_prediction",
+      event: "queue_overflow",
+      message: "体重预测队列已满，本次更新已跳过。",
+      details: {
+        code: normalizedCode,
+        reason: sanitizeLogText(reason, 80),
+        queueLength: weightPredictionQueue.length,
+        maxQueued: WEIGHT_PREDICTION_QUEUE_MAX
+      }
+    });
+    return false;
+  }
+
+  const queuedAt = new Date().toISOString();
+  const current = weightPredictions.users[normalizedCode] || {};
+  weightPredictions.users[normalizedCode] = {
+    ...current,
+    version: current.version || WEIGHT_PREDICTION_MODEL_VERSION,
+    userCode: normalizedCode,
+    status: current.tomorrow ? "updating" : "queued",
+    updatedAt: current.updatedAt || queuedAt,
+    queuedAt,
+    reason: sanitizeLogText(reason, 80)
+  };
+  weightPredictionQueue.push({ code: normalizedCode, reason: sanitizeLogText(reason, 80), queuedAt });
+  weightPredictionQueuedCodes.add(normalizedCode);
+  setTimeout(() => {
+    void processWeightPredictionQueue();
+  }, 0);
+  return true;
+}
+
+async function processWeightPredictionQueue() {
+  while (weightPredictionActiveWorkers < WEIGHT_PREDICTION_QUEUE_CONCURRENCY && weightPredictionQueue.length) {
+    const task = weightPredictionQueue.shift();
+    if (!task) return;
+    weightPredictionQueuedCodes.delete(task.code);
+    weightPredictionActiveWorkers += 1;
+    void runWeightPredictionTask(task).finally(() => {
+      weightPredictionActiveWorkers = Math.max(0, weightPredictionActiveWorkers - 1);
+      void processWeightPredictionQueue();
+    });
+  }
+}
+
+async function runWeightPredictionTask(task) {
+  const code = String(task?.code || "").trim();
+  const reason = sanitizeLogText(task?.reason || "queue", 80);
+  if (!CODE_PATTERN.test(code) || !isKnownAccessCode(code)) return;
+
+  try {
+    const previous = weightPredictions.users[code] || {};
+    const input = buildWeightPredictionInput({
+      code,
+      records: records[code] || [],
+      profile: publicProfile(code),
+      health: nativeHealthSnapshots.users[code],
+      now: new Date()
+    });
+    const prediction = computeWeightPrediction(input, previous.state || {});
+    weightPredictions.users[code] = {
+      ...prediction,
+      reason
+    };
+    await writeJson(WEIGHT_PREDICTIONS_PATH, weightPredictions);
+
+    if (prediction.status !== "ready") {
+      await recordRuntimeEvent(null, {
+        level: "info",
+        area: "weight_prediction",
+        event: "prediction_not_ready",
+        message: "体重预测暂未生成。",
+        details: {
+          code,
+          reason,
+          status: prediction.status,
+          dataWindow: prediction.dataWindow || {}
+        }
+      });
+    }
+  } catch (error) {
+    const current = weightPredictions.users[code] || {};
+    weightPredictions.users[code] = {
+      version: WEIGHT_PREDICTION_MODEL_VERSION,
+      userCode: code,
+      status: "error",
+      updatedAt: new Date().toISOString(),
+      queuedAt: null,
+      reason,
+      sourceHash: current.sourceHash || "",
+      dataWindow: current.dataWindow || {},
+      state: current.state || {},
+      tomorrow: current.tomorrow || null,
+      diagnostics: {
+        ...(current.diagnostics || {}),
+        error: sanitizeLogText(error?.message || "weight prediction failed", 200)
+      }
+    };
+    await writeJson(WEIGHT_PREDICTIONS_PATH, weightPredictions);
+    await recordRuntimeEvent(null, {
+      level: "error",
+      area: "weight_prediction",
+      event: "prediction_failed",
+      message: "体重预测计算失败。",
+      details: {
+        code,
+        reason,
+        error: sanitizeLogText(error?.message || String(error), 200)
+      }
+    });
+  }
 }
 
 function credentialDigest(value) {
@@ -10280,6 +10438,74 @@ async function handleApi(req, res, pathname) {
     });
   }
 
+  if (req.method === "GET" && pathname === "/api/weight-prediction") {
+    if (!hasFullPrivacyAccess(session.code)) {
+      return sendJson(res, 403, {
+        ok: false,
+        privacyRequired: true,
+        privacy: publicPrivacyStatus(session.code),
+        message: "需要完整模式授权后才能读取体重预测。"
+      });
+    }
+    const existing = publicWeightPrediction(weightPredictions.users[session.code] || null);
+    if (!existing || (!existing.tomorrow && !weightPredictionQueuedCodes.has(session.code))) {
+      enqueueWeightPrediction(session.code, "client_view");
+    }
+    return sendJson(res, 200, {
+      ok: true,
+      prediction: publicWeightPrediction(weightPredictions.users[session.code] || null),
+      queue: weightPredictionQueueStatus(session.code)
+    });
+  }
+
+  if (req.method === "POST" && pathname === "/api/weight-prediction/refresh") {
+    if (!hasFullPrivacyAccess(session.code)) {
+      return sendJson(res, 403, {
+        ok: false,
+        privacyRequired: true,
+        privacy: publicPrivacyStatus(session.code),
+        message: "需要完整模式授权后才能更新体重预测。"
+      });
+    }
+    enqueueWeightPrediction(session.code, "manual_refresh");
+    return sendJson(res, 202, {
+      ok: true,
+      prediction: publicWeightPrediction(weightPredictions.users[session.code] || null),
+      queue: weightPredictionQueueStatus(session.code)
+    });
+  }
+
+  if (req.method === "POST" && pathname === "/api/native-health/sync") {
+    if (!hasFullPrivacyAccess(session.code)) {
+      return sendJson(res, 403, {
+        ok: false,
+        privacyRequired: true,
+        privacy: publicPrivacyStatus(session.code),
+        message: "需要完整模式授权后才能同步健康数据。"
+      });
+    }
+    try {
+      const body = await readRequestJson(req);
+      const compact = compactNativeHealthSnapshot(body.snapshot || body, {
+        maxDays: MAX_NATIVE_HEALTH_SYNC_DAYS
+      });
+      nativeHealthSnapshots.users[session.code] = compact;
+      await writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots);
+      enqueueWeightPrediction(session.code, "native_health_sync");
+      return sendJson(res, 200, {
+        ok: true,
+        health: {
+          updatedAt: compact.updatedAt,
+          range: compact.range
+        },
+        prediction: publicWeightPrediction(weightPredictions.users[session.code] || null),
+        queue: weightPredictionQueueStatus(session.code)
+      });
+    } catch (error) {
+      return sendError(res, error.statusCode || 400, error.message);
+    }
+  }
+
   if (req.method === "POST" && pathname === "/api/ai-summary") {
     return handleAiSummaryStream(req, res, session);
   }
@@ -10489,6 +10715,7 @@ async function handleApi(req, res, pathname) {
     if (foodLibraryChanged) {
       await writeJson(FOOD_NUTRITION_LIBRARY_PATH, foodNutritionLibrary);
     }
+    enqueueWeightPrediction(session.code, "food_record_created");
     return sendJson(res, 201, { ok: true, record: publicRecord(record) });
   }
 
@@ -10648,6 +10875,7 @@ async function handleApi(req, res, pathname) {
 
     records[session.code].push(record);
     await writeJson(RECORDS_PATH, records);
+    enqueueWeightPrediction(session.code, "body_record_created");
 
     return sendJson(res, 201, { ok: true, record: publicRecord(record) });
   }
@@ -10671,6 +10899,7 @@ async function handleApi(req, res, pathname) {
     await deleteRecordPhotoFiles(session.code, deletedRecord);
 
     await writeJson(RECORDS_PATH, records);
+    enqueueWeightPrediction(session.code, "record_deleted");
     return sendJson(res, 200, { ok: true });
   }
 
