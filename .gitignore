@@ -38,5 +38,7 @@ backups/
 coverage/
 dist/
 
-# Local iOS wrapper experiments and Xcode build output
-ios/
+# Xcode build output
+ios/**/DerivedData/
+ios/**/*.xcuserstate
+ios/**/xcuserdata/

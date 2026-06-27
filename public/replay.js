@@ -14,6 +14,8 @@ const DANMAKU_ITEM_GAP_PX = 36;
 const DANMAKU_TRACK_TOP_PX = 7;
 const DANMAKU_TRACK_GAP_PX = 23;
 const API_TIMEOUT_MS = 20000;
+const PHOTO_DECODE_TIMEOUT_MS = 15000;
+const PHOTO_DECODE_RETRY_DELAYS = [350, 900];
 document.documentElement.dataset.environment = APP_BASE_PATH ? "test" : "production";
 document.documentElement.dataset.embedded = EMBEDDED ? "true" : "false";
 
@@ -97,52 +99,97 @@ function formatWeight(weight) {
   return EMBEDDED ? `${weight.toFixed(2)}kg` : `${weight.toFixed(2)} kg`;
 }
 
-function decodePhoto(url) {
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function decodePhotoOnce(url) {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.onload = resolve;
-    image.onerror = () => reject(new Error("照片解码失败。"));
+    let settled = false;
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      image.onload = null;
+      image.onerror = null;
+      reject(new Error("照片下载超时。"));
+    }, PHOTO_DECODE_TIMEOUT_MS);
+
+    function finish(error = null) {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      if (error) reject(error);
+      else resolve();
+    }
+
+    image.decoding = "async";
+    image.onload = async () => {
+      if (typeof image.decode === "function") {
+        try {
+          await image.decode();
+        } catch {
+          // Some mobile WebViews report decode races after a successful load.
+        }
+      }
+      finish();
+    };
+    image.onerror = () => finish(new Error("照片解码失败。"));
     image.src = url;
   });
+}
+
+async function decodePhoto(url) {
+  let lastError = null;
+  for (let attempt = 0; attempt <= PHOTO_DECODE_RETRY_DELAYS.length; attempt += 1) {
+    try {
+      await decodePhotoOnce(url);
+      return;
+    } catch (error) {
+      lastError = error;
+      const delay = PHOTO_DECODE_RETRY_DELAYS[attempt];
+      if (delay) {
+        await wait(delay);
+      }
+    }
+  }
+  throw lastError || new Error("照片解码失败。");
 }
 
 async function preparePhotoSources(records) {
   let nextIndex = 0;
   let completed = 0;
-  let loadError = null;
+  let failed = 0;
   els.loading.textContent = `正在下载 0/${records.length}`;
 
   async function worker() {
-    while (nextIndex < records.length && !loadError) {
+    while (nextIndex < records.length) {
       const index = nextIndex;
       nextIndex += 1;
       const record = records[index];
       try {
-        const response = await fetch(record.photoUrl, {
-          credentials: "same-origin",
-          cache: "force-cache"
-        });
-        if (!response.ok) {
-          throw new Error(`第 ${index + 1} 张照片载入失败。`);
-        }
-        const photoBlob = await response.blob();
-        const objectUrl = URL.createObjectURL(photoBlob);
-        state.objectUrls.push(objectUrl);
-        await decodePhoto(objectUrl);
-        record.preloadedPhotoUrl = objectUrl;
-        completed += 1;
-        els.loading.textContent = `正在下载 ${completed}/${records.length}`;
+        await decodePhoto(record.photoUrl);
+        record.preloadedPhotoUrl = record.photoUrl;
       } catch (error) {
-        loadError = error;
+        failed += 1;
+        record.preloadError = error.message || `第 ${index + 1} 张照片载入失败。`;
       }
+      completed += 1;
+      els.loading.textContent = failed
+        ? `正在下载 ${completed}/${records.length}，已跳过 ${failed} 张`
+        : `正在下载 ${completed}/${records.length}`;
     }
   }
 
-  const workers = Array.from({ length: Math.min(4, records.length) }, () => worker());
+  const workers = Array.from({ length: Math.min(3, records.length) }, () => worker());
   await Promise.all(workers);
-  if (loadError) {
-    throw loadError;
+  const loadedRecords = records.filter((record) => record.preloadedPhotoUrl);
+  if (!loadedRecords.length) {
+    throw new Error("照片下载失败，请稍后重试。");
   }
+  return loadedRecords;
 }
 
 function releasePhotoSources() {
@@ -447,22 +494,22 @@ async function init() {
       document.title = `${profileData.profile.label} · 变化回放`;
       recordData = ownRecordData;
     }
-    state.records = recordData.records
+    const photoRecords = recordData.records
       .filter((record) => record.photoUrl)
       .sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
     state.communityComments = Array.isArray(recordData.comments) ? recordData.comments : [];
 
-    if (!state.records.length) {
+    if (!photoRecords.length) {
       els.loading.classList.add("hidden");
       els.empty.classList.remove("hidden");
       return;
     }
 
+    state.records = await preparePhotoSources(photoRecords);
     els.total.textContent = String(state.records.length);
     els.timeline.max = String(state.records.length - 1);
     els.timelineStart.textContent = shortDateFormat.format(new Date(state.records[0].timestamp));
     els.timelineEnd.textContent = shortDateFormat.format(new Date(state.records.at(-1).timestamp));
-    await preparePhotoSources(state.records);
     renderFrame(0);
     els.loading.classList.add("hidden");
     els.content.classList.remove("hidden");

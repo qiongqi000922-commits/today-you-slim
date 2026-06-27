@@ -43,6 +43,7 @@
 │   └── models/             # 端侧模型文件
 ├── docs/                   # 架构和安全说明
 ├── deploy/                 # systemd 与安全冒烟测试示例
+├── ios/WellEcho/           # iOS/Xcode 工程，WKWebView + HealthKit 原生桥
 ├── scripts/verify.mjs      # 基础检查脚本
 ├── server.mjs              # 后端服务
 ├── .env.example            # 环境变量示例
@@ -68,6 +69,10 @@ http://localhost:3000
 
 本地如果不配置 QQ、AI 或文本安全密钥，对应功能会显示未配置或降级提示。
 
+## iOS 工程
+
+新的 iOS 工程位于 `ios/WellEcho/WellEcho.xcodeproj`。当前采用原生 Apple/Passkey 登录 + `WKWebView` 承载线上 Web 应用，并提供 HealthKit、定位和 Passkey 原生桥接。迁移说明见 `ios/WellEcho/PROJECT_SUMMARY.md`，上架资料见 `ios/WellEcho/APP_STORE_SUBMISSION.md`。
+
 ## 环境变量
 
 复制 `.env.example` 后按需填写。不要把 `.env`、证书、真实密钥或生产数据提交到 GitHub。
@@ -89,19 +94,42 @@ DEEPSEEK_API_KEY=
 TENCENT_TMS_SECRET_ID=
 TENCENT_TMS_SECRET_KEY=
 TENCENT_TMS_BIZ_TYPE=
+TENCENT_IMS_SECRET_ID=
+TENCENT_IMS_SECRET_KEY=
+TENCENT_IMS_BIZ_TYPE=
+IMAGE_SAFETY_FAIL_CLOSED=1
+
+# 可选：腾讯云 COS/CDN 媒体存储
+COS_ENABLED=0
+COS_BUCKET=
+COS_REGION=ap-shanghai
+COS_SECRET_ID=
+COS_SECRET_KEY=
+COS_MEDIA_PREFIX=photos
+COS_CDN_BASE_URL=https://media.example.com
+MEDIA_URL_MODE=api
+MEDIA_SIGNED_URL_TTL_SECONDS=86400
+MEDIA_UPLOAD_FALLBACK_LOCAL=1
+MEDIA_KEEP_LOCAL_COPY=0
 ```
 
 管理台生产环境建议使用 Passkey，并将初始化用的密码或密码哈希放在服务器私有环境变量中。
 
 ## 数据与隐私
 
-项目默认使用 JSON 文件和本地照片目录保存数据：
+项目默认使用 JSON 文件和本地照片目录保存数据，也支持将照片迁移到腾讯云 COS，并通过 CDN 域名访问：
 
 - `data/records.json`
 - `data/qq-accounts.json`
 - `data/community*.json`
 - `data/privacy-consents.json`
 - `data/photos/`
+
+迁移本地照片到 COS：
+
+```bash
+DATA_DIR=/path/to/data COS_ENABLED=1 COS_BUCKET=... COS_REGION=... COS_SECRET_ID=... COS_SECRET_KEY=... node scripts/migrate-media-to-cos.mjs
+```
 
 这些文件包含用户资料、照片、体重、评论、登录审计等敏感信息，仓库已默认忽略 `data/`。公开部署前请使用独立数据目录，并做好备份、权限和访问控制。
 

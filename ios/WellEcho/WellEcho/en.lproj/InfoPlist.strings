@@ -1,0 +1,6 @@
+"CFBundleDisplayName" = "WellEcho";
+"NSCameraUsageDescription" = "Used to take body-record photos and food photos that you choose to save.";
+"NSPhotoLibraryUsageDescription" = "Used only when you choose an existing photo for a record.";
+"NSLocationWhenInUseUsageDescription" = "Used, with your permission, to add local weather and environment context to AI suggestions.";
+"NSHealthShareUsageDescription" = "Used, with your permission, to read recent weight, heart rate, steps, active energy, and exercise minutes for trends and summaries.";
+"NSHealthUpdateUsageDescription" = "WellEcho does not write Health data in this version.";

@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f4f6f5">
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
-    <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" href="/favicon.svg?v=20260624-noglow" type="image/svg+xml">
+    <link rel="icon" href="/favicon-32.png?v=20260624-noglow" sizes="32x32" type="image/png">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260624-noglow">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260624-noglow">
     <title>管理台 · 今天你瘦了吗?</title>
-    <link rel="stylesheet" href="./styles.css?v=20260621-qwenonly1">
+    <link rel="stylesheet" href="./styles.css?v=20260626-admin1">
   </head>
   <body>
     <div class="admin-pull-refresh" id="adminPullRefresh" aria-live="polite" aria-hidden="true">
@@ -24,7 +24,7 @@
     <main class="admin-root">
       <section class="admin-login" id="adminLoginView">
         <div class="login-title">
-          <p class="eyebrow">今天你瘦了吗?</p>
+          <p class="eyebrow" data-i18n-brand>今天你瘦了吗?</p>
           <h1>管理台</h1>
         </div>
         <form class="login-form" id="adminLoginForm">
@@ -47,7 +47,7 @@
       <section class="admin-shell hidden" id="adminShell">
         <header class="admin-header">
           <div>
-            <p class="eyebrow">今天你瘦了吗?</p>
+            <p class="eyebrow" data-i18n-brand>今天你瘦了吗?</p>
             <h1>管理台</h1>
           </div>
           <div class="header-actions">
@@ -57,21 +57,101 @@
           </div>
         </header>
 
+        <div class="ops-status-strip" aria-label="关键状态">
+          <div class="ops-status-item" data-tone="neutral">
+            <span id="opsHealthBadge">健康</span>
+            <strong id="opsHealthText">等待刷新</strong>
+          </div>
+          <div class="ops-status-item" data-tone="neutral">
+            <span id="opsRuntimeBadge">运行</span>
+            <strong id="opsRuntimeText">等待日志</strong>
+          </div>
+          <div class="ops-status-item" data-tone="neutral">
+            <span id="opsStorageBadge">容量</span>
+            <strong id="opsStorageText">等待服务器</strong>
+          </div>
+          <div class="ops-status-item" data-tone="neutral">
+            <span id="opsQuotaBadge">AI</span>
+            <strong id="opsQuotaText">等待用量</strong>
+          </div>
+        </div>
+
         <nav class="admin-section-nav" aria-label="管理台模块">
-          <button class="admin-section-tab is-active" type="button" data-admin-section="overview">运营概览</button>
-          <button class="admin-section-tab" type="button" data-admin-section="server">服务器状态</button>
-          <button class="admin-section-tab" type="button" data-admin-section="quota">接口额度</button>
-          <button class="admin-section-tab" type="button" data-admin-section="accounts">账户数据</button>
-          <button class="admin-section-tab" type="button" data-admin-section="moderation">治理中心</button>
-          <button class="admin-section-tab" type="button" data-admin-section="security">安全审计</button>
+          <div class="admin-nav-group">
+            <span>指挥中心</span>
+            <button class="admin-section-tab is-active" type="button" data-admin-section="overview" data-icon="总">运营概览</button>
+            <button class="admin-section-tab" type="button" data-admin-section="runtime" data-icon="告">运行日志</button>
+          </div>
+          <div class="admin-nav-group">
+            <span>基础设施</span>
+            <button class="admin-section-tab" type="button" data-admin-section="server" data-icon="服">服务器状态</button>
+            <button class="admin-section-tab" type="button" data-admin-section="quota" data-icon="额">接口额度</button>
+            <button class="admin-section-tab" type="button" data-admin-section="security" data-icon="审">安全审计</button>
+          </div>
+          <div class="admin-nav-group">
+            <span>业务管理</span>
+            <button class="admin-section-tab" type="button" data-admin-section="accounts" data-icon="户">账户数据</button>
+            <button class="admin-section-tab" type="button" data-admin-section="moderation" data-icon="治">治理中心</button>
+          </div>
         </nav>
 
+        <div class="admin-workspace">
         <section class="admin-panel" data-admin-section-panel="overview" aria-labelledby="overviewTitle">
           <div class="admin-panel-heading">
             <div>
               <span>Overview</span>
               <h2 id="overviewTitle">运营概览</h2>
             </div>
+            <span class="panel-meta" id="overviewUpdatedAt">等待刷新</span>
+          </div>
+          <div class="overview-command-grid" aria-label="运营总控">
+            <section class="overview-command-card is-primary" aria-labelledby="dashboardHealthTitle">
+              <div class="overview-command-heading">
+                <span>系统健康</span>
+                <strong id="dashboardHealthTitle">等待数据</strong>
+              </div>
+              <p id="dashboardHealthMeta">同步服务器、账号和日志后生成状态判断。</p>
+              <div class="dashboard-list" id="dashboardHealthList"></div>
+            </section>
+            <section class="overview-command-card" aria-labelledby="dashboardRiskTitle">
+              <div class="overview-command-heading">
+                <span>风险队列</span>
+                <strong id="dashboardRiskTitle">待巡检</strong>
+              </div>
+              <p id="dashboardRiskMeta">集中展示告警、举报和异常登录。</p>
+              <div class="dashboard-list" id="dashboardRiskList"></div>
+              <div class="overview-action-row">
+                <button class="secondary-button" type="button" data-jump-section="runtime">查看日志</button>
+                <button class="secondary-button" type="button" data-jump-section="moderation">处理举报</button>
+              </div>
+            </section>
+            <section class="overview-command-card" aria-labelledby="dashboardCapacityTitle">
+              <div class="overview-command-heading">
+                <span>容量与注册</span>
+                <strong id="dashboardCapacityTitle">等待估算</strong>
+              </div>
+              <p id="dashboardCapacityMeta">容量阈值用于保护当前服务器稳定运行。</p>
+              <div class="dashboard-progress" aria-hidden="true"><span id="dashboardCapacityBar"></span></div>
+              <div class="dashboard-list" id="dashboardCapacityList"></div>
+              <div class="overview-action-row">
+                <button class="secondary-button" type="button" data-jump-section="server">容量设置</button>
+              </div>
+            </section>
+            <section class="overview-command-card" aria-labelledby="dashboardAiTitle">
+              <div class="overview-command-heading">
+                <span>AI 与识别</span>
+                <strong id="dashboardAiTitle">等待用量</strong>
+              </div>
+              <p id="dashboardAiMeta">千问视觉、DeepSeek 总结和食物识别策略。</p>
+              <div class="dashboard-list" id="dashboardAiList"></div>
+              <div class="overview-action-row">
+                <button class="secondary-button" type="button" data-jump-section="quota">查看额度</button>
+              </div>
+            </section>
+          </div>
+          <div class="admin-panel-subheading">
+            <span>业务指标</span>
+            <strong>账户、记录与签署状态</strong>
           </div>
           <div class="summary-strip" aria-label="总体数据">
             <div><span>全部账户</span><strong id="accountCount">0</strong></div>
@@ -135,6 +215,46 @@
               <div class="server-action-row">
                 <button class="secondary-button" id="saveFoodRecognitionPriorityButton" type="button">保存优先级</button>
               </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-section-panel="runtime" aria-labelledby="runtimeTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>Runtime</span>
+              <h2 id="runtimeTitle">运行日志</h2>
+            </div>
+            <span class="panel-meta" id="runtimeUpdatedAt">等待刷新</span>
+          </div>
+          <div class="runtime-layout">
+            <section class="runtime-card runtime-overview-card" aria-labelledby="runtimeOverviewTitle">
+              <div class="records-header">
+                <h3 id="runtimeOverviewTitle">运行告警</h3>
+                <span id="runtimeOverviewMeta">-</span>
+              </div>
+              <div class="runtime-summary-strip" aria-label="运行事件概览">
+                <div><span>24小时告警</span><strong id="runtimeWarningCount">0</strong></div>
+                <div><span>24小时错误</span><strong id="runtimeErrorCount">0</strong></div>
+                <div><span>兜底事件</span><strong id="runtimeFallbackCount">0</strong></div>
+                <div><span>全部事件</span><strong id="runtimeTotalCount">0</strong></div>
+              </div>
+              <div class="runtime-chart" id="runtimeHourlyChart" aria-label="最近24小时运行事件"></div>
+              <div class="runtime-top-events" id="runtimeTopEvents"></div>
+            </section>
+            <section class="runtime-card" aria-labelledby="runtimeAreaTitle">
+              <div class="records-header">
+                <h3 id="runtimeAreaTitle">主要模块</h3>
+                <span id="runtimeAreaMeta">暂无数据</span>
+              </div>
+              <div class="runtime-area-list" id="runtimeAreaList"></div>
+            </section>
+            <section class="runtime-card runtime-event-card" aria-labelledby="runtimeRecentTitle">
+              <div class="records-header">
+                <h3 id="runtimeRecentTitle">最近事件</h3>
+                <button class="secondary-button" id="clearRuntimeEventsButton" type="button">清空日志</button>
+              </div>
+              <div class="runtime-event-list" id="runtimeEventList"></div>
             </section>
           </div>
         </section>
@@ -395,6 +515,7 @@
           </section>
           </div>
         </section>
+        </div>
       </section>
     </main>
 
@@ -422,6 +543,6 @@
     </dialog>
 
     <script src="../shared.js?v=20260621-arch1" defer></script>
-    <script src="./app.js?v=20260621-qwenonly1" defer></script>
+    <script src="./app.js?v=20260626-admin1" defer></script>
   </body>
 </html>
