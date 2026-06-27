@@ -6,6 +6,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
+import { createCosMediaStorage, mediaStorageConfigFromEnv } from "./lib/cos-media.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, "public");
@@ -19,6 +20,7 @@ const COMMUNITY_PATH = path.join(DATA_DIR, "community.json");
 const COMMUNITY_INTERACTIONS_PATH = path.join(DATA_DIR, "community-interactions.json");
 const PRIVACY_CONSENTS_PATH = path.join(DATA_DIR, "privacy-consents.json");
 const QQ_ACCOUNTS_PATH = path.join(DATA_DIR, "qq-accounts.json");
+const APPLE_ACCOUNTS_PATH = path.join(DATA_DIR, "apple-accounts.json");
 const LOGIN_AUDIT_PATH = path.join(DATA_DIR, "login-audit.json");
 const ADMIN_AUTH_EVENTS_PATH = path.join(DATA_DIR, "admin-auth-events.json");
 const ADMIN_PASSKEYS_PATH = path.join(DATA_DIR, "admin-passkeys.json");
@@ -26,11 +28,13 @@ const USER_PASSKEYS_PATH = path.join(DATA_DIR, "user-passkeys.json");
 const TEXT_RISK_PATH = path.join(DATA_DIR, "text-risk.json");
 const ACCOUNT_GOVERNANCE_PATH = path.join(DATA_DIR, "account-governance.json");
 const MODERATION_QUEUE_PATH = path.join(DATA_DIR, "moderation-queue.json");
+const MODERATION_ATTACHMENT_DIR = path.join(DATA_DIR, "moderation-attachments");
 const CAPACITY_CONTROL_PATH = path.join(DATA_DIR, "capacity-control.json");
 const FOOD_NUTRITION_LIBRARY_PATH = path.join(DATA_DIR, "food-nutrition-library.json");
 const AI_SUMMARY_CACHE_PATH = path.join(DATA_DIR, "ai-summary-cache.json");
 const APP_CONFIG_PATH = path.join(DATA_DIR, "app-config.json");
 const QWEN_USAGE_PATH = path.join(DATA_DIR, "qwen-usage.json");
+const RUNTIME_EVENTS_PATH = path.join(DATA_DIR, "runtime-events.json");
 const BASE_PATH = normalizeBasePath(process.env.BASE_PATH || "");
 const ADMIN_PATH = normalizeAdminPath(process.env.ADMIN_PATH || "/admin");
 const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || "admin").trim();
@@ -39,6 +43,7 @@ const ADMIN_PASSWORD_HASH = String(process.env.ADMIN_PASSWORD_HASH || "").trim()
 const SESSION_COOKIE_NAME = String(process.env.SESSION_COOKIE_NAME || "jf_session");
 const ADMIN_SESSION_COOKIE_NAME = String(process.env.ADMIN_SESSION_COOKIE_NAME || "jf_admin");
 const QQ_STATE_COOKIE_NAME = String(process.env.QQ_STATE_COOKIE_NAME || "jf_qq_state");
+const APPLE_STATE_COOKIE_NAME = String(process.env.APPLE_STATE_COOKIE_NAME || "jf_apple_state");
 const TEST_PROXY_PATH = normalizeBasePath(process.env.TEST_PROXY_PATH || "");
 const TEST_PROXY_TARGET = String(process.env.TEST_PROXY_TARGET || "").trim();
 const DEFAULT_ACCESS_CODES = (process.env.ACCESS_CODES || "jianfei111,jianfei222,jianfei333,qiongqi111,qiongqi222,qiongqi333")
@@ -60,6 +65,7 @@ const MAX_LOGIN_AUDIT_EVENTS = positiveNumber(process.env.MAX_LOGIN_AUDIT_EVENTS
 const MAX_MODERATION_QUEUE_ITEMS = positiveNumber(process.env.MAX_MODERATION_QUEUE_ITEMS, 2000);
 const MAX_ACCOUNT_MODERATION_EVENTS = positiveNumber(process.env.MAX_ACCOUNT_MODERATION_EVENTS, 200);
 const MAX_QWEN_USAGE_EVENTS = positiveNumber(process.env.MAX_QWEN_USAGE_EVENTS, 200);
+const MAX_RUNTIME_EVENTS = positiveNumber(process.env.MAX_RUNTIME_EVENTS, 3000);
 const MAX_PHOTO_BYTES = positiveNumber(process.env.MAX_PHOTO_BYTES, 10 * 1024 * 1024);
 const MAX_DAILY_BODY_RECORDS_PER_USER = positiveNumber(process.env.MAX_DAILY_BODY_RECORDS_PER_USER, 20);
 const MAX_DAILY_FOOD_RECORDS_PER_USER = positiveNumber(process.env.MAX_DAILY_FOOD_RECORDS_PER_USER, 20);
@@ -111,16 +117,32 @@ const DEFAULT_FOOD_RECOGNITION_PRIORITY = sanitizeFoodRecognitionPriority(
 const MAX_MOOD_LENGTH = 60;
 const MAX_COMMENT_LENGTH = 120;
 const MAX_FEEDBACK_TEXT_LENGTH = 500;
+const MAX_FEEDBACK_IMAGES = 6;
+const MAX_FEEDBACK_IMAGE_BYTES = positiveNumber(process.env.MAX_FEEDBACK_IMAGE_BYTES, Math.floor(1.8 * 1024 * 1024));
+const MAX_FEEDBACK_BODY_BYTES = positiveNumber(process.env.MAX_FEEDBACK_BODY_BYTES, Math.floor(13.5 * 1024 * 1024));
 const CODE_PATTERN = /^[A-Za-z0-9_-]{6,32}$/;
 const RESOURCE_ID_PATTERN = /^[A-Za-z0-9_-]{6,80}$/;
-const AGREEMENT_VERSION = "2026-06-19";
-const PRIVACY_POLICY_VERSION = "2026-06-19";
+const AGREEMENT_VERSION = "2026-06-25";
+const PRIVACY_POLICY_VERSION = "2026-06-25";
 const PRIVACY_AUDIT_SALT = String(process.env.PRIVACY_AUDIT_SALT || ADMIN_PASSWORD || "privacy-audit-development-salt");
 const QQ_APP_ID = String(process.env.QQ_APP_ID || process.env.QQ_CLIENT_ID || "").trim();
 const QQ_APP_KEY = String(process.env.QQ_APP_KEY || process.env.QQ_CLIENT_SECRET || "").trim();
 const QQ_CALLBACK_URL = String(process.env.QQ_CALLBACK_URL || "http://localhost:3000/api/auth/qq/callback").trim();
 const QQ_AUTH_SCOPE = String(process.env.QQ_AUTH_SCOPE || "get_user_info").trim();
 const QQ_ONLY_LOGIN = String(process.env.QQ_ONLY_LOGIN || "1").trim() !== "0";
+const APPLE_BUNDLE_ID = String(process.env.APPLE_BUNDLE_ID || "top.furby.wellecho").trim();
+const APPLE_WEB_CLIENT_ID = String(process.env.APPLE_WEB_CLIENT_ID || process.env.APPLE_SERVICE_ID || "").trim();
+const APPLE_WEB_REDIRECT_URL = String(process.env.APPLE_WEB_REDIRECT_URL || process.env.APPLE_REDIRECT_URL || "").trim();
+const APPLE_WEB_CLIENT_SECRET = String(process.env.APPLE_WEB_CLIENT_SECRET || process.env.APPLE_CLIENT_SECRET || "").trim();
+const APPLE_TEAM_ID = String(process.env.APPLE_TEAM_ID || "").trim();
+const APPLE_KEY_ID = String(process.env.APPLE_KEY_ID || "").trim();
+const APPLE_PRIVATE_KEY = String(process.env.APPLE_PRIVATE_KEY || "").replace(/\\n/g, "\n").trim();
+const APPLE_PRIVATE_KEY_PATH = String(process.env.APPLE_PRIVATE_KEY_PATH || "").trim();
+const APPLE_TOKEN_URL = String(process.env.APPLE_TOKEN_URL || "https://appleid.apple.com/auth/token").trim();
+const APPLE_JWKS_URL = String(process.env.APPLE_JWKS_URL || "https://appleid.apple.com/auth/keys").trim();
+const APPLE_AUTH_TIMEOUT_MS = positiveNumber(process.env.APPLE_AUTH_TIMEOUT_MS, 10 * 1000);
+const TEST_LOGIN_ENABLED = String(process.env.ENABLE_TEST_LOGIN || "").trim() === "1" || BASE_PATH === "/test";
+const TEST_LOGIN_ACCOUNT_CODE = String(process.env.TEST_LOGIN_ACCOUNT_CODE || "test_fixed_account").trim();
 const QQ_OAUTH_TTL_MS = 10 * 60 * 1000;
 const TENCENT_TMS_SECRET_ID = String(process.env.TENCENT_TMS_SECRET_ID || "").trim();
 const TENCENT_TMS_SECRET_KEY = String(process.env.TENCENT_TMS_SECRET_KEY || "").trim();
@@ -130,21 +152,32 @@ const TENCENT_TMS_ENDPOINT = "tms.tencentcloudapi.com";
 const TENCENT_TMS_ACTION = "TextModeration";
 const TENCENT_TMS_VERSION = "2020-12-29";
 const TEXT_SAFETY_FAIL_CLOSED = String(process.env.TEXT_SAFETY_FAIL_CLOSED || "1").trim() !== "0";
+const TENCENT_IMS_SECRET_ID = String(process.env.TENCENT_IMS_SECRET_ID || TENCENT_TMS_SECRET_ID || "").trim();
+const TENCENT_IMS_SECRET_KEY = String(process.env.TENCENT_IMS_SECRET_KEY || TENCENT_TMS_SECRET_KEY || "").trim();
+const TENCENT_IMS_BIZ_TYPE = String(process.env.TENCENT_IMS_BIZ_TYPE || process.env.TENCENT_IMAGE_BIZ_TYPE || TENCENT_TMS_BIZ_TYPE || "").trim();
+const TENCENT_IMS_REGION = String(process.env.TENCENT_IMS_REGION || TENCENT_TMS_REGION || "ap-guangzhou").trim();
+const TENCENT_IMS_ENDPOINT = "ims.tencentcloudapi.com";
+const TENCENT_IMS_ACTION = "ImageModeration";
+const TENCENT_IMS_VERSION = "2020-12-29";
+const IMAGE_SAFETY_FAIL_CLOSED = String(process.env.IMAGE_SAFETY_FAIL_CLOSED || "1").trim() !== "0";
+const IMAGE_SAFETY_TIMEOUT_MS = positiveNumber(process.env.IMAGE_SAFETY_TIMEOUT_MS, 8 * 1000);
+const IMAGE_SAFETY_MAX_RAW_BYTES = Math.min(MAX_PHOTO_BYTES, positiveNumber(process.env.IMAGE_SAFETY_MAX_RAW_BYTES, 7 * 1024 * 1024));
 const TEXT_RISK_WINDOW_MS = positiveNumber(process.env.TEXT_RISK_WINDOW_MS, 10 * 60 * 1000);
 const RATE_LIMIT_ENABLED = String(process.env.RATE_LIMIT_ENABLED || "1").trim() !== "0";
-const RATE_LIMIT_GLOBAL_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_GLOBAL_PER_MINUTE, 260);
-const RATE_LIMIT_API_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_API_PER_MINUTE, 140);
-const RATE_LIMIT_STATIC_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_STATIC_PER_MINUTE, 420);
-const RATE_LIMIT_AUTH_PER_10_MINUTES = positiveNumber(process.env.RATE_LIMIT_AUTH_PER_10_MINUTES, 36);
+const RATE_LIMIT_GLOBAL_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_GLOBAL_PER_MINUTE, 1200);
+const RATE_LIMIT_API_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_API_PER_MINUTE, 420);
+const RATE_LIMIT_MEDIA_READ_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_MEDIA_READ_PER_MINUTE, 1800);
+const RATE_LIMIT_STATIC_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_STATIC_PER_MINUTE, 900);
+const RATE_LIMIT_AUTH_PER_10_MINUTES = positiveNumber(process.env.RATE_LIMIT_AUTH_PER_10_MINUTES, 80);
 const RATE_LIMIT_ADMIN_AUTH_PER_15_MINUTES = positiveNumber(process.env.RATE_LIMIT_ADMIN_AUTH_PER_15_MINUTES, 20);
-const RATE_LIMIT_MUTATION_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_MUTATION_PER_MINUTE, 70);
+const RATE_LIMIT_MUTATION_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_MUTATION_PER_MINUTE, 160);
 const RATE_LIMIT_UPLOAD_PER_10_MINUTES = positiveNumber(process.env.RATE_LIMIT_UPLOAD_PER_10_MINUTES, 28);
 const RATE_LIMIT_USER_UPLOAD_PER_10_MINUTES = positiveNumber(process.env.RATE_LIMIT_USER_UPLOAD_PER_10_MINUTES, 18);
 const RATE_LIMIT_USER_TEXT_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_USER_TEXT_PER_MINUTE, 20);
 const RATE_LIMIT_USER_AI_PER_HOUR = positiveNumber(process.env.RATE_LIMIT_USER_AI_PER_HOUR, 12);
-const RATE_LIMIT_CLIENT_LOG_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_CLIENT_LOG_PER_MINUTE, 20);
-const RATE_LIMIT_BLOCK_THRESHOLD = positiveNumber(process.env.RATE_LIMIT_BLOCK_THRESHOLD, 8);
-const RATE_LIMIT_BLOCK_MS = positiveNumber(process.env.RATE_LIMIT_BLOCK_MS, 60 * 1000);
+const RATE_LIMIT_CLIENT_LOG_PER_MINUTE = positiveNumber(process.env.RATE_LIMIT_CLIENT_LOG_PER_MINUTE, 120);
+const RATE_LIMIT_BLOCK_THRESHOLD = positiveNumber(process.env.RATE_LIMIT_BLOCK_THRESHOLD, 40);
+const RATE_LIMIT_BLOCK_MS = positiveNumber(process.env.RATE_LIMIT_BLOCK_MS, 15 * 1000);
 const TRUSTED_PROXY_IPS = new Set(
   String(process.env.TRUSTED_PROXY_IPS || "127.0.0.1,::1")
     .split(",")
@@ -173,6 +206,9 @@ const MIME_TYPES = {
   ".ico": "image/x-icon"
 };
 
+const mediaStorage = createCosMediaStorage(mediaStorageConfigFromEnv(process.env));
+const MEDIA_CSP_SOURCE = mediaStorage.enabled ? mediaStorage.cspSource() : "";
+
 let records = {};
 let sessions = {};
 let customAccessCodes = [];
@@ -181,6 +217,7 @@ let communityPreferences = {};
 let communityInteractions = { likes: {}, comments: {} };
 let privacyConsents = {};
 let qqAccounts = {};
+let appleAccounts = {};
 let loginAuditEvents = [];
 let adminAuthEvents = [];
 let adminPasskeys = { credentials: [], passwordLoginDisabled: false };
@@ -193,23 +230,28 @@ let foodNutritionLibrary = { users: {} };
 let aiSummaryCache = { users: {} };
 let appConfig = { foodRecognitionPriority: DEFAULT_FOOD_RECOGNITION_PRIORITY, updatedAt: null, updatedBy: "" };
 let qwenUsage = { totals: {}, daily: {}, recent: [] };
+let runtimeEvents = [];
 let logmealQuotaCache = null;
 let deepseekBalanceCache = null;
 const adminSessions = new Map();
 const adminLoginAttempts = new Map();
 const qqOAuthStates = new Map();
+const qqNativeAuthTokens = new Map();
+const appleOAuthStates = new Map();
 const adminPasskeyChallenges = new Map();
 const userPasskeyChallenges = new Map();
 const jsonWriteQueues = new Map();
 const rateLimitBuckets = new Map();
 const rateLimitPenalties = new Map();
 let baiduDishTokenCache = { token: "", expiresAt: 0 };
+let appleJwksCache = { keys: [], expiresAt: 0 };
 
 await initializeStorage();
 
 async function initializeStorage() {
   await fsp.mkdir(DATA_DIR, { recursive: true });
   await fsp.mkdir(PHOTO_DIR, { recursive: true });
+  await fsp.mkdir(MODERATION_ATTACHMENT_DIR, { recursive: true });
 
   records = await readJson(RECORDS_PATH, {});
   sessions = await readJson(SESSIONS_PATH, {});
@@ -217,6 +259,7 @@ async function initializeStorage() {
   communityInteractions = sanitizeCommunityInteractions(await readJson(COMMUNITY_INTERACTIONS_PATH, {}));
   privacyConsents = sanitizePrivacyConsents(await readJson(PRIVACY_CONSENTS_PATH, {}));
   qqAccounts = sanitizeQqAccounts(await readJson(QQ_ACCOUNTS_PATH, {}));
+  appleAccounts = sanitizeAppleAccounts(await readJson(APPLE_ACCOUNTS_PATH, {}));
   loginAuditEvents = sanitizeLoginAuditEvents(await readJson(LOGIN_AUDIT_PATH, []));
   adminAuthEvents = sanitizeAdminAuthEvents(await readJson(ADMIN_AUTH_EVENTS_PATH, []));
   adminPasskeys = sanitizeAdminPasskeys(await readJson(ADMIN_PASSKEYS_PATH, {}));
@@ -229,6 +272,7 @@ async function initializeStorage() {
   aiSummaryCache = sanitizeAiSummaryCache(await readJson(AI_SUMMARY_CACHE_PATH, {}));
   appConfig = sanitizeAppConfig(await readJson(APP_CONFIG_PATH, {}));
   qwenUsage = sanitizeQwenUsage(await readJson(QWEN_USAGE_PATH, {}));
+  runtimeEvents = sanitizeRuntimeEvents(await readJson(RUNTIME_EVENTS_PATH, []));
   deletedAccessCodes = sanitizeAccessCodes(await readJson(DELETED_ACCESS_CODES_PATH, []));
   customAccessCodes = sanitizeAccessCodes(await readJson(ACCESS_CODES_PATH, []))
     .filter((code) => !DEFAULT_ACCESS_CODES.includes(code) && !deletedAccessCodes.includes(code));
@@ -254,6 +298,7 @@ async function initializeStorage() {
   await writeJson(COMMUNITY_INTERACTIONS_PATH, communityInteractions);
   await writeJson(PRIVACY_CONSENTS_PATH, privacyConsents);
   await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+  await writeJson(APPLE_ACCOUNTS_PATH, appleAccounts);
   await writeJson(LOGIN_AUDIT_PATH, loginAuditEvents);
   await writeJson(ADMIN_AUTH_EVENTS_PATH, adminAuthEvents);
   await writeJson(ADMIN_PASSKEYS_PATH, adminPasskeys);
@@ -266,6 +311,7 @@ async function initializeStorage() {
   await writeJson(AI_SUMMARY_CACHE_PATH, aiSummaryCache);
   await writeJson(APP_CONFIG_PATH, appConfig);
   await writeJson(QWEN_USAGE_PATH, qwenUsage);
+  await writeJson(RUNTIME_EVENTS_PATH, runtimeEvents);
 }
 
 async function readJson(filePath, fallback) {
@@ -306,9 +352,10 @@ function baseSecurityHeaders(req, { admin = false, html = false } = {}) {
   };
 
   if (html) {
+    const mediaImgSource = MEDIA_CSP_SOURCE ? ` ${MEDIA_CSP_SOURCE}` : "";
     headers["Content-Security-Policy"] = admin
-      ? "default-src 'self'; img-src 'self' data: https://*.qlogo.cn https://qzapp.qlogo.cn https://thirdqq.qlogo.cn; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
-      : "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob: https://*.qlogo.cn https://qzapp.qlogo.cn https://thirdqq.qlogo.cn; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'";
+      ? `default-src 'self'; img-src 'self' data:${mediaImgSource} https://*.qlogo.cn https://qzapp.qlogo.cn https://thirdqq.qlogo.cn; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`
+      : `default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval' 'unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net${mediaImgSource}; img-src 'self' data: blob:${mediaImgSource} https://*.qlogo.cn https://qzapp.qlogo.cn https://thirdqq.qlogo.cn; media-src 'self' blob:${mediaImgSource}; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'`;
   }
 
   if (req && isSecureRequest(req)) {
@@ -396,6 +443,13 @@ function requestOriginAllowed(req) {
   try {
     const url = new URL(origin);
     const host = url.hostname.toLowerCase();
+    const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
+    if (req.method === "POST"
+      && pathname === withBasePath("/api/auth/apple/callback")
+      && url.protocol === "https:"
+      && host === "appleid.apple.com") {
+      return true;
+    }
     return ["http:", "https:"].includes(url.protocol)
       && ALLOWED_HOSTS.has(host)
       && host === requestHostName(req);
@@ -456,6 +510,7 @@ function rateLimitMax(scope) {
   return {
     global: RATE_LIMIT_GLOBAL_PER_MINUTE,
     api: RATE_LIMIT_API_PER_MINUTE,
+    "media-read": RATE_LIMIT_MEDIA_READ_PER_MINUTE,
     static: RATE_LIMIT_STATIC_PER_MINUTE,
     auth: RATE_LIMIT_AUTH_PER_10_MINUTES,
     "admin-auth": RATE_LIMIT_ADMIN_AUTH_PER_15_MINUTES,
@@ -532,6 +587,14 @@ function noteRateLimitViolation(req, scope) {
       ipDigest: key,
       blockedForMs: RATE_LIMIT_BLOCK_MS
     }));
+    void recordRuntimeEvent(req, {
+      level: "warning",
+      area: "security",
+      event: "ip_temporary_throttle",
+      message: "IP 触发临时限流。",
+      source: "server",
+      details: { scope, blockedForMs: RATE_LIMIT_BLOCK_MS }
+    }).catch(() => {});
   }
 }
 
@@ -555,13 +618,25 @@ function assertRateLimit(req, scope, identity) {
   throw rateLimitError(limit);
 }
 
-function sendRateLimited(req, res, limit) {
-  noteRateLimitViolation(req, limit.scope);
+function sendRateLimited(req, res, limit, { recordViolation = true } = {}) {
+  if (recordViolation) {
+    noteRateLimitViolation(req, limit.scope);
+  }
   return sendJson(res, 429, { ok: false, message: "请求过于频繁，请稍后再试。" }, {
     "Retry-After": String(Math.max(1, Math.ceil(limit.retryAfterMs / 1000))),
     "X-RateLimit-Limit": String(limit.max),
     "X-RateLimit-Scope": limit.scope
   });
+}
+
+function isMediaReadRequest(req, pathname) {
+  if (!["GET", "HEAD"].includes(req.method)) return false;
+  return /^\/api\/(?:photos|thumbnails)\/[^/]+$/.test(pathname)
+    || /^\/api\/food-(?:photos|thumbnails)\/[^/]+\/[^/]+$/.test(pathname)
+    || /^\/api\/community\/(?:photos|thumbnails)\/[^/]+\/[^/]+$/.test(pathname)
+    || /^\/api\/community\/food-(?:photos|thumbnails)\/[^/]+\/[^/]+\/[^/]+$/.test(pathname)
+    || new RegExp(`^${ADMIN_PATH.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/api\\/(?:photos|thumbnails)\\/[^/]+\\/[^/]+$`).test(pathname)
+    || new RegExp(`^${ADMIN_PATH.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/api\\/food-(?:photos|thumbnails)\\/[^/]+\\/[^/]+\\/[^/]+$`).test(pathname);
 }
 
 function rateLimitScopesForRequest(req, pathname) {
@@ -571,9 +646,18 @@ function rateLimitScopesForRequest(req, pathname) {
   const scopes = ["global"];
   const isApi = pathname.startsWith("/api/");
   const isAdminApi = pathname.startsWith(`${ADMIN_PATH}/api/`);
-  scopes.push(isApi || isAdminApi ? "api" : "static");
+  const isMediaRead = isMediaReadRequest(req, pathname);
+  scopes.push(isMediaRead ? "media-read" : (isApi || isAdminApi ? "api" : "static"));
 
-  if (pathname === "/api/auth/qq/start" || pathname === "/api/auth/qq/callback" || pathname === "/api/login" || pathname === "/api/access-codes") {
+  if (pathname === "/api/auth/qq/start"
+    || pathname === "/api/auth/qq/callback"
+    || pathname === "/api/auth/qq/native-complete"
+    || pathname === "/api/auth/apple/start"
+    || pathname === "/api/auth/apple/callback"
+    || pathname === "/api/auth/apple/native"
+    || pathname === "/api/test-login"
+    || pathname === "/api/login"
+    || pathname === "/api/access-codes") {
     scopes.push("auth");
   }
   if (pathname.startsWith(`${ADMIN_PATH}/api/passkeys/login`) || pathname === `${ADMIN_PATH}/api/login`) {
@@ -597,7 +681,7 @@ function applyIpRateLimits(req, res, pathname) {
   if (!RATE_LIMIT_ENABLED) return false;
   const penalty = activeIpPenalty(req);
   if (penalty) {
-    sendRateLimited(req, res, penalty);
+    sendRateLimited(req, res, penalty, { recordViolation: false });
     return true;
   }
   const ipIdentity = privacyDigest(requestIp(req));
@@ -896,9 +980,36 @@ function qqAccountForCode(code) {
   return Object.values(qqAccounts).find((account) => account.code === code) || null;
 }
 
-function communityDisplayNameForCode(code) {
+function appleAccountForCode(code) {
+  return Object.values(appleAccounts).find((account) => account.code === code) || null;
+}
+
+function identityAccountForCode(code) {
   const qqAccount = qqAccountForCode(code);
-  return qqAccount?.nickname || (qqAccount ? "QQ用户" : "用户");
+  if (qqAccount) return { provider: "qq", account: qqAccount };
+  const appleAccount = appleAccountForCode(code);
+  if (appleAccount) return { provider: "apple", account: appleAccount };
+  return { provider: "access_code", account: null };
+}
+
+function identityDisplayNameForCode(code) {
+  const identity = identityAccountForCode(code);
+  if (identity.provider === "qq") {
+    return identity.account.nickname || "QQ用户";
+  }
+  if (identity.provider === "apple") {
+    return identity.account.nickname || "Apple用户";
+  }
+  return "用户";
+}
+
+function identityAvatarUrlForCode(code) {
+  const identity = identityAccountForCode(code);
+  return identity.provider === "qq" ? identity.account.avatarUrl || "" : "";
+}
+
+function communityDisplayNameForCode(code) {
+  return identityDisplayNameForCode(code);
 }
 
 function communityAvatarTextForCode(code) {
@@ -907,10 +1018,9 @@ function communityAvatarTextForCode(code) {
 }
 
 function publicCommunityIdentity(code) {
-  const qqAccount = qqAccountForCode(code);
   return {
     alias: communityDisplayNameForCode(code),
-    avatarUrl: qqAccount?.avatarUrl || "",
+    avatarUrl: identityAvatarUrlForCode(code),
     avatarText: communityAvatarTextForCode(code)
   };
 }
@@ -940,6 +1050,41 @@ function sanitizeQqAccounts(value) {
       unionIdDigest: /^[a-f0-9]{64}$/.test(String(account.unionIdDigest || "")) ? String(account.unionIdDigest) : "",
       nickname: sanitizeQqText(account.nickname, 60),
       avatarUrl: normalizeQqAvatarUrl(account.avatarUrl),
+      gender: sanitizeProfileGender(account.gender),
+      birthday: sanitizeProfileBirthday(account.birthday),
+      passkeyPromptedAt: Number.isFinite(Date.parse(account.passkeyPromptedAt)) ? account.passkeyPromptedAt : null,
+      createdAt: Number.isFinite(Date.parse(account.createdAt)) ? account.createdAt : new Date().toISOString(),
+      updatedAt: Number.isFinite(Date.parse(account.updatedAt)) ? account.updatedAt : new Date().toISOString()
+    }]];
+  }));
+}
+
+function sanitizeAppleAccounts(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(Object.entries(value).flatMap(([subjectDigest, account]) => {
+    const normalizedDigest = /^[a-f0-9]{64}$/.test(subjectDigest)
+      ? subjectDigest
+      : /^[a-f0-9]{64}$/.test(String(account?.subjectDigest || ""))
+        ? String(account.subjectDigest)
+        : "";
+    if (!normalizedDigest || !account || typeof account !== "object") {
+      return [];
+    }
+    const code = String(account.code || "");
+    if (!CODE_PATTERN.test(code)) {
+      return [];
+    }
+    const email = String(account.email || "").trim().toLowerCase();
+    return [[normalizedDigest, {
+      code,
+      subjectDigest: normalizedDigest,
+      appleId: sanitizeQqText(account.appleId || code, 80),
+      nickname: sanitizeQqText(account.nickname, 60),
+      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.slice(0, 160) : "",
+      emailVerified: account.emailVerified === true,
       gender: sanitizeProfileGender(account.gender),
       birthday: sanitizeProfileBirthday(account.birthday),
       passkeyPromptedAt: Number.isFinite(Date.parse(account.passkeyPromptedAt)) ? account.passkeyPromptedAt : null,
@@ -1058,9 +1203,11 @@ function sanitizeUserPasskeys(value) {
     }
     if (publicKeyJwk.kty !== "EC" || publicKeyJwk.crv !== "P-256" || !publicKeyJwk.x || !publicKeyJwk.y) return [];
     const status = ["active", "revoked"].includes(String(credential.status)) ? String(credential.status) : "active";
+    const provider = ["qq", "apple"].includes(String(credential.provider || "")) ? String(credential.provider) : "qq";
     return [{
       id,
       accountCode,
+      provider,
       openidDigest,
       label: sanitizeUserPasskeyLabel(credential.label),
       userId: /^[A-Za-z0-9_-]{16,128}$/.test(String(credential.userId || "")) ? String(credential.userId) : crypto.randomBytes(16).toString("base64url"),
@@ -1151,6 +1298,28 @@ function sanitizeModerationText(value, maxLength = MAX_FEEDBACK_TEXT_LENGTH) {
     .slice(0, maxLength);
 }
 
+function sanitizeModerationAttachments(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, MAX_FEEDBACK_IMAGES).flatMap((attachment) => {
+    if (!attachment || typeof attachment !== "object" || Array.isArray(attachment)) return [];
+    const id = /^[A-Za-z0-9_-]{8,80}$/.test(String(attachment.id || "")) ? String(attachment.id) : "";
+    const file = String(attachment.file || "");
+    const mimeType = ["image/jpeg", "image/png", "image/webp"].includes(String(attachment.mimeType || "").toLowerCase())
+      ? String(attachment.mimeType).toLowerCase()
+      : "";
+    const size = Math.max(0, Math.min(MAX_FEEDBACK_IMAGE_BYTES, Math.round(Number(attachment.size) || 0)));
+    if (!id || !/^[A-Za-z0-9._/-]{1,300}$/.test(file) || !mimeType || size <= 0) return [];
+    return [{
+      id,
+      name: sanitizeModerationText(attachment.name, 80) || `反馈图片.${mimeType.split("/")[1]}`,
+      file,
+      mimeType,
+      size,
+      createdAt: sanitizeIsoDate(attachment.createdAt)
+    }];
+  });
+}
+
 function sanitizeIsoDate(value) {
   const raw = String(value || "");
   return Number.isFinite(Date.parse(raw)) ? new Date(raw).toISOString() : null;
@@ -1219,6 +1388,7 @@ function sanitizeModerationQueue(value) {
         targetDisplay: sanitizeModerationText(item.targetDisplay, 100),
         text: sanitizeModerationText(item.text, MAX_FEEDBACK_TEXT_LENGTH),
         snapshot: sanitizeModerationText(item.snapshot, 240),
+        attachments: sanitizeModerationAttachments(item.attachments),
         createdAt,
         updatedAt: sanitizeIsoDate(item.updatedAt) || createdAt,
         resolvedAt: sanitizeIsoDate(item.resolvedAt),
@@ -1605,7 +1775,7 @@ function communityPreferenceFor(code, createIdentity = false) {
   if (createIdentity && !existing.memberId) {
     Object.assign(existing, createCommunityIdentity(code));
   }
-  if (createIdentity || qqAccountForCode(code)) {
+  if (createIdentity || identityAccountForCode(code).account) {
     existing.alias = communityDisplayNameForCode(code);
   }
   communityPreferences[code] = existing;
@@ -1854,8 +2024,37 @@ function clearQqStateCookie(req) {
   return `${QQ_STATE_COOKIE_NAME}=; Path=${cookiePath()}; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
 }
 
+function buildAppleStateCookie(req, state) {
+  const secure = isSecureRequest(req) ? "; Secure" : "";
+  return `${APPLE_STATE_COOKIE_NAME}=${encodeURIComponent(state)}; Path=${cookiePath()}; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(QQ_OAUTH_TTL_MS / 1000)}${secure}`;
+}
+
+function clearAppleStateCookie(req) {
+  const secure = isSecureRequest(req) ? "; Secure" : "";
+  return `${APPLE_STATE_COOKIE_NAME}=; Path=${cookiePath()}; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
+}
+
 function qqLoginConfigured() {
   return Boolean(QQ_APP_ID && QQ_APP_KEY && QQ_CALLBACK_URL);
+}
+
+function applePrivateKey() {
+  if (APPLE_PRIVATE_KEY) return APPLE_PRIVATE_KEY;
+  if (!APPLE_PRIVATE_KEY_PATH) return "";
+  try {
+    return fs.readFileSync(path.resolve(APPLE_PRIVATE_KEY_PATH), "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+function appleLoginConfigured() {
+  return Boolean(APPLE_WEB_CLIENT_ID && (APPLE_WEB_CLIENT_SECRET || (APPLE_TEAM_ID && APPLE_KEY_ID && applePrivateKey())));
+}
+
+function appleWebRedirectUrl(req) {
+  if (APPLE_WEB_REDIRECT_URL) return APPLE_WEB_REDIRECT_URL;
+  return `${webauthnOrigin(req)}${withBasePath("/api/auth/apple/callback")}`;
 }
 
 function redirect(res, location, headers = {}) {
@@ -1871,6 +2070,17 @@ function redirectWithQqStatus(req, res, status) {
   const location = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
   location.searchParams.set("qq", status);
   return redirect(res, location.pathname + location.search);
+}
+
+function redirectWithAppleStatus(req, res, status, extraParams = {}, headers = {}) {
+  const location = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
+  location.searchParams.set("apple", status);
+  for (const [key, value] of Object.entries(extraParams || {})) {
+    if (value !== undefined && value !== null && value !== "") {
+      location.searchParams.set(key, String(value));
+    }
+  }
+  return redirect(res, location.pathname + location.search, headers);
 }
 
 function safeInlineJson(value) {
@@ -1948,6 +2158,152 @@ function sendQqCallbackPage(req, res, status, headers = {}, extraParams = {}) {
 </html>`);
 }
 
+function sendAppleCallbackPage(req, res, status, headers = {}, extraParams = {}) {
+  const target = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
+  target.searchParams.set("apple", status);
+  for (const [key, value] of Object.entries(extraParams)) {
+    if (value !== undefined && value !== null && value !== "") {
+      target.searchParams.set(key, String(value));
+    }
+  }
+  const message = {
+    type: "apple-login-result",
+    status,
+    href: target.pathname + target.search,
+    at: Date.now()
+  };
+  const callbackCopy = {
+    ok: ["登录完成", "Apple 登录已完成，正在返回。"],
+    "bind-ok": ["绑定完成", "Apple ID 已绑定，正在返回。"]
+  };
+  const [title, description] = callbackCopy[status] || ["授权未完成", "Apple 授权没有完成，正在返回。"];
+  const payload = safeInlineJson(message);
+  writeResponseHead(res, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+    ...headers
+  });
+  res.end(`<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${title} · 今天你瘦了吗?</title>
+    <style>
+      html,body{height:100%;margin:0;background:#edf8fb;color:#17202a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      body{display:grid;place-items:center;padding:24px;box-sizing:border-box}
+      main{max-width:320px;text-align:center}
+      h1{margin:0 0 10px;font-size:24px}
+      p{margin:0 0 20px;color:#667480;line-height:1.7}
+      a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border-radius:999px;padding:0 18px;background:#111820;color:#fff;text-decoration:none;font-weight:800}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>${title}</h1>
+      <p>${description}</p>
+      <a href="${message.href}">返回今天你瘦了吗?</a>
+    </main>
+    <script>
+      (function () {
+        var message = ${payload};
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(message, window.location.origin);
+          }
+        } catch (error) {}
+        try {
+          window.localStorage.setItem("jf_apple_login_result", JSON.stringify(message));
+        } catch (error) {}
+        window.setTimeout(function () {
+          window.close();
+        }, 80);
+        window.setTimeout(function () {
+          window.location.replace(message.href);
+        }, 900);
+      }());
+    </script>
+  </body>
+</html>`);
+}
+
+function cleanupQqNativeAuthTokens() {
+  const now = Date.now();
+  for (const [token, value] of qqNativeAuthTokens) {
+    if (!value || now - value.createdAt > QQ_OAUTH_TTL_MS) {
+      qqNativeAuthTokens.delete(token);
+    }
+  }
+}
+
+function createQqNativeAuthToken(status, accountCode = "", extraParams = {}) {
+  cleanupQqNativeAuthTokens();
+  const token = crypto.randomBytes(24).toString("base64url");
+  qqNativeAuthTokens.set(token, {
+    createdAt: Date.now(),
+    status: sanitizeQqText(status, 40) || "error",
+    accountCode: sanitizeQqText(accountCode, 120),
+    extraParams: Object.fromEntries(
+      Object.entries(extraParams || {})
+        .filter(([key, value]) => /^[a-z0-9_-]{1,32}$/i.test(key) && value !== undefined && value !== null && value !== "")
+        .map(([key, value]) => [key, String(value).slice(0, 80)])
+    )
+  });
+  return token;
+}
+
+function sendQqNativeCallbackPage(req, res, status, headers = {}, extraParams = {}, accountCode = "") {
+  const callbackUrl = new URL("furby://qq-auth");
+  callbackUrl.searchParams.set("status", sanitizeQqText(status, 40) || "error");
+  callbackUrl.searchParams.set("token", createQqNativeAuthToken(status, accountCode, extraParams));
+  if (BASE_PATH) {
+    callbackUrl.searchParams.set("base", BASE_PATH);
+  }
+
+  const callbackHref = callbackUrl.href;
+  const callbackCopy = {
+    ok: ["登录完成", "QQ 登录已完成，正在返回应用。"],
+    "sync-ok": ["同步完成", "QQ 资料已同步，正在返回应用。"]
+  };
+  const [title, description] = callbackCopy[status] || ["授权未完成", "QQ 授权没有完成，正在返回应用。"];
+  writeResponseHead(res, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+    ...headers
+  });
+  res.end(`<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${title} · 今天你瘦了吗?</title>
+    <style>
+      html,body{height:100%;margin:0;background:#f4f7f5;color:#17201c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      body{display:grid;place-items:center;padding:24px;box-sizing:border-box}
+      main{max-width:320px;text-align:center}
+      h1{margin:0 0 10px;font-size:24px}
+      p{margin:0 0 20px;color:#66716c;line-height:1.7}
+      a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border-radius:8px;padding:0 18px;background:#1f7658;color:#fff;text-decoration:none;font-weight:800}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>${title}</h1>
+      <p>${description}</p>
+      <a href="${callbackHref}">返回应用</a>
+    </main>
+    <script>
+      window.setTimeout(function () {
+        window.location.replace(${safeInlineJson(callbackHref)});
+      }, 80);
+    </script>
+  </body>
+</html>`);
+}
+
 function cleanupQqOAuthStates() {
   const now = Date.now();
   for (const [state, value] of qqOAuthStates) {
@@ -1972,6 +2328,8 @@ function buildSignedQqState(req, stateData = {}) {
     n: crypto.randomBytes(12).toString("base64url"),
     p: stateData.popupMode ? 1 : 0,
     s: stateData.syncMode ? 1 : 0,
+    b: stateData.bindMode ? 1 : 0,
+    a: stateData.nativeMode ? 1 : 0,
     i: qqStateIpDigest(req)
   };
   if (stateData.code) payload.c = String(stateData.code).slice(0, 80);
@@ -2017,6 +2375,8 @@ function parseSignedQqState(req, state) {
     createdAt,
     popupMode: payload.p === 1,
     syncMode: payload.s === 1,
+    bindMode: payload.b === 1,
+    nativeMode: payload.a === 1,
     code: sanitizeQqText(payload.c, 80),
     openidDigest: sanitizeQqText(payload.d, 96),
     signed: true
@@ -2025,6 +2385,178 @@ function parseSignedQqState(req, state) {
 
 function completedQqStateKey(state) {
   return `done:${String(state || "")}`;
+}
+
+function appleStateSigningKey() {
+  return `${APPLE_WEB_CLIENT_ID || "apple"}:${PRIVACY_AUDIT_SALT}`;
+}
+
+function buildSignedAppleState(req, stateData = {}) {
+  const payload = {
+    v: 1,
+    t: Date.now(),
+    n: crypto.randomBytes(12).toString("base64url"),
+    p: stateData.popupMode ? 1 : 0,
+    b: stateData.bindMode ? 1 : 0,
+    i: qqStateIpDigest(req)
+  };
+  if (stateData.code) payload.c = String(stateData.code).slice(0, 80);
+  const body = base64urlEncode(JSON.stringify(payload));
+  const signature = hmacSha256(appleStateSigningKey(), body, "base64url");
+  return `a.${body}.${signature}`;
+}
+
+function parseSignedAppleState(req, state) {
+  const raw = String(state || "");
+  if (!raw.startsWith("a.")) return null;
+  const parts = raw.split(".");
+  if (parts.length !== 3) return null;
+  const [, body, signature] = parts;
+  const expectedSignature = hmacSha256(appleStateSigningKey(), body, "base64url");
+  if (!secureStringEquals(signature, expectedSignature)) {
+    console.warn("Apple login signed state signature check failed.");
+    return null;
+  }
+  let payload = null;
+  try {
+    payload = JSON.parse(base64urlDecode(body).toString("utf8"));
+  } catch {
+    return null;
+  }
+  const createdAt = Number(payload?.t || 0);
+  const age = Date.now() - createdAt;
+  if (payload?.v !== 1 || !Number.isFinite(createdAt) || age < -60 * 1000 || age > QQ_OAUTH_TTL_MS) {
+    return null;
+  }
+  const expectedIpDigest = String(payload.i || "");
+  if (expectedIpDigest && !secureStringEquals(expectedIpDigest, qqStateIpDigest(req))) {
+    console.warn("Apple login signed state IP changed across authorization.");
+  }
+  return {
+    createdAt,
+    popupMode: payload.p === 1,
+    bindMode: payload.b === 1,
+    code: sanitizeQqText(payload.c, 80),
+    signed: true
+  };
+}
+
+function completedAppleStateKey(state) {
+  return `done:${String(state || "")}`;
+}
+
+function cleanupAppleOAuthStates() {
+  const now = Date.now();
+  for (const [state, value] of appleOAuthStates) {
+    if (!value || now - value.createdAt > QQ_OAUTH_TTL_MS) {
+      appleOAuthStates.delete(state);
+    }
+  }
+}
+
+function derLength(buffer, offset) {
+  const first = buffer[offset];
+  if (first < 0x80) return { length: first, offset: offset + 1 };
+  const bytes = first & 0x7f;
+  let length = 0;
+  for (let index = 0; index < bytes; index += 1) {
+    length = (length << 8) | buffer[offset + 1 + index];
+  }
+  return { length, offset: offset + 1 + bytes };
+}
+
+function derInteger(buffer, offset, partLength = 32) {
+  if (buffer[offset] !== 0x02) {
+    throw new Error("Apple client_secret 签名格式不正确。");
+  }
+  const parsedLength = derLength(buffer, offset + 1);
+  const end = parsedLength.offset + parsedLength.length;
+  let value = buffer.subarray(parsedLength.offset, end);
+  while (value.length > 0 && value[0] === 0x00) {
+    value = value.subarray(1);
+  }
+  if (value.length > partLength) {
+    throw new Error("Apple client_secret 签名长度不正确。");
+  }
+  return {
+    value: Buffer.concat([Buffer.alloc(partLength - value.length), value]),
+    offset: end
+  };
+}
+
+function derEcdsaSignatureToJose(signature) {
+  const buffer = Buffer.from(signature);
+  if (buffer[0] !== 0x30) {
+    throw new Error("Apple client_secret 签名格式不正确。");
+  }
+  const sequence = derLength(buffer, 1);
+  const r = derInteger(buffer, sequence.offset, 32);
+  const s = derInteger(buffer, r.offset, 32);
+  return Buffer.concat([r.value, s.value]).toString("base64url");
+}
+
+function createAppleClientSecret() {
+  if (APPLE_WEB_CLIENT_SECRET) return APPLE_WEB_CLIENT_SECRET;
+  const privateKey = applePrivateKey();
+  if (!APPLE_TEAM_ID || !APPLE_KEY_ID || !APPLE_WEB_CLIENT_ID || !privateKey) {
+    const error = new Error("Apple 登录服务端配置不完整。");
+    error.statusCode = 500;
+    throw error;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64urlEncode(JSON.stringify({ alg: "ES256", kid: APPLE_KEY_ID, typ: "JWT" }));
+  const payload = base64urlEncode(JSON.stringify({
+    iss: APPLE_TEAM_ID,
+    iat: now,
+    exp: now + 30 * 24 * 60 * 60,
+    aud: "https://appleid.apple.com",
+    sub: APPLE_WEB_CLIENT_ID
+  }));
+  const signer = crypto.createSign("SHA256");
+  signer.update(`${header}.${payload}`);
+  const signature = signer.sign(privateKey);
+  return `${header}.${payload}.${derEcdsaSignatureToJose(signature)}`;
+}
+
+async function exchangeAppleAuthorizationCode(req, code) {
+  const requestSignal = signalWithTimeout(APPLE_AUTH_TIMEOUT_MS);
+  try {
+    const response = await fetch(APPLE_TOKEN_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      signal: requestSignal.signal,
+      body: new URLSearchParams({
+        client_id: APPLE_WEB_CLIENT_ID,
+        client_secret: createAppleClientSecret(),
+        code: String(code || ""),
+        grant_type: "authorization_code",
+        redirect_uri: appleWebRedirectUrl(req)
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.error) {
+      const error = new Error(payload.error_description || payload.error || "Apple 授权换取令牌失败。");
+      error.statusCode = 401;
+      throw error;
+    }
+    if (!payload.id_token) {
+      const error = new Error("Apple 授权没有返回身份令牌。");
+      error.statusCode = 401;
+      throw error;
+    }
+    return payload;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("Apple 登录响应超时，请稍后重试。");
+      timeoutError.statusCode = 504;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    requestSignal.clear();
+  }
 }
 
 function parseQqResponse(text) {
@@ -2056,6 +2588,89 @@ async function fetchQqJson(url) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchAppleJwks() {
+  const now = Date.now();
+  if (appleJwksCache.keys.length && appleJwksCache.expiresAt > now) {
+    return appleJwksCache.keys;
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), APPLE_AUTH_TIMEOUT_MS);
+  try {
+    const response = await fetch(APPLE_JWKS_URL, { signal: controller.signal });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(data.keys)) {
+      const error = new Error("Apple 登录密钥获取失败。");
+      error.statusCode = 502;
+      throw error;
+    }
+    appleJwksCache = {
+      keys: data.keys,
+      expiresAt: Date.now() + 6 * 60 * 60 * 1000
+    };
+    return appleJwksCache.keys;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function parseJwtPart(part) {
+  try {
+    return JSON.parse(base64urlDecode(part).toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function verifyAppleIdentityToken(identityToken) {
+  const token = String(identityToken || "").trim();
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    const error = new Error("Apple 登录凭证格式不正确。");
+    error.statusCode = 400;
+    throw error;
+  }
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  const header = parseJwtPart(encodedHeader);
+  const payload = parseJwtPart(encodedPayload);
+  if (!header || !payload || header.alg !== "RS256" || !header.kid) {
+    const error = new Error("Apple 登录凭证头不正确。");
+    error.statusCode = 400;
+    throw error;
+  }
+  const jwk = (await fetchAppleJwks()).find((key) => key.kid === header.kid && key.kty === "RSA");
+  if (!jwk) {
+    appleJwksCache = { keys: [], expiresAt: 0 };
+    const error = new Error("Apple 登录密钥未匹配，请重试。");
+    error.statusCode = 401;
+    throw error;
+  }
+  const key = crypto.createPublicKey({ key: jwk, format: "jwk" });
+  const signatureOk = crypto.verify(
+    "RSA-SHA256",
+    Buffer.from(`${encodedHeader}.${encodedPayload}`),
+    key,
+    base64urlDecode(encodedSignature)
+  );
+  if (!signatureOk) {
+    const error = new Error("Apple 登录签名校验失败。");
+    error.statusCode = 401;
+    throw error;
+  }
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const audience = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  const allowedAudiences = [APPLE_BUNDLE_ID, APPLE_WEB_CLIENT_ID].filter(Boolean);
+  if (payload.iss !== "https://appleid.apple.com"
+    || !allowedAudiences.some((item) => audience.includes(item))
+    || !payload.sub
+    || Number(payload.exp || 0) < nowSeconds
+    || Number(payload.iat || 0) > nowSeconds + 300) {
+    const error = new Error("Apple 登录凭证已失效或不属于当前应用。");
+    error.statusCode = 401;
+    throw error;
+  }
+  return payload;
 }
 
 async function fetchQqMe(accessToken) {
@@ -2111,6 +2726,48 @@ function qqOpenidDigest(openid) {
   return crypto.createHash("sha256").update(`qq:${QQ_APP_ID}:${openid}`).digest("hex");
 }
 
+function appleSubjectDigest(subject) {
+  return crypto.createHash("sha256").update(`apple:${APPLE_BUNDLE_ID}:${subject}`).digest("hex");
+}
+
+function appleInternalCode(subjectDigest) {
+  return `apple_${subjectDigest.slice(0, 24)}`;
+}
+
+function appleDisplayCode(account) {
+  if (!account) return "";
+  return `apple_${qqDisplaySegment(account.nickname || "用户")}_${account.appleId || account.code}`;
+}
+
+function appleNicknameFromIdentity(identity = {}, existing = null) {
+  const fullName = sanitizeQqText(identity.fullName, 60);
+  if (fullName) return fullName;
+
+  const existingNickname = sanitizeQqText(existing?.nickname, 60);
+  if (existingNickname && existingNickname !== "Apple用户") return existingNickname;
+
+  const email = String(identity.email || existing?.email || "").trim().toLowerCase();
+  const localPart = email.includes("@") ? email.split("@")[0] : "";
+  const emailName = sanitizeQqText(localPart.replace(/[._-]+/g, " "), 60);
+  if (emailName) return emailName;
+
+  return existingNickname || "Apple用户";
+}
+
+function appleUserInfoFromCallback(value) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(String(value));
+    const firstName = sanitizeQqText(parsed?.name?.firstName, 30);
+    const lastName = sanitizeQqText(parsed?.name?.lastName, 30);
+    const fullName = sanitizeQqText([lastName, firstName].filter(Boolean).join("") || [firstName, lastName].filter(Boolean).join(" "), 60);
+    const email = sanitizeQqText(parsed?.email, 160);
+    return { fullName, email };
+  } catch {
+    return {};
+  }
+}
+
 async function accountCodeForQqOpenid(openid, profile = {}, req = null) {
   const openidDigest = qqOpenidDigest(openid);
   const now = new Date().toISOString();
@@ -2162,6 +2819,141 @@ async function accountCodeForQqOpenid(openid, profile = {}, req = null) {
   await writeJson(DELETED_ACCESS_CODES_PATH, deletedAccessCodes);
   await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
   await writeJson(RECORDS_PATH, records);
+  return code;
+}
+
+async function accountCodeForAppleIdentity(identity = {}, req = null) {
+  const subject = String(identity.sub || "").trim();
+  if (!subject || subject.length > 240) {
+    const error = new Error("Apple 身份信息不完整。");
+    error.statusCode = 400;
+    throw error;
+  }
+  const subjectDigest = appleSubjectDigest(subject);
+  const now = new Date().toISOString();
+  const email = String(identity.email || "").trim().toLowerCase();
+  const existing = appleAccounts[subjectDigest];
+  const nickname = appleNicknameFromIdentity(identity, existing);
+  if (existing?.code && isKnownAccessCode(existing.code)) {
+    existing.nickname = nickname;
+    existing.email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.slice(0, 160) : existing.email || "";
+    existing.emailVerified = identity.emailVerified === true || existing.emailVerified === true;
+    existing.subjectDigest = subjectDigest;
+    existing.appleId = existing.appleId || appleInternalCode(subjectDigest);
+    existing.gender = sanitizeProfileGender(existing.gender);
+    existing.birthday = sanitizeProfileBirthday(existing.birthday);
+    existing.passkeyPromptedAt = existing.passkeyPromptedAt || null;
+    existing.updatedAt = now;
+    await writeJson(APPLE_ACCOUNTS_PATH, appleAccounts);
+    return existing.code;
+  }
+
+  await assertRegistrationOpen(req);
+
+  const code = existing?.code && CODE_PATTERN.test(existing.code) ? existing.code : appleInternalCode(subjectDigest);
+  deletedAccessCodes = deletedAccessCodes.filter((item) => item !== code);
+  if (!customAccessCodes.includes(code) && !DEFAULT_ACCESS_CODES.includes(code)) {
+    customAccessCodes.push(code);
+    customAccessCodes = sanitizeAccessCodes(customAccessCodes);
+  }
+  appleAccounts[subjectDigest] = {
+    code,
+    subjectDigest,
+    appleId: existing?.appleId || appleInternalCode(subjectDigest),
+    nickname,
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.slice(0, 160) : existing?.email || "",
+    emailVerified: identity.emailVerified === true || existing?.emailVerified === true,
+    gender: sanitizeProfileGender(existing?.gender),
+    birthday: sanitizeProfileBirthday(existing?.birthday),
+    passkeyPromptedAt: existing?.passkeyPromptedAt || null,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+  await ensureUserStorage(code);
+  await writeJson(ACCESS_CODES_PATH, customAccessCodes);
+  await writeJson(DELETED_ACCESS_CODES_PATH, deletedAccessCodes);
+  await writeJson(APPLE_ACCOUNTS_PATH, appleAccounts);
+  await writeJson(RECORDS_PATH, records);
+  return code;
+}
+
+async function bindQqOpenidToCode(code, openid, profile = {}) {
+  if (!CODE_PATTERN.test(code) || !isKnownAccessCode(code)) {
+    const error = new Error("当前账户不存在，不能绑定 QQ。");
+    error.statusCode = 404;
+    throw error;
+  }
+  const openidDigest = qqOpenidDigest(openid);
+  const existing = qqAccounts[openidDigest];
+  if (existing?.code && existing.code !== code) {
+    const error = new Error("这个 QQ 已绑定到其他账户，不能重复绑定。");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const normalizedProfile = typeof profile === "object" && profile ? profile : {};
+  const nickname = sanitizeQqText(normalizedProfile.nickname, 60);
+  const avatarUrl = normalizeQqAvatarUrl(normalizedProfile.avatarUrl);
+  const unionIdDigest = qqStableDigest(normalizedProfile.unionId, "qq-union");
+  const current = existing || qqAccountForCode(code);
+  qqAccounts[openidDigest] = {
+    code,
+    openidDigest,
+    qqId: current?.qqId || qqInternalCode(openidDigest),
+    unionIdDigest: unionIdDigest || current?.unionIdDigest || "",
+    nickname: nickname || current?.nickname || "",
+    avatarUrl: avatarUrl || current?.avatarUrl || "",
+    gender: sanitizeProfileGender(current?.gender),
+    birthday: sanitizeProfileBirthday(current?.birthday),
+    passkeyPromptedAt: current?.passkeyPromptedAt || null,
+    createdAt: current?.createdAt || now,
+    updatedAt: now
+  };
+  await ensureUserStorage(code);
+  await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+  return code;
+}
+
+async function bindAppleIdentityToCode(code, identity = {}) {
+  if (!CODE_PATTERN.test(code) || !isKnownAccessCode(code)) {
+    const error = new Error("当前账户不存在，不能绑定 Apple ID。");
+    error.statusCode = 404;
+    throw error;
+  }
+  const subject = String(identity.sub || "").trim();
+  if (!subject || subject.length > 240) {
+    const error = new Error("Apple 身份信息不完整。");
+    error.statusCode = 400;
+    throw error;
+  }
+  const subjectDigest = appleSubjectDigest(subject);
+  const existing = appleAccounts[subjectDigest];
+  if (existing?.code && existing.code !== code) {
+    const error = new Error("这个 Apple ID 已绑定到其他账户，不能重复绑定。");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const current = existing || appleAccountForCode(code);
+  const email = String(identity.email || current?.email || "").trim().toLowerCase();
+  const nickname = appleNicknameFromIdentity(identity, current);
+  appleAccounts[subjectDigest] = {
+    code,
+    subjectDigest,
+    appleId: current?.appleId || appleInternalCode(subjectDigest),
+    nickname,
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.slice(0, 160) : "",
+    emailVerified: identity.emailVerified === true || current?.emailVerified === true,
+    gender: sanitizeProfileGender(current?.gender),
+    birthday: sanitizeProfileBirthday(current?.birthday),
+    passkeyPromptedAt: current?.passkeyPromptedAt || null,
+    createdAt: current?.createdAt || now,
+    updatedAt: now
+  };
+  await ensureUserStorage(code);
+  await writeJson(APPLE_ACCOUNTS_PATH, appleAccounts);
   return code;
 }
 
@@ -2229,13 +3021,162 @@ function requestDeviceSummary(req) {
   };
 }
 
+function sanitizeRuntimeLevel(level) {
+  return ["info", "warning", "error"].includes(String(level)) ? String(level) : "warning";
+}
+
+function sanitizeRuntimeDetails(value, depth = 0) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return sanitizeLogText(value, 500);
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean") return value;
+  if (depth >= 3) {
+    try {
+      return sanitizeLogText(JSON.stringify(value).slice(0, 500), 500);
+    } catch {
+      return sanitizeLogText(String(value), 500);
+    }
+  }
+  if (Array.isArray(value)) {
+    return value.slice(0, 20).map((item) => sanitizeRuntimeDetails(item, depth + 1));
+  }
+  if (typeof value === "object") {
+    const output = {};
+    for (const [key, item] of Object.entries(value).slice(0, 40)) {
+      output[sanitizeLogText(key, 60)] = sanitizeRuntimeDetails(item, depth + 1);
+    }
+    return output;
+  }
+  return sanitizeLogText(String(value), 500);
+}
+
+function sanitizeRuntimeEvent(item) {
+  const value = item && typeof item === "object" ? item : {};
+  const at = Number.isFinite(Date.parse(value.at)) ? new Date(value.at).toISOString() : new Date().toISOString();
+  return {
+    id: RESOURCE_ID_PATTERN.test(String(value.id || "")) ? String(value.id) : crypto.randomUUID(),
+    at,
+    level: sanitizeRuntimeLevel(value.level),
+    area: sanitizeLogText(value.area || "system", 48) || "system",
+    event: sanitizeLogText(value.event || "runtime_event", 80) || "runtime_event",
+    message: sanitizeLogText(value.message || value.event || "运行事件", 240),
+    source: sanitizeLogText(value.source || "server", 48) || "server",
+    ipDigest: sanitizeLogText(value.ipDigest, 96),
+    userAgentDigest: sanitizeLogText(value.userAgentDigest, 96),
+    origin: sanitizeLogText(value.origin, 160),
+    referer: sanitizeLogText(value.referer, 200),
+    details: sanitizeRuntimeDetails(value.details || null)
+  };
+}
+
+function sanitizeRuntimeEvents(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(sanitizeRuntimeEvent)
+    .filter((item) => item.event)
+    .sort((left, right) => Date.parse(left.at) - Date.parse(right.at))
+    .slice(-MAX_RUNTIME_EVENTS);
+}
+
+async function recordRuntimeEvent(req, options = {}) {
+  const device = req ? requestDeviceSummary(req) : {};
+  const event = sanitizeRuntimeEvent({
+    id: crypto.randomUUID(),
+    at: new Date().toISOString(),
+    level: options.level,
+    area: options.area,
+    event: options.event,
+    message: options.message,
+    source: options.source || (req ? "client" : "server"),
+    ipDigest: device.ipDigest,
+    userAgentDigest: device.userAgentDigest,
+    origin: device.origin,
+    referer: device.referer,
+    details: options.details || null
+  });
+  runtimeEvents.push(event);
+  runtimeEvents = sanitizeRuntimeEvents(runtimeEvents);
+  await writeJson(RUNTIME_EVENTS_PATH, runtimeEvents);
+  return event;
+}
+
+function runtimeEventsSummary() {
+  runtimeEvents = sanitizeRuntimeEvents(runtimeEvents);
+  const now = Date.now();
+  const dayAgo = now - 24 * 60 * 60 * 1000;
+  const recent = [...runtimeEvents].reverse().slice(0, 120);
+  const last24h = runtimeEvents.filter((event) => Date.parse(event.at) >= dayAgo);
+  const summary = {
+    total: runtimeEvents.length,
+    info: runtimeEvents.filter((event) => event.level === "info").length,
+    warning: runtimeEvents.filter((event) => event.level === "warning").length,
+    error: runtimeEvents.filter((event) => event.level === "error").length,
+    last24h: last24h.length,
+    last24hWarning: last24h.filter((event) => event.level === "warning").length,
+    last24hError: last24h.filter((event) => event.level === "error").length,
+    fallback: runtimeEvents.filter((event) => /fallback|degrade|降级|兜底/i.test(event.event)).length
+  };
+  const byArea = Object.values(runtimeEvents.reduce((map, event) => {
+    const key = event.area || "system";
+    if (!map[key]) {
+      map[key] = { area: key, total: 0, warning: 0, error: 0, info: 0, latestAt: event.at };
+    }
+    map[key].total += 1;
+    map[key][event.level] += 1;
+    if (Date.parse(event.at) > Date.parse(map[key].latestAt)) {
+      map[key].latestAt = event.at;
+    }
+    return map;
+  }, {})).sort((left, right) => right.error - left.error || right.warning - left.warning || right.total - left.total);
+  const hourly = [];
+  for (let index = 23; index >= 0; index -= 1) {
+    const start = new Date(now - index * 60 * 60 * 1000);
+    start.setMinutes(0, 0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const items = runtimeEvents.filter((event) => {
+      const time = Date.parse(event.at);
+      return time >= start.getTime() && time < end.getTime();
+    });
+    hourly.push({
+      at: start.toISOString(),
+      label: `${String(start.getHours()).padStart(2, "0")}:00`,
+      total: items.length,
+      warning: items.filter((event) => event.level === "warning").length,
+      error: items.filter((event) => event.level === "error").length
+    });
+  }
+  const byEvent = Object.values(runtimeEvents.reduce((map, event) => {
+    const key = event.event || "runtime_event";
+    if (!map[key]) map[key] = { event: key, total: 0, level: event.level, latestAt: event.at };
+    map[key].total += 1;
+    if (event.level === "error" || (event.level === "warning" && map[key].level !== "error")) {
+      map[key].level = event.level;
+    }
+    if (Date.parse(event.at) > Date.parse(map[key].latestAt)) {
+      map[key].latestAt = event.at;
+    }
+    return map;
+  }, {})).sort((left, right) => right.total - left.total || Date.parse(right.latestAt) - Date.parse(left.latestAt)).slice(0, 12);
+  return {
+    ok: true,
+    at: new Date().toISOString(),
+    summary,
+    byArea,
+    hourly,
+    byEvent,
+    recent
+  };
+}
+
 function credentialDigest(value) {
   return String(value || "") ? privacyDigest(`credential:${value}`) : "";
 }
 
 function userPasskeyAccountLabel(credential) {
-  const qqAccount = qqAccountForCode(credential?.accountCode);
-  return qqAccount ? qqDisplayCode(qqAccount) : credential?.accountCode || "";
+  const identity = identityAccountForCode(credential?.accountCode);
+  if (identity.provider === "qq") return qqDisplayCode(identity.account);
+  if (identity.provider === "apple") return appleDisplayCode(identity.account);
+  return credential?.accountCode || "";
 }
 
 function recordUserPasskeyEvent(req, event, details = {}) {
@@ -2332,6 +3273,72 @@ function publicPrivacyStatus(code) {
     renewalRequired: preference.mode === "full" && !fullAccess,
     hasStoredPersonalData: Boolean((records[code] || []).length || communityPreferences[code])
   };
+}
+
+async function ensureTestLoginAccount(req) {
+  if (!TEST_LOGIN_ENABLED) {
+    const error = new Error("测试账号入口未开启。");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const code = CODE_PATTERN.test(TEST_LOGIN_ACCOUNT_CODE) ? TEST_LOGIN_ACCOUNT_CODE : "test_fixed_account";
+  const now = new Date().toISOString();
+  const openidDigest = crypto.createHash("sha256").update(`test-login:${code}`).digest("hex");
+  const unionIdDigest = crypto.createHash("sha256").update(`test-login-union:${code}`).digest("hex");
+  const existing = qqAccounts[openidDigest] || {};
+
+  deletedAccessCodes = deletedAccessCodes.filter((item) => item !== code);
+  if (!customAccessCodes.includes(code) && !DEFAULT_ACCESS_CODES.includes(code)) {
+    customAccessCodes.push(code);
+    customAccessCodes = sanitizeAccessCodes(customAccessCodes);
+  }
+  await ensureUserStorage(code);
+
+  qqAccounts[openidDigest] = {
+    ...existing,
+    code,
+    openidDigest,
+    qqId: "test_fixed",
+    unionIdDigest,
+    nickname: "Test 体验账号",
+    avatarUrl: "",
+    gender: sanitizeProfileGender(existing.gender),
+    birthday: sanitizeProfileBirthday(existing.birthday),
+    passkeyPromptedAt: existing.passkeyPromptedAt || now,
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+
+  const preference = privacyPreferenceFor(code);
+  if (!hasFullPrivacyAccess(code)) {
+    preference.mode = "full";
+    preference.acceptedAt = preference.acceptedAt || now;
+    preference.sensitiveAcceptedAt = preference.sensitiveAcceptedAt || now;
+    preference.updatedAt = now;
+    preference.agreementVersion = AGREEMENT_VERSION;
+    preference.privacyPolicyVersion = PRIVACY_POLICY_VERSION;
+    preference.events = [
+      ...(preference.events || []),
+      {
+        id: crypto.randomUUID(),
+        action: "test_login_auto_full",
+        mode: "full",
+        at: now,
+        agreementVersion: AGREEMENT_VERSION,
+        privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+        networkDigest: privacyDigest(requestIp(req)),
+        deviceDigest: privacyDigest(req.headers["user-agent"] || "")
+      }
+    ].slice(-100);
+  }
+
+  await writeJson(ACCESS_CODES_PATH, customAccessCodes);
+  await writeJson(DELETED_ACCESS_CODES_PATH, deletedAccessCodes);
+  await writeJson(RECORDS_PATH, records);
+  await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+  await writeJson(PRIVACY_CONSENTS_PATH, privacyConsents);
+  return code;
 }
 
 function accountGovernanceEntry(code) {
@@ -2450,8 +3457,17 @@ function assertAccountCanMutate(code, action = "操作") {
 function moderationQueueItemSummary(item) {
   const reporterAccount = item.reporterCode ? qqAccountForCode(item.reporterCode) : null;
   const targetAccount = item.targetCode ? qqAccountForCode(item.targetCode) : null;
+  const itemId = String(item.id || "");
   return {
     ...item,
+    attachments: sanitizeModerationAttachments(item.attachments).map((attachment) => ({
+      id: attachment.id,
+      name: attachment.name,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      createdAt: attachment.createdAt,
+      url: `${ADMIN_PATH}/api/moderation/items/${encodeURIComponent(itemId)}/attachments/${encodeURIComponent(attachment.id)}`
+    })),
     reporterDisplay: item.reporterDisplay || (reporterAccount ? qqDisplayCode(reporterAccount) : item.reporterCode),
     targetDisplay: item.targetDisplay || (targetAccount ? qqDisplayCode(targetAccount) : item.targetCode)
   };
@@ -2475,6 +3491,78 @@ function moderationQueueSummary() {
     feedback: moderationQueue.items.filter((item) => item.type === "feedback").length,
     items
   };
+}
+
+function parseFeedbackAttachmentDataUrl(attachment, index) {
+  if (!attachment || typeof attachment !== "object" || Array.isArray(attachment)) {
+    const error = new Error("反馈图片格式不正确。");
+    error.statusCode = 400;
+    throw error;
+  }
+  const match = String(attachment.dataUrl || "").match(/^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (!match) {
+    const error = new Error("反馈图片仅支持 JPG、PNG 或 WebP。");
+    error.statusCode = 400;
+    throw error;
+  }
+  const normalizedType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
+  const typeKinds = {
+    "image/jpeg": { kind: "jpg", ext: "jpg" },
+    "image/png": { kind: "png", ext: "png" },
+    "image/webp": { kind: "webp", ext: "webp" }
+  };
+  const info = typeKinds[normalizedType];
+  const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
+  if (!info || buffer.length < 100 || buffer.length > MAX_FEEDBACK_IMAGE_BYTES || !isPhotoBuffer(info.kind, buffer)) {
+    const error = new Error(`第 ${index + 1} 张反馈图片无法保存，请重新选择。`);
+    error.statusCode = buffer.length > MAX_FEEDBACK_IMAGE_BYTES ? 413 : 400;
+    throw error;
+  }
+  return {
+    buffer,
+    mimeType: normalizedType,
+    ext: info.ext,
+    name: sanitizeModerationText(attachment.name, 80) || `反馈图片-${index + 1}.${info.ext}`
+  };
+}
+
+async function saveModerationAttachments(reporterCode, itemId, rawAttachments) {
+  if (!Array.isArray(rawAttachments) || rawAttachments.length === 0) return [];
+  if (rawAttachments.length > MAX_FEEDBACK_IMAGES) {
+    const error = new Error(`最多只能上传 ${MAX_FEEDBACK_IMAGES} 张图片。`);
+    error.statusCode = 400;
+    throw error;
+  }
+  const safeReporter = CODE_PATTERN.test(String(reporterCode || "")) ? String(reporterCode) : "anonymous";
+  const safeItemId = RESOURCE_ID_PATTERN.test(String(itemId || "")) ? String(itemId) : crypto.randomUUID();
+  const directory = path.join(MODERATION_ATTACHMENT_DIR, safeReporter, safeItemId);
+  await fsp.mkdir(directory, { recursive: true });
+
+  const saved = [];
+  for (const [index, raw] of rawAttachments.entries()) {
+    const parsed = parseFeedbackAttachmentDataUrl(raw, index);
+    const id = crypto.randomUUID();
+    const filename = `${id}.${parsed.ext}`;
+    await fsp.writeFile(path.join(directory, filename), parsed.buffer);
+    saved.push({
+      id,
+      name: parsed.name,
+      file: `${safeReporter}/${safeItemId}/${filename}`,
+      mimeType: parsed.mimeType,
+      size: parsed.buffer.length,
+      createdAt: new Date().toISOString()
+    });
+  }
+  return saved;
+}
+
+function moderationAttachmentFullPath(attachment) {
+  const relative = String(attachment?.file || "");
+  if (!/^[A-Za-z0-9._/-]{1,300}$/.test(relative)) return "";
+  const fullPath = path.normalize(path.join(MODERATION_ATTACHMENT_DIR, relative));
+  const resolvedRelative = path.relative(MODERATION_ATTACHMENT_DIR, fullPath);
+  if (resolvedRelative.startsWith("..") || path.isAbsolute(resolvedRelative)) return "";
+  return fullPath;
 }
 
 async function setAccountModeration(req, code, body, operator = "admin") {
@@ -2588,8 +3676,10 @@ async function createModerationQueueItem(req, reporterCode, body) {
     throw error;
   }
   const now = new Date().toISOString();
+  const itemId = crypto.randomUUID();
+  const attachments = await saveModerationAttachments(reporterCode, itemId, body.attachments);
   const item = {
-    id: crypto.randomUUID(),
+    id: itemId,
     type,
     status: "pending",
     category,
@@ -2597,6 +3687,7 @@ async function createModerationQueueItem(req, reporterCode, body) {
     reporterCode,
     reporterDisplay: qqDisplayCode(qqAccountForCode(reporterCode)) || reporterCode,
     text,
+    attachments,
     createdAt: now,
     updatedAt: now,
     resolvedAt: null,
@@ -2605,6 +3696,38 @@ async function createModerationQueueItem(req, reporterCode, body) {
     ipAddress: requestIp(req),
     networkDigest: privacyDigest(requestIp(req)),
     deviceDigest: privacyDigest(req.headers["user-agent"] || "unknown")
+  };
+  moderationQueue.items.push(item);
+  moderationQueue.items = moderationQueue.items.slice(-MAX_MODERATION_QUEUE_ITEMS);
+  await writeJson(MODERATION_QUEUE_PATH, moderationQueue);
+  return item;
+}
+
+async function createSystemModerationQueueItem({ reporterCode = "", targetCode = "", targetType = "image", targetDisplay = "", category = "image", text = "", snapshot = "" } = {}) {
+  const now = new Date().toISOString();
+  const item = {
+    id: crypto.randomUUID(),
+    type: "report",
+    status: "pending",
+    category: sanitizeModerationText(category, 40) || "image",
+    targetType: sanitizeModerationText(targetType, 40) || "image",
+    targetMemberId: "",
+    targetCommentId: "",
+    targetCode,
+    targetDisplay: sanitizeModerationText(targetDisplay, 80) || (targetCode ? communityDisplayNameForCode(targetCode) : ""),
+    snapshot: sanitizeModerationText(snapshot, 240),
+    reporterCode,
+    reporterDisplay: reporterCode ? (qqDisplayCode(qqAccountForCode(reporterCode)) || reporterCode) : "system",
+    text: sanitizeModerationText(text, MAX_FEEDBACK_TEXT_LENGTH) || "系统内容安全审核命中。",
+    attachments: [],
+    createdAt: now,
+    updatedAt: now,
+    resolvedAt: null,
+    resolvedBy: "",
+    resolutionNote: "",
+    ipAddress: "",
+    networkDigest: "",
+    deviceDigest: ""
   };
   moderationQueue.items.push(item);
   moderationQueue.items = moderationQueue.items.slice(-MAX_MODERATION_QUEUE_ITEMS);
@@ -2650,12 +3773,20 @@ function textSafetyConfigured() {
   return Boolean(TENCENT_TMS_SECRET_ID && TENCENT_TMS_SECRET_KEY && TENCENT_TMS_BIZ_TYPE);
 }
 
+function imageSafetyConfigured() {
+  return Boolean(TENCENT_IMS_SECRET_ID && TENCENT_IMS_SECRET_KEY);
+}
+
 function normalizeTextSafetySuggestion(value) {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "pass") return "Pass";
   if (normalized === "block") return "Block";
   if (normalized === "review") return "Review";
   return "Review";
+}
+
+function normalizeImageSafetySuggestion(value) {
+  return normalizeTextSafetySuggestion(value);
 }
 
 function textRiskEntryFor(code) {
@@ -2733,11 +3864,10 @@ function assertTextNotMuted(code) {
   throw error;
 }
 
-function tencentTmsAuthorization({ payload, timestamp }) {
-  const service = "tms";
+function tencentCloudAuthorization({ payload, timestamp, service, endpoint, secretId, secretKey }) {
   const date = new Date(timestamp * 1000).toISOString().slice(0, 10);
   const credentialScope = `${date}/${service}/tc3_request`;
-  const canonicalHeaders = `content-type:application/json; charset=utf-8\nhost:${TENCENT_TMS_ENDPOINT}\n`;
+  const canonicalHeaders = `content-type:application/json; charset=utf-8\nhost:${endpoint}\n`;
   const signedHeaders = "content-type;host";
   const canonicalRequest = [
     "POST",
@@ -2753,11 +3883,33 @@ function tencentTmsAuthorization({ payload, timestamp }) {
     credentialScope,
     sha256Hex(canonicalRequest)
   ].join("\n");
-  const secretDate = hmacSha256(`TC3${TENCENT_TMS_SECRET_KEY}`, date);
+  const secretDate = hmacSha256(`TC3${secretKey}`, date);
   const secretService = hmacSha256(secretDate, service);
   const secretSigning = hmacSha256(secretService, "tc3_request");
   const signature = hmacSha256(secretSigning, stringToSign, "hex");
-  return `TC3-HMAC-SHA256 Credential=${TENCENT_TMS_SECRET_ID}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  return `TC3-HMAC-SHA256 Credential=${secretId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+}
+
+function tencentTmsAuthorization({ payload, timestamp }) {
+  return tencentCloudAuthorization({
+    payload,
+    timestamp,
+    service: "tms",
+    endpoint: TENCENT_TMS_ENDPOINT,
+    secretId: TENCENT_TMS_SECRET_ID,
+    secretKey: TENCENT_TMS_SECRET_KEY
+  });
+}
+
+function tencentImsAuthorization({ payload, timestamp }) {
+  return tencentCloudAuthorization({
+    payload,
+    timestamp,
+    service: "ims",
+    endpoint: TENCENT_IMS_ENDPOINT,
+    secretId: TENCENT_IMS_SECRET_ID,
+    secretKey: TENCENT_IMS_SECRET_KEY
+  });
 }
 
 async function callTencentTextModeration(text, { scene } = {}) {
@@ -2812,6 +3964,68 @@ async function callTencentTextModeration(text, { scene } = {}) {
   }
 }
 
+async function callTencentImageModeration(buffer, { scene } = {}) {
+  if (!imageSafetyConfigured()) {
+    return { suggestion: "Pass", label: "NotConfigured", subLabel: "", score: 0 };
+  }
+  if (!Buffer.isBuffer(buffer) || buffer.length < 200) {
+    return { suggestion: "Pass", label: "EmptyImage", subLabel: "", score: 0 };
+  }
+  if (buffer.length > IMAGE_SAFETY_MAX_RAW_BYTES) {
+    const error = new Error(`图片超过安全审核大小限制，请压缩到 ${Math.floor(IMAGE_SAFETY_MAX_RAW_BYTES / 1024 / 1024)}MB 以内。`);
+    error.statusCode = 413;
+    throw error;
+  }
+
+  const requestBody = {
+    FileContent: buffer.toString("base64"),
+    DataId: `${scene || "image"}-${crypto.randomBytes(10).toString("hex")}`.slice(0, 64)
+  };
+  if (TENCENT_IMS_BIZ_TYPE) {
+    requestBody.BizType = TENCENT_IMS_BIZ_TYPE;
+  }
+
+  const payload = JSON.stringify(requestBody);
+  const timestamp = Math.floor(Date.now() / 1000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), IMAGE_SAFETY_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`https://${TENCENT_IMS_ENDPOINT}`, {
+      method: "POST",
+      headers: {
+        Authorization: tencentImsAuthorization({ payload, timestamp }),
+        "Content-Type": "application/json; charset=utf-8",
+        Host: TENCENT_IMS_ENDPOINT,
+        "X-TC-Action": TENCENT_IMS_ACTION,
+        "X-TC-Version": TENCENT_IMS_VERSION,
+        "X-TC-Region": TENCENT_IMS_REGION,
+        "X-TC-Timestamp": String(timestamp)
+      },
+      body: payload,
+      signal: controller.signal
+    });
+    const data = await response.json().catch(() => ({}));
+    const result = data.Response || {};
+    if (!response.ok || result.Error) {
+      const message = result.Error?.Message || `腾讯云图片安全接口返回 ${response.status}`;
+      const error = new Error(message);
+      error.statusCode = response.status || 502;
+      error.code = result.Error?.Code || "";
+      throw error;
+    }
+    return {
+      suggestion: normalizeImageSafetySuggestion(result.Suggestion),
+      label: sanitizeQqText(result.Label, 40),
+      subLabel: sanitizeQqText(result.SubLabel, 60),
+      score: Number.isFinite(Number(result.Score)) ? Number(result.Score) : 0,
+      requestId: sanitizeQqText(result.RequestId, 80)
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function moderateUserTextOrThrow(req, code, scene, text) {
   const content = String(text || "").trim();
   if (!content) return { suggestion: "Pass" };
@@ -2827,6 +4041,14 @@ async function moderateUserTextOrThrow(req, code, scene, text) {
       statusCode: error.statusCode || 0,
       scene
     });
+    void recordRuntimeEvent(req, {
+      level: TEXT_SAFETY_FAIL_CLOSED ? "error" : "warning",
+      area: "safety",
+      event: TEXT_SAFETY_FAIL_CLOSED ? "text_moderation_failed_closed" : "text_moderation_fail_open",
+      message: TEXT_SAFETY_FAIL_CLOSED ? "文本安全审核失败，已阻断请求。" : "文本安全审核失败，已按配置放行。",
+      source: "server",
+      details: { scene, statusCode: error.statusCode || 0, code: sanitizeQqText(error.code, 60) }
+    }).catch(() => {});
     if (!TEXT_SAFETY_FAIL_CLOSED) {
       return { suggestion: "Pass", failOpen: true };
     }
@@ -2848,6 +4070,54 @@ async function moderateUserTextOrThrow(req, code, scene, text) {
   throw error;
 }
 
+async function moderateUserImageOrThrow(req, code, scene, buffer) {
+  if (!Buffer.isBuffer(buffer) || !buffer.length) return { suggestion: "Pass" };
+
+  let result;
+  try {
+    result = await callTencentImageModeration(buffer, { scene, code });
+  } catch (error) {
+    console.warn("Image moderation failed:", {
+      code: sanitizeQqText(error.code, 60),
+      statusCode: error.statusCode || 0,
+      scene
+    });
+    void recordRuntimeEvent(req, {
+      level: IMAGE_SAFETY_FAIL_CLOSED ? "error" : "warning",
+      area: "safety",
+      event: IMAGE_SAFETY_FAIL_CLOSED ? "image_moderation_failed_closed" : "image_moderation_fail_open",
+      message: IMAGE_SAFETY_FAIL_CLOSED ? "图片安全审核失败，已阻断请求。" : "图片安全审核失败，已按配置放行。",
+      source: "server",
+      details: { scene, statusCode: error.statusCode || 0, code: sanitizeQqText(error.code, 60) }
+    }).catch(() => {});
+    if (!IMAGE_SAFETY_FAIL_CLOSED) {
+      return { suggestion: "Pass", failOpen: true };
+    }
+    const blocked = new Error(error.statusCode === 413 ? error.message : "图片安全审核暂时不可用，请稍后再试。");
+    blocked.statusCode = error.statusCode === 413 ? 413 : 503;
+    throw blocked;
+  }
+
+  if (result.suggestion === "Pass") {
+    return result;
+  }
+
+  await createSystemModerationQueueItem({
+    reporterCode: code,
+    category: result.label || "image",
+    text: `图片安全审核命中：${result.label || "Unknown"} ${result.subLabel || ""}`.trim(),
+    targetType: "image",
+    targetCode: code,
+    snapshot: scene
+  }).catch((error) => {
+    console.warn("Failed to enqueue image safety review item:", error.message);
+  });
+
+  const error = new Error("图片内容需要调整后再提交。");
+  error.statusCode = result.suggestion === "Review" ? 400 : 400;
+  throw error;
+}
+
 function adminPasswordLoginConfigured() {
   return Boolean(ADMIN_USERNAME && (ADMIN_PASSWORD_HASH || ADMIN_PASSWORD));
 }
@@ -2864,12 +4134,30 @@ function pendingAdminPasskeys() {
   return adminPasskeys.credentials.filter((credential) => credential.status === "pending");
 }
 
+function userIdentityDigestsForCode(code) {
+  const qqAccount = qqAccountForCode(code);
+  const appleAccount = appleAccountForCode(code);
+  return {
+    qq: qqAccount?.openidDigest || "",
+    apple: appleAccount?.subjectDigest || ""
+  };
+}
+
+function userPasskeyIdentityDigestForCode(code, provider = "") {
+  const digests = userIdentityDigestsForCode(code);
+  if (provider === "qq" || provider === "apple") {
+    return digests[provider] || "";
+  }
+  const identity = identityAccountForCode(code);
+  return identity.provider === "qq" || identity.provider === "apple" ? digests[identity.provider] || "" : "";
+}
+
 function activeUserPasskeys() {
   return userPasskeys.credentials.filter((credential) => {
-    const qqAccount = qqAccountForCode(credential.accountCode);
+    const identityDigest = userPasskeyIdentityDigestForCode(credential.accountCode, credential.provider);
     return credential.status === "active"
-      && qqAccount
-      && qqAccount.openidDigest === credential.openidDigest;
+      && identityDigest
+      && identityDigest === credential.openidDigest;
   });
 }
 
@@ -2878,13 +4166,15 @@ function userPasskeysForCode(code) {
 }
 
 function publicUserPasskeySummary(code) {
-  const qqAccount = qqAccountForCode(code);
-  const credentials = qqAccount ? userPasskeysForCode(code) : [];
+  const identity = identityAccountForCode(code);
+  const hasIdentityBinding = Boolean(identity.account && ["qq", "apple"].includes(identity.provider));
+  const credentials = hasIdentityBinding ? userPasskeysForCode(code) : [];
+  const promptedAt = identity.account?.passkeyPromptedAt || null;
   return {
-    available: Boolean(qqAccount),
+    available: hasIdentityBinding,
     activeCount: credentials.length,
     enabled: Boolean(credentials.length),
-    promptAvailable: Boolean(qqAccount && !credentials.length && !qqAccount.passkeyPromptedAt)
+    promptAvailable: Boolean(hasIdentityBinding && !credentials.length && !promptedAt)
   };
 }
 
@@ -3418,15 +4708,24 @@ async function verifyAdminPasskeyLogin(req, body) {
 }
 
 function userPasskeyStatusPayload(req, code) {
-  const qqAccount = qqAccountForCode(code);
-  const credentials = qqAccount ? userPasskeysForCode(code) : [];
+  const identity = identityAccountForCode(code);
+  const hasIdentityBinding = Boolean(identity.account && ["qq", "apple"].includes(identity.provider));
+  const credentials = hasIdentityBinding ? userPasskeysForCode(code) : [];
+  const bindId = identity.provider === "qq"
+    ? identity.account.qqId || ""
+    : identity.provider === "apple"
+      ? identity.account.email || identity.account.appleId || ""
+      : "";
+  const promptedAt = identity.account?.passkeyPromptedAt || null;
   return {
     ok: true,
-    hasQqBinding: Boolean(qqAccount),
-    bindId: qqAccount?.qqId || "",
+    hasQqBinding: hasIdentityBinding,
+    hasIdentityBinding,
+    provider: identity.provider,
+    bindId,
     activeCount: credentials.length,
     passkeyLoginEnabled: Boolean(credentials.length),
-    promptAvailable: Boolean(qqAccount && !credentials.length && !qqAccount.passkeyPromptedAt),
+    promptAvailable: Boolean(hasIdentityBinding && !credentials.length && !promptedAt),
     rpId: webauthnRpId(req),
     credentials: credentials
       .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))
@@ -3488,29 +4787,35 @@ function assertUserPasskeyRegistrationAllowed(req) {
     error.statusCode = 401;
     throw error;
   }
-  const qqAccount = qqAccountForCode(session.code);
-  if (!qqAccount) {
-    const error = new Error("请先使用 QQ 登录并绑定账户后，再添加 Passkey。");
+  const identity = identityAccountForCode(session.code);
+  const identityDigest = userPasskeyIdentityDigestForCode(session.code);
+  if (!identity.account || !identityDigest) {
+    const error = new Error("请先使用 QQ 或 Apple ID 登录并绑定账户后，再添加 Passkey。");
     error.statusCode = 403;
     throw error;
   }
-  return { session, qqAccount };
+  return { session, identity, identityDigest };
 }
 
-function userPasskeyUserId(openidDigest) {
-  return base64urlEncode(sha256Buffer(`user-passkey:${openidDigest}`));
+function userPasskeyUserId(identityDigest) {
+  return base64urlEncode(sha256Buffer(`user-passkey:${identityDigest}`));
 }
 
 function userPasskeyCreationOptions(req, label) {
-  const { session, qqAccount } = assertUserPasskeyRegistrationAllowed(req);
+  const current = assertUserPasskeyRegistrationAllowed(req);
   const challenge = crypto.randomBytes(32).toString("base64url");
   const cleanLabel = sanitizeUserPasskeyLabel(label || `手机 Passkey ${new Date().toLocaleDateString("zh-CN")}`);
-  const userId = userPasskeyUserId(qqAccount.openidDigest);
+  const userId = userPasskeyUserId(current.identityDigest);
+  const displayCode = current.identity.provider === "qq"
+    ? qqDisplayCode(current.identity.account)
+    : appleDisplayCode(current.identity.account);
+  const displayName = current.identity.account.nickname || (current.identity.provider === "apple" ? "Apple用户" : "QQ用户");
   storeUserPasskeyChallenge({
     type: "user-register",
     challenge,
-    code: session.code,
-    openidDigest: qqAccount.openidDigest,
+    code: current.session.code,
+    provider: current.identity.provider,
+    openidDigest: current.identityDigest,
     userId,
     label: cleanLabel,
     createdAt: Date.now()
@@ -3523,13 +4828,13 @@ function userPasskeyCreationOptions(req, label) {
     },
     user: {
       id: userId,
-      name: qqDisplayCode(qqAccount) || qqAccount.qqId || session.code,
-      displayName: qqAccount.nickname || "QQ用户"
+      name: displayCode || current.session.code,
+      displayName
     },
     pubKeyCredParams: [{ type: "public-key", alg: -7 }],
     timeout: 60000,
     attestation: "none",
-    excludeCredentials: userCredentialIdList(session.code),
+    excludeCredentials: userCredentialIdList(current.session.code),
     authenticatorSelection: {
       userVerification: "required",
       residentKey: "preferred"
@@ -3542,7 +4847,7 @@ async function verifyUserPasskeyRegistration(req, body) {
   const response = body?.response || {};
   const { clientData, clientDataJSON } = parseWebauthnClientData(response.clientDataJSON, req, "webauthn.create");
   const challenge = takeUserPasskeyChallenge(clientData.challenge, "user-register");
-  if (challenge.code !== current.session.code || challenge.openidDigest !== current.qqAccount.openidDigest) {
+  if (challenge.code !== current.session.code || challenge.openidDigest !== current.identityDigest) {
     const error = new Error("Passkey 绑定状态已变化，请重新开始。");
     error.statusCode = 409;
     throw error;
@@ -3572,7 +4877,8 @@ async function verifyUserPasskeyRegistration(req, body) {
   const credential = {
     id: credentialId,
     accountCode: current.session.code,
-    openidDigest: current.qqAccount.openidDigest,
+    provider: current.identity.provider,
+    openidDigest: current.identityDigest,
     label: challenge.label,
     userId: challenge.userId,
     publicKeyJwk: attested.publicKeyJwk,
@@ -3585,17 +4891,21 @@ async function verifyUserPasskeyRegistration(req, body) {
     clientDataDigest: base64urlEncode(sha256Buffer(clientDataJSON)).slice(0, 32)
   };
   userPasskeys.credentials.push(credential);
-  current.qqAccount.passkeyPromptedAt = current.qqAccount.passkeyPromptedAt || now;
-  current.qqAccount.updatedAt = now;
+  current.identity.account.passkeyPromptedAt = current.identity.account.passkeyPromptedAt || now;
+  current.identity.account.updatedAt = now;
   await writeJson(USER_PASSKEYS_PATH, userPasskeys);
-  await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+  if (current.identity.provider === "apple") {
+    await writeJson(APPLE_ACCOUNTS_PATH, appleAccounts);
+  } else {
+    await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+  }
   return credential;
 }
 
 function userPasskeyRequestOptions(req) {
   const credentials = activeUserPasskeys();
   if (!credentials.length) {
-    const error = new Error("还没有可登录的用户 Passkey，请先使用 QQ 登录并在设置中添加。");
+    const error = new Error("还没有可登录的用户 Passkey，请先登录并在设置中添加。");
     error.statusCode = 404;
     throw error;
   }
@@ -3621,7 +4931,7 @@ async function verifyUserPasskeyLogin(req, body) {
   const credentialId = String(body.rawId || body.id || "");
   const credential = activeUserPasskeys().find((item) => item.id === credentialId);
   if (!credential) {
-    const error = new Error("这个 Passkey 尚未绑定到可用的 QQ 账户。");
+    const error = new Error("这个 Passkey 尚未绑定到可用账户。");
     error.statusCode = 403;
     throw error;
   }
@@ -3647,14 +4957,14 @@ async function verifyUserPasskeyLogin(req, body) {
   return credential;
 }
 
-async function readRequestJson(req) {
+async function readRequestJson(req, maxBytes = MAX_JSON_BODY_BYTES, tooLargeMessage = "请求内容太大。") {
   const contentType = String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
   if (contentType && contentType !== "application/json") {
     const error = new Error("请求内容类型不正确。");
     error.statusCode = 415;
     throw error;
   }
-  const buffer = await readRequestBuffer(req, MAX_JSON_BODY_BYTES, "请求内容太大。");
+  const buffer = await readRequestBuffer(req, maxBytes, tooLargeMessage);
   if (buffer.length === 0) {
     return {};
   }
@@ -3672,6 +4982,17 @@ async function readRequestJson(req) {
     error.statusCode = 400;
     throw error;
   }
+}
+
+async function readRequestForm(req) {
+  const contentType = String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+  if (contentType && contentType !== "application/x-www-form-urlencoded") {
+    const error = new Error("请求内容类型不正确。");
+    error.statusCode = 415;
+    throw error;
+  }
+  const buffer = await readRequestBuffer(req, MAX_JSON_BODY_BYTES, "请求内容太大。");
+  return Object.fromEntries(new URLSearchParams(buffer.toString("utf8")));
 }
 
 async function readRequestBuffer(req, maxBytes = MAX_BODY_BYTES, tooLargeMessage = "请求内容太大，请缩小照片后再试。") {
@@ -3729,15 +5050,21 @@ function signalWithTimeout(timeoutMs, externalSignal = null) {
 }
 
 function publicProfile(code) {
+  const identity = identityAccountForCode(code);
   const qqAccount = qqAccountForCode(code);
-  const displayName = qqAccount?.nickname || (qqAccount ? "QQ用户" : "我的");
+  const appleAccount = appleAccountForCode(code);
+  const displayName = identity.provider === "qq"
+    ? qqAccount?.nickname || "QQ用户"
+    : identity.provider === "apple"
+      ? appleAccount?.nickname || "Apple用户"
+      : "我的";
   return {
-    label: qqAccount ? displayName : `档案 ${code}`,
+    label: identity.account ? displayName : `档案 ${code}`,
     displayName,
     avatarUrl: qqAccount?.avatarUrl || "",
     accountCode: code,
     codeSuffix: code.slice(-3),
-    authProvider: qqAccount ? "qq" : "access_code",
+    authProvider: identity.provider,
     qq: qqAccount ? {
         nickname: qqAccount.nickname || "",
         avatarUrl: qqAccount.avatarUrl || "",
@@ -3746,7 +5073,15 @@ function publicProfile(code) {
         unionIdDigest: qqAccount.unionIdDigest || "",
         displayId: qqDisplayCode(qqAccount)
       } : null,
-    demographics: publicProfileDemographics(qqAccount),
+    apple: appleAccount ? {
+      nickname: appleAccount.nickname || "",
+      bindId: appleAccount.appleId || appleAccount.code,
+      uniqueId: appleAccount.subjectDigest || "",
+      email: appleAccount.email || "",
+      emailVerified: appleAccount.emailVerified === true,
+      displayId: appleDisplayCode(appleAccount)
+    } : null,
+    demographics: publicProfileDemographics(qqAccount || appleAccount),
     passkeys: publicUserPasskeySummary(code),
     privacy: publicPrivacyStatus(code),
     accountStatus: publicAccountStatus(code),
@@ -4298,7 +5633,9 @@ function adminPublicRecord(code, record) {
 }
 
 function adminAccountSummary(code) {
+  const identity = identityAccountForCode(code);
   const qqAccount = qqAccountForCode(code);
+  const appleAccount = appleAccountForCode(code);
   const userRecords = [...(records[code] || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   const weightRecords = userRecords.filter((record) => Number.isFinite(record.weight));
   const firstWeight = weightRecords[0]?.weight ?? null;
@@ -4309,13 +5646,15 @@ function adminAccountSummary(code) {
 
   return {
     code,
-    displayCode: qqAccount ? qqDisplayCode(qqAccount) : code,
-    uniqueId: qqAccount?.openidDigest || code,
+    displayCode: qqAccount ? qqDisplayCode(qqAccount) : appleAccount ? appleDisplayCode(appleAccount) : code,
+    uniqueId: qqAccount?.openidDigest || appleAccount?.subjectDigest || code,
     qqUnionIdDigest: qqAccount?.unionIdDigest || "",
-    source: qqAccount ? "qq" : DEFAULT_ACCESS_CODES.includes(code) ? "preset" : "custom",
+    source: qqAccount ? "qq" : appleAccount ? "apple" : DEFAULT_ACCESS_CODES.includes(code) ? "preset" : "custom",
     qqNickname: qqAccount?.nickname || "",
     qqAvatarUrl: qqAccount?.avatarUrl || "",
     qqBindId: qqAccount?.qqId || "",
+    appleNickname: appleAccount?.nickname || "",
+    appleBindId: appleAccount?.appleId || "",
     recordCount: userRecords.length,
     photoCount: userRecords.reduce((sum, record) => sum + recordPhotoCount(record), 0),
     firstRecordAt: userRecords[0]?.timestamp ?? null,
@@ -4372,6 +5711,7 @@ function removeCommunityFootprint(code) {
 async function clearUserContent(code) {
   const deletedRecordCount = (records[code] || []).length;
   const deletedPhotoCount = (records[code] || []).reduce((sum, record) => sum + recordPhotoCount(record), 0);
+  await Promise.all((records[code] || []).map((record) => deleteRecordPhotoFiles(code, record)));
   await fsp.rm(path.join(PHOTO_DIR, code), { recursive: true, force: true });
   records[code] = [];
   await fsp.mkdir(path.join(PHOTO_DIR, code), { recursive: true });
@@ -4395,6 +5735,11 @@ async function deleteAccountCompletely(code) {
       delete qqAccounts[openidDigest];
     }
   }
+  for (const [subjectDigest, account] of Object.entries(appleAccounts)) {
+    if (account.code === code) {
+      delete appleAccounts[subjectDigest];
+    }
+  }
   await fsp.rm(path.join(PHOTO_DIR, code), { recursive: true, force: true });
 
   customAccessCodes = customAccessCodes.filter((item) => item !== code);
@@ -4412,6 +5757,7 @@ async function deleteAccountCompletely(code) {
   await writeJson(SESSIONS_PATH, sessions);
   await writeJson(PRIVACY_CONSENTS_PATH, privacyConsents);
   await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+  await writeJson(APPLE_ACCOUNTS_PATH, appleAccounts);
   await writeJson(USER_PASSKEYS_PATH, userPasskeys);
   await writeJson(TEXT_RISK_PATH, textRiskState);
   await writeJson(ACCOUNT_GOVERNANCE_PATH, accountGovernance);
@@ -4528,6 +5874,162 @@ function aiSummaryRecordsFor(code) {
     });
 }
 
+const AI_SUMMARY_FOCUS_DAYS = 3;
+
+function chinaDayKeyToTime(dayKey) {
+  const match = String(dayKey || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return NaN;
+  return Date.parse(`${match[1]}-${match[2]}-${match[3]}T00:00:00+08:00`);
+}
+
+function shiftChinaDayKey(dayKey, offsetDays) {
+  const time = chinaDayKeyToTime(dayKey);
+  if (!Number.isFinite(time)) return chinaDayKey();
+  return chinaDayKey(new Date(time + offsetDays * 24 * 60 * 60 * 1000));
+}
+
+function compactAiFocusRecord(record) {
+  return {
+    date: record.date,
+    time: record.time,
+    type: record.type,
+    weightKg: Number.isFinite(record.weightKg) ? record.weightKg : null,
+    mood: record.mood || null,
+    foodTotalCaloriesKcal: Number.isFinite(record.foodTotalCaloriesKcal) ? record.foodTotalCaloriesKcal : null,
+    foodTotalNutrition: Array.isArray(record.foodTotalNutrition) ? record.foodTotalNutrition : [],
+    foods: Array.isArray(record.foods)
+      ? record.foods.map((item) => ({
+        name: item.name,
+        category: item.category,
+        grams: item.grams,
+        totalCaloriesKcal: item.totalCaloriesKcal,
+        caloriesPer100gKcal: item.caloriesPer100gKcal,
+        totalNutrition: item.totalNutrition,
+        nutritionPer100g: item.nutritionPer100g
+      }))
+      : []
+  };
+}
+
+function aiDailyWeightRanges(weightedRecords) {
+  const grouped = new Map();
+  for (const record of weightedRecords) {
+    const group = grouped.get(record.date) || {
+      date: record.date,
+      minWeightKg: record.weightKg,
+      maxWeightKg: record.weightKg,
+      latestWeightKg: record.weightKg,
+      count: 0,
+      firstTime: record.time,
+      latestTime: record.time
+    };
+    group.minWeightKg = Math.min(group.minWeightKg, record.weightKg);
+    group.maxWeightKg = Math.max(group.maxWeightKg, record.weightKg);
+    group.latestWeightKg = record.weightKg;
+    group.count += 1;
+    group.latestTime = record.time;
+    grouped.set(record.date, group);
+  }
+
+  let previousLatest = null;
+  return [...grouped.values()]
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .map((group) => {
+      const deltaFromPreviousDayKg = previousLatest === null
+        ? null
+        : Math.round((group.latestWeightKg - previousLatest) * 100) / 100;
+      previousLatest = group.latestWeightKg;
+      return {
+        ...group,
+        minWeightKg: Math.round(group.minWeightKg * 100) / 100,
+        maxWeightKg: Math.round(group.maxWeightKg * 100) / 100,
+        latestWeightKg: Math.round(group.latestWeightKg * 100) / 100,
+        deltaFromPreviousDayKg
+      };
+    });
+}
+
+function aiDailyFoodSummaries(foodRecords) {
+  const grouped = new Map();
+  for (const record of foodRecords) {
+    const group = grouped.get(record.date) || {
+      date: record.date,
+      recordCount: 0,
+      itemCount: 0,
+      totalCaloriesKcal: 0,
+      totalNutrition: {},
+      foods: []
+    };
+    group.recordCount += 1;
+    group.itemCount += record.foods.length;
+    if (Number.isFinite(record.foodTotalCaloriesKcal)) {
+      group.totalCaloriesKcal += record.foodTotalCaloriesKcal;
+    }
+    for (const item of record.foods) {
+      if (item.name) group.foods.push(item.name);
+    }
+    for (const nutrient of Array.isArray(record.foodTotalNutrition) ? record.foodTotalNutrition : []) {
+      const value = parseNumberLike(nutrient.value);
+      if (nutrient.key && Number.isFinite(value)) {
+        group.totalNutrition[nutrient.key] = roundFoodNumber((group.totalNutrition[nutrient.key] || 0) + value, 1);
+      }
+    }
+    grouped.set(record.date, group);
+  }
+
+  return [...grouped.values()]
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .map((group) => ({
+      ...group,
+      totalCaloriesKcal: roundFoodNumber(group.totalCaloriesKcal, 1),
+      totalNutrition: aiNutritionList(group.totalNutrition),
+      foods: [...new Set(group.foods)].slice(0, 12)
+    }));
+}
+
+function aiDailyMoodSummaries(userRecords) {
+  const grouped = new Map();
+  for (const record of userRecords) {
+    if (!record.mood) continue;
+    const group = grouped.get(record.date) || {
+      date: record.date,
+      count: 0,
+      latestMood: "",
+      samples: []
+    };
+    group.count += 1;
+    group.latestMood = record.mood;
+    if (group.samples.length < 4) {
+      group.samples.push(record.mood);
+    }
+    grouped.set(record.date, group);
+  }
+  return [...grouped.values()].sort((left, right) => left.date.localeCompare(right.date));
+}
+
+function aiSummaryFocusWindow(userRecords) {
+  const today = chinaDayKey();
+  const recentStart = shiftChinaDayKey(today, -(AI_SUMMARY_FOCUS_DAYS - 1));
+  const recentRecords = userRecords.filter((record) => record.date >= recentStart && record.date <= today);
+  if (recentRecords.length) {
+    return {
+      mode: "today_and_recent_3_days",
+      startDate: recentStart,
+      endDate: today,
+      records: recentRecords
+    };
+  }
+
+  const latestDate = userRecords.at(-1)?.date || today;
+  const fallbackStart = shiftChinaDayKey(latestDate, -(AI_SUMMARY_FOCUS_DAYS - 1));
+  return {
+    mode: "latest_available_3_days",
+    startDate: fallbackStart,
+    endDate: latestDate,
+    records: userRecords.filter((record) => record.date >= fallbackStart && record.date <= latestDate)
+  };
+}
+
 function buildAiSummaryMessages(code, environment = null) {
   const userRecords = aiSummaryRecordsFor(code);
   const weightedRecords = userRecords.filter((record) => Number.isFinite(record.weightKg));
@@ -4552,9 +6054,14 @@ function buildAiSummaryMessages(code, environment = null) {
     ? Math.round((spanDays / (weightedRecords.length - 1)) * 10) / 10
     : null;
   const environmentSnapshot = publicAiEnvironmentForPrompt(environment);
-  const dataLines = userRecords.map((record, index) => (
-    `${index + 1}. ${record.date} | 类型:${record.type === "food" ? "食物" : "体重"} | 体重:${Number.isFinite(record.weightKg) ? `${record.weightKg.toFixed(2)}kg` : "未填"} | 心情:${record.mood || "未填"} | 食物:${record.foods.length ? record.foods.map((item) => `${item.name}${item.grams ? `约${item.grams}g` : ""}${Number.isFinite(item.totalCaloriesKcal) ? `/${item.totalCaloriesKcal}kcal` : ""}`).join("、") : "无"}`
-  )).join("\n");
+  const focusWindow = aiSummaryFocusWindow(userRecords);
+  const dailyWeightRanges = aiDailyWeightRanges(weightedRecords);
+  const dailyFoodSummaries = aiDailyFoodSummaries(foodRecords);
+  const dailyMoodSummaries = aiDailyMoodSummaries(userRecords);
+  const focusDateSet = new Set(focusWindow.records.map((record) => record.date));
+  const focusDailyWeightRanges = dailyWeightRanges.filter((entry) => focusDateSet.has(entry.date));
+  const focusDailyFoodSummaries = dailyFoodSummaries.filter((entry) => focusDateSet.has(entry.date));
+  const focusDailyMoodSummaries = dailyMoodSummaries.filter((entry) => focusDateSet.has(entry.date));
   const structuredData = {
     generatedAt: new Date().toISOString(),
     site: "今天你瘦了吗?",
@@ -4583,7 +6090,25 @@ function buildAiSummaryMessages(code, environment = null) {
       totalFoodNutrition
     },
     nutritionFieldNotes: FOOD_NUTRIENT_SPECS.map(({ key, label, unit }) => ({ key, label, unit })),
-    records: userRecords
+    analysisPriority: {
+      primary: "today_and_recent_3_days",
+      secondary: "daily_weight_high_low_trend",
+      instruction: "先判断重点窗口里的今天/近三天变化，再用长期按日高低趋势做背景校验；不要把所有历史记录平均揉在一起。"
+    },
+    focusWindow: {
+      mode: focusWindow.mode,
+      startDate: focusWindow.startDate,
+      endDate: focusWindow.endDate,
+      records: focusWindow.records.map(compactAiFocusRecord),
+      dailyWeightRanges: focusDailyWeightRanges,
+      dailyFoodSummaries: focusDailyFoodSummaries,
+      dailyMoodSummaries: focusDailyMoodSummaries
+    },
+    trendContext: {
+      dailyWeightRanges,
+      dailyFoodSummaries,
+      dailyMoodSummaries
+    }
   };
   const dataHash = crypto
     .createHash("sha256")
@@ -4591,7 +6116,8 @@ function buildAiSummaryMessages(code, environment = null) {
       user: structuredData.user,
       summary: structuredData.summary,
       environment: structuredData.environment,
-      records: userRecords
+      focusWindow: structuredData.focusWindow,
+      trendContext: structuredData.trendContext
     }))
     .digest("hex");
 
@@ -4607,6 +6133,9 @@ function buildAiSummaryMessages(code, environment = null) {
           `当前用户场景：用户昵称为「${displayName || "当前用户"}」，正在用连续照片、体重曲线、心情记录和饮食营养估算追踪减重过程。他需要的是可直接执行的阶段结论，不需要分析过程展开。`,
           "分析边界：只能基于提供的结构化数据分析；食物营养来自图片识别和用户重量估算，必须视为近似值；不得声称掌握未提供的照片内容、运动、疾病、药物或体脂数据；不得做医学诊断、处方、药物建议或极端减重建议。",
           "环境数据边界：定位和天气仅用于解释当天状态可能受到温度、湿度、降雨、风和体感温度影响；不要输出经纬度或精确位置；环境因素只能作为辅助判断，不要过度归因。",
+          "数据优先级：第一优先分析 focusWindow 中的今天/近三天数据；第二优先分析 trendContext.dailyWeightRanges 的按日高低变化；第三优先才看全局汇总。若近期数据与长期平均趋势冲突，以近期数据为当前阶段判断主依据。",
+          "体重数据规则：体重历史已按天聚合为最低、最高、最新和相邻日变化；不要要求逐条体重记录，也不要把同一天多次记录误解为多天变化。",
+          "饮食数据规则：重点窗口内可看具体食物；长期饮食只看每日总热量和营养汇总，用作背景，不要逐条复述。",
           "输出风格：中文，专业化、结论导向、直接；不要寒暄，不要安慰式废话，不要展示推理过程，不要解释你如何分析。",
           "输出必须使用 Markdown，但结构要轻：只允许使用简短标题、加粗、列表、必要时一个小表格。不要输出外部图片链接。",
           "输出结构固定为：## 结论、## 关键判断、## 下一步。总长度控制在 260 到 420 字。",
@@ -4640,10 +6169,12 @@ function buildAiSummaryMessages(code, environment = null) {
           `平均体重记录间隔：${Number.isFinite(averageIntervalDays) ? `${averageIntervalDays}天` : "无"}`,
           `环境上下文：${JSON.stringify(environmentSnapshot)}`,
           "",
-          "逐条数据：",
-          dataLines || "暂无可分析数据。",
+          "重点分析窗口：",
+          `窗口模式：${focusWindow.mode}`,
+          `窗口范围：${focusWindow.startDate} 至 ${focusWindow.endDate}`,
+          `窗口记录数：${focusWindow.records.length}`,
           "",
-          "完整结构化数据（请优先以此为准，包含所有记录、所有饮食重量和所有可用营养字段）：",
+          "结构化数据（请严格按优先级使用：focusWindow > trendContext.dailyWeightRanges > summary）：",
           "```json",
           JSON.stringify(structuredData, null, 2),
           "```"
@@ -4738,6 +6269,14 @@ async function handleAiSummaryStream(req, res, session) {
         status: response.status,
         detail: detail.slice(0, 240)
       }));
+      void recordRuntimeEvent(req, {
+        level: "error",
+        area: "ai",
+        event: "deepseek_summary_failed",
+        message: "DeepSeek 总结请求失败。",
+        source: "server",
+        details: { status: response.status, detail: detail.slice(0, 240) }
+      }).catch(() => {});
       return sendAiStreamError(res, "AI 建议生成失败，请稍后再试。");
     }
 
@@ -5393,6 +6932,64 @@ function isPhotoBuffer(kind, buffer) {
   return false;
 }
 
+function mediaObjectKey(code, filename) {
+  return mediaStorage.objectKeyFor(code, filename);
+}
+
+function localMediaPath(code, filename) {
+  const safeCode = String(code || "").trim();
+  const safeFilename = String(filename || "").trim().split(/[\\/]/g).pop() || "";
+  if (!CODE_PATTERN.test(safeCode) || !/^[A-Za-z0-9._-]{1,220}$/.test(safeFilename)) {
+    return "";
+  }
+  return path.join(PHOTO_DIR, safeCode, safeFilename);
+}
+
+async function writeLocalMediaFile(code, filename, buffer) {
+  const fullPath = localMediaPath(code, filename);
+  if (!fullPath) {
+    const error = new Error("照片路径不合法。");
+    error.statusCode = 400;
+    throw error;
+  }
+  const directory = path.dirname(fullPath);
+  await fsp.mkdir(directory, { recursive: true });
+  await fsp.writeFile(fullPath, buffer);
+}
+
+async function saveMediaFile(code, filename, buffer, contentType) {
+  const objectKey = mediaObjectKey(code, filename);
+  if (mediaStorage.enabled && objectKey) {
+    try {
+      await mediaStorage.uploadBuffer(objectKey, buffer, contentType);
+      if (mediaStorage.shouldKeepLocalCopy()) {
+        await writeLocalMediaFile(code, filename, buffer);
+      }
+      return filename;
+    } catch (error) {
+      if (!mediaStorage.shouldFallbackLocal()) {
+        throw error;
+      }
+      console.warn("COS media upload failed, falling back to local storage:", error.message);
+      void recordRuntimeEvent(null, {
+        level: "warning",
+        area: "storage",
+        event: "cos_upload_fallback",
+        message: "COS 上传失败，已回退到本地存储。",
+        source: "server",
+        details: {
+          objectKey,
+          contentType,
+          error: error.message
+        }
+      }).catch(() => {});
+    }
+  }
+
+  await writeLocalMediaFile(code, filename, buffer);
+  return filename;
+}
+
 async function savePhotoBuffer(code, recordId, buffer, contentType) {
   const typeKinds = {
     "image/jpeg": "jpg",
@@ -5412,9 +7009,7 @@ async function savePhotoBuffer(code, recordId, buffer, contentType) {
   }
 
   const filename = `${recordId}.${kind}`;
-  const fullPath = path.join(PHOTO_DIR, code, filename);
-  await fsp.writeFile(fullPath, buffer);
-  return filename;
+  return saveMediaFile(code, filename, buffer, contentType);
 }
 
 async function saveThumbnailBuffer(code, recordId, buffer, contentType) {
@@ -5431,11 +7026,10 @@ async function saveThumbnailBuffer(code, recordId, buffer, contentType) {
   }
 
   const filename = `${recordId}.thumb.jpg`;
-  await fsp.writeFile(path.join(PHOTO_DIR, code, filename), buffer);
-  return filename;
+  return saveMediaFile(code, filename, buffer, normalizedType);
 }
 
-async function savePhotoFromDataUrl(code, recordId, dataUrl) {
+function parsePhotoDataUrl(dataUrl) {
   if (!dataUrl) {
     return null;
   }
@@ -5447,24 +7041,113 @@ async function savePhotoFromDataUrl(code, recordId, dataUrl) {
     throw error;
   }
 
-  return savePhotoBuffer(code, recordId, Buffer.from(match[2].replace(/\s/g, ""), "base64"), match[1]);
+  return {
+    contentType: match[1],
+    buffer: Buffer.from(match[2].replace(/\s/g, ""), "base64")
+  };
+}
+
+async function savePhotoFromDataUrl(code, recordId, dataUrl) {
+  const parsed = parsePhotoDataUrl(dataUrl);
+  if (!parsed) {
+    return null;
+  }
+  return savePhotoBuffer(code, recordId, parsed.buffer, parsed.contentType);
 }
 
 async function deleteRecordPhotoFiles(code, record) {
-  const filenames = [];
-  if (record?.photoFile) filenames.push(record.photoFile);
-  if (record?.thumbnailFile) filenames.push(record.thumbnailFile);
+  const filenames = new Set();
+  if (record?.photoFile) filenames.add(record.photoFile);
+  if (record?.thumbnailFile) filenames.add(record.thumbnailFile);
   for (const photo of Array.isArray(record?.foodPhotos) ? record.foodPhotos : []) {
-    if (photo?.file) filenames.push(photo.file);
-    if (photo?.thumbnailFile) filenames.push(photo.thumbnailFile);
+    if (photo?.file) filenames.add(photo.file);
+    if (photo?.thumbnailFile) filenames.add(photo.thumbnailFile);
   }
-  await Promise.all(filenames.map((filename) => (
-    fsp.unlink(path.join(PHOTO_DIR, code, filename)).catch((error) => {
-      if (error.code !== "ENOENT") {
-        throw error;
+  await Promise.all([...filenames].flatMap((filename) => {
+    const objectKey = mediaObjectKey(code, filename);
+    const fullPath = localMediaPath(code, filename);
+    return [
+      objectKey && mediaStorage.enabled ? mediaStorage.deleteObject(objectKey) : Promise.resolve(false),
+      fullPath
+        ? fsp.unlink(fullPath).catch((error) => {
+          if (error.code !== "ENOENT") {
+            throw error;
+          }
+        })
+        : Promise.resolve(false)
+    ];
+  }));
+}
+
+async function serveMediaFile(req, res, {
+  code,
+  filename,
+  notFoundMessage = "没有找到这张照片。",
+  cacheControl = "private, max-age=604800, immutable"
+}) {
+  const objectKey = mediaObjectKey(code, filename);
+  const ext = path.extname(String(filename || "")).toLowerCase();
+  const contentType = MIME_TYPES[ext] || "application/octet-stream";
+
+  if (mediaStorage.enabled && objectKey) {
+    const publicUrl = mediaStorage.publicUrl(objectKey);
+    if (publicUrl && mediaStorage.shouldRedirect()) {
+      writeResponseHead(res, 302, {
+        Location: publicUrl,
+        "Cache-Control": "private, max-age=300"
+      });
+      return res.end();
+    }
+
+    try {
+      const object = await mediaStorage.openReadStream(objectKey);
+      if (object?.stream) {
+        writeResponseHead(res, 200, {
+          "Content-Type": object.contentType || contentType,
+          "Cache-Control": cacheControl
+        });
+        return object.stream.pipe(res);
       }
-    })
-  )));
+    } catch (error) {
+      console.warn("COS media read failed, falling back to local storage:", error.message);
+      void recordRuntimeEvent(req, {
+        level: "warning",
+        area: "storage",
+        event: "cos_read_fallback",
+        message: "COS 读取失败，已尝试回退到本地文件。",
+        source: "server",
+        details: {
+          objectKey,
+          contentType,
+          error: error.message
+        }
+      }).catch(() => {});
+    }
+  }
+
+  const fullPath = localMediaPath(code, filename);
+  if (!fullPath) {
+    return sendError(res, 404, notFoundMessage);
+  }
+  try {
+    await fsp.access(fullPath);
+  } catch {
+    return sendError(res, 404, notFoundMessage);
+  }
+
+  writeResponseHead(res, 200, {
+    "Content-Type": contentType,
+    "Cache-Control": cacheControl
+  });
+  const stream = fs.createReadStream(fullPath);
+  stream.on("error", () => {
+    if (!res.headersSent) {
+      sendError(res, 404, notFoundMessage);
+      return;
+    }
+    res.destroy();
+  });
+  return stream.pipe(res);
 }
 
 function normalizeTianapiFoodResult(result) {
@@ -6216,6 +7899,19 @@ async function callQwenVisionJsonEndpoint(buffer, options = {}) {
         statusCode: error.statusCode || 0,
         message: sanitizeLogText(error.message, 160)
       }));
+      void recordRuntimeEvent(null, {
+        level: "warning",
+        area: "ai",
+        event: "qwen_model_fallback",
+        message: "千问主模型调用失败，已切换备选模型。",
+        source: "server",
+        details: {
+          failedModel: model,
+          nextModel: models[index + 1],
+          statusCode: error.statusCode || 0,
+          error: sanitizeLogText(error.message, 160)
+        }
+      }).catch(() => {});
     }
   }
   throw lastError || new Error("千问视觉识别服务暂时不可用。");
@@ -6907,6 +8603,21 @@ async function handleAdminApi(req, res, pathname) {
     }
   }
 
+  if (req.method === "GET" && relativePath === "/api/runtime-events") {
+    try {
+      return sendJson(res, 200, runtimeEventsSummary());
+    } catch (error) {
+      return sendError(res, error.statusCode || 500, error.message);
+    }
+  }
+
+  if (req.method === "POST" && relativePath === "/api/runtime-events/clear") {
+    runtimeEvents = [];
+    await writeJson(RUNTIME_EVENTS_PATH, runtimeEvents);
+    await recordAdminAuthEvent(req, "runtime_events_cleared", session.username, "all");
+    return sendJson(res, 200, runtimeEventsSummary());
+  }
+
   if (req.method === "PATCH" && relativePath === "/api/server-registration") {
     const body = await readRequestJson(req);
     try {
@@ -6934,6 +8645,28 @@ async function handleAdminApi(req, res, pathname) {
       ok: true,
       queue: moderationQueueSummary()
     });
+  }
+
+  const moderationAttachmentMatch = relativePath.match(/^\/api\/moderation\/items\/([^/]+)\/attachments\/([^/]+)$/);
+  if (req.method === "GET" && moderationAttachmentMatch) {
+    const itemId = safeDecodeURIComponent(moderationAttachmentMatch[1]);
+    const attachmentId = safeDecodeURIComponent(moderationAttachmentMatch[2]);
+    const item = moderationQueue.items.find((entry) => entry.id === itemId);
+    const attachment = item ? sanitizeModerationAttachments(item.attachments).find((entry) => entry.id === attachmentId) : null;
+    const fullPath = moderationAttachmentFullPath(attachment);
+    if (!fullPath || !attachment) {
+      return sendError(res, 404, "没有找到这张反馈图片。");
+    }
+    try {
+      await fsp.access(fullPath);
+    } catch {
+      return sendError(res, 404, "没有找到这张反馈图片。");
+    }
+    writeResponseHead(res, 200, {
+      "Content-Type": attachment.mimeType || "application/octet-stream",
+      "Cache-Control": "private, max-age=300"
+    }, { admin: true });
+    return fs.createReadStream(fullPath).pipe(res);
   }
 
   const moderationItemMatch = relativePath.match(/^\/api\/moderation\/items\/([^/]+)$/);
@@ -7083,13 +8816,12 @@ async function handleAdminApi(req, res, pathname) {
       return sendError(res, 404, "没有找到这张照片。");
     }
 
-    const fullPath = path.join(PHOTO_DIR, code, record.photoFile);
-    const ext = path.extname(record.photoFile).toLowerCase();
-    writeResponseHead(res, 200, {
-      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": "private, no-store"
+    return serveMediaFile(req, res, {
+      code,
+      filename: record.photoFile,
+      cacheControl: "private, no-store",
+      notFoundMessage: "没有找到这张照片。"
     });
-    return fs.createReadStream(fullPath).pipe(res);
   }
 
   const foodPhotoMatch = relativePath.match(/^\/api\/food-(photos|thumbnails)\/([^/]+)\/([^/]+)\/([^/]+)$/);
@@ -7104,13 +8836,12 @@ async function handleAdminApi(req, res, pathname) {
       return sendError(res, 404, "没有找到这张饮食照片。");
     }
 
-    const fullPath = path.join(PHOTO_DIR, code, filename);
-    const ext = path.extname(filename).toLowerCase();
-    writeResponseHead(res, 200, {
-      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": "private, no-store"
+    return serveMediaFile(req, res, {
+      code,
+      filename,
+      cacheControl: "private, no-store",
+      notFoundMessage: "没有找到这张饮食照片。"
     });
-    return fs.createReadStream(fullPath).pipe(res);
   }
 
   return sendError(res, 404, "没有找到管理接口。");
@@ -7136,22 +8867,36 @@ async function handleApi(req, res, pathname) {
     const requestUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const popupMode = requestUrl.searchParams.get("popup") === "1";
     const syncMode = requestUrl.searchParams.get("sync") === "1";
+    const bindMode = requestUrl.searchParams.get("bind") === "1" && !syncMode;
+    const nativeMode = requestUrl.searchParams.get("native") === "1";
     const mobileMode = requestUrl.searchParams.get("mobile") === "1"
       || /iPhone|iPad|iPod|Android|Mobile|OpenHarmony|HarmonyOS|ArkWeb/i.test(String(req.headers["user-agent"] || ""));
     const syncSession = syncMode ? currentSession(req) : null;
     const syncAccount = syncSession ? qqAccountForCode(syncSession.code) : null;
+    const bindSession = bindMode ? currentSession(req) : null;
     if (syncMode && (!syncSession || !syncAccount?.openidDigest)) {
+      if (nativeMode) {
+        return sendQqNativeCallbackPage(req, res, "sync-unavailable");
+      }
       if (popupMode) {
         return sendQqCallbackPage(req, res, "sync-unavailable");
       }
       return redirect(res, `${withBasePath("/")}?qq=sync-unavailable`);
+    }
+    if (bindMode && !bindSession) {
+      if (popupMode) {
+        return sendQqCallbackPage(req, res, "bind-unavailable");
+      }
+      return redirect(res, `${withBasePath("/")}?qq=bind-unavailable`);
     }
     cleanupQqOAuthStates();
     const stateRecord = {
       createdAt: Date.now(),
       popupMode,
       syncMode,
-      code: syncSession?.code || "",
+      bindMode,
+      nativeMode,
+      code: syncSession?.code || bindSession?.code || "",
       openidDigest: syncAccount?.openidDigest || ""
     };
     const state = buildSignedQqState(req, stateRecord);
@@ -7168,6 +8913,232 @@ async function handleApi(req, res, pathname) {
       authUrl.searchParams.set("scope", QQ_AUTH_SCOPE);
     }
     return redirect(res, authUrl.href, { "Set-Cookie": buildQqStateCookie(req, state) });
+  }
+
+  if (["GET", "HEAD"].includes(req.method) && pathname === "/api/auth/apple/start") {
+    if (!appleLoginConfigured()) {
+      return redirectWithAppleStatus(req, res, "setup");
+    }
+
+    const requestUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+    const popupMode = requestUrl.searchParams.get("popup") === "1";
+    const bindMode = requestUrl.searchParams.get("bind") === "1";
+    const bindSession = bindMode ? currentSession(req) : null;
+    if (bindMode && !bindSession) {
+      if (popupMode) {
+        return sendAppleCallbackPage(req, res, "bind-unavailable");
+      }
+      return redirectWithAppleStatus(req, res, "bind-unavailable");
+    }
+
+    cleanupAppleOAuthStates();
+    const stateRecord = {
+      createdAt: Date.now(),
+      popupMode,
+      bindMode,
+      code: bindSession?.code || ""
+    };
+    const state = buildSignedAppleState(req, stateRecord);
+    appleOAuthStates.set(state, stateRecord);
+    const authUrl = new URL("https://appleid.apple.com/auth/authorize");
+    authUrl.searchParams.set("response_type", "code id_token");
+    authUrl.searchParams.set("response_mode", "form_post");
+    authUrl.searchParams.set("client_id", APPLE_WEB_CLIENT_ID);
+    authUrl.searchParams.set("redirect_uri", appleWebRedirectUrl(req));
+    authUrl.searchParams.set("scope", "name email");
+    authUrl.searchParams.set("state", state);
+    return redirect(res, authUrl.href, { "Set-Cookie": buildAppleStateCookie(req, state) });
+  }
+
+  if ((req.method === "POST" || req.method === "GET") && pathname === "/api/auth/apple/callback") {
+    if (!appleLoginConfigured()) {
+      return redirectWithAppleStatus(req, res, "setup");
+    }
+
+    let callbackData = {};
+    try {
+      callbackData = req.method === "POST"
+        ? await readRequestForm(req)
+        : Object.fromEntries(new URL(req.url, `http://${req.headers.host || "localhost"}`).searchParams);
+    } catch (error) {
+      return redirectWithAppleStatus(req, res, "error");
+    }
+
+    const state = callbackData.state || "";
+    const memoryState = state ? appleOAuthStates.get(state) : null;
+    const signedState = memoryState ? null : parseSignedAppleState(req, state);
+    const storedState = memoryState || signedState;
+    const completedState = state ? appleOAuthStates.get(completedAppleStateKey(state)) : null;
+    const cookieState = parseCookies(req)[APPLE_STATE_COOKIE_NAME] || "";
+    const cookieStateMatches = Boolean(state && cookieState && secureStringEquals(state, cookieState));
+    if (memoryState) {
+      appleOAuthStates.delete(state);
+    }
+    const memoryStateValid = Boolean(storedState && Date.now() - storedState.createdAt <= QQ_OAUTH_TTL_MS);
+    const stateValid = memoryStateValid || cookieStateMatches;
+
+    if (completedState && Date.now() - completedState.createdAt <= QQ_OAUTH_TTL_MS) {
+      const completedStatus = completedState.status || (completedState.bindMode ? "bind-ok" : "ok");
+      const extraParams = completedStatus === "bind-ok" ? { tab: "settings", settings: "bindings" } : {};
+      if ((completedStatus === "ok" || completedStatus === "bind-ok") && completedState.accountCode) {
+        const sid = await issueSession(completedState.accountCode);
+        if (completedState.popupMode) {
+          return sendAppleCallbackPage(req, res, completedStatus, {
+            "Set-Cookie": [buildSessionCookie(req, sid), clearAppleStateCookie(req)]
+          }, extraParams);
+        }
+        return redirectWithAppleStatus(req, res, completedStatus, extraParams, {
+          "Set-Cookie": [buildSessionCookie(req, sid), clearAppleStateCookie(req)]
+        });
+      }
+      if (completedState.popupMode) {
+        return sendAppleCallbackPage(req, res, completedStatus, { "Set-Cookie": clearAppleStateCookie(req) }, extraParams);
+      }
+      return redirectWithAppleStatus(req, res, completedStatus, extraParams);
+    }
+
+    const oauthError = callbackData.error || callbackData.error_description;
+    if (oauthError) {
+      const status = storedState?.bindMode ? "bind-denied" : "denied";
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "apple_bind_denied" : "apple_login_denied", {
+        status: "failure",
+        method: "apple",
+        accountCode: storedState?.code || "",
+        detail: String(oauthError).slice(0, 160)
+      });
+      if (storedState?.popupMode) {
+        return sendAppleCallbackPage(req, res, status, { "Set-Cookie": clearAppleStateCookie(req) });
+      }
+      return redirectWithAppleStatus(req, res, status, {}, { "Set-Cookie": clearAppleStateCookie(req) });
+    }
+
+    if (!callbackData.code && !callbackData.id_token) {
+      const status = storedState?.bindMode ? "bind-error" : "callback";
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "apple_bind_missing_code" : "apple_login_missing_code", {
+        status: "failure",
+        method: "apple",
+        accountCode: storedState?.code || "",
+        detail: "missing_code"
+      });
+      if (storedState?.popupMode) {
+        return sendAppleCallbackPage(req, res, status, { "Set-Cookie": clearAppleStateCookie(req) });
+      }
+      return redirect(res, `${withBasePath("/")}?apple=${status}`, { "Set-Cookie": clearAppleStateCookie(req) });
+    }
+
+    if (!stateValid) {
+      const status = storedState?.bindMode ? "bind-state" : "state";
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "apple_bind_state_failed" : "apple_login_state_failed", {
+        status: "failure",
+        method: "apple",
+        accountCode: storedState?.code || "",
+        detail: `state=${Boolean(state)} signed=${Boolean(signedState)} cookie=${cookieStateMatches}`
+      });
+      if (storedState?.popupMode) {
+        return sendAppleCallbackPage(req, res, status, { "Set-Cookie": clearAppleStateCookie(req) });
+      }
+      return redirect(res, `${withBasePath("/")}?apple=${status}`, { "Set-Cookie": clearAppleStateCookie(req) });
+    }
+
+    try {
+      assertRateLimit(req, "auth", `apple-web:${privacyDigest(requestIp(req))}`);
+      const tokenData = callbackData.code
+        ? await exchangeAppleAuthorizationCode(req, callbackData.code)
+        : { id_token: callbackData.id_token };
+      const payload = await verifyAppleIdentityToken(tokenData.id_token);
+      const callbackUser = appleUserInfoFromCallback(callbackData.user);
+      const identity = {
+        sub: payload.sub,
+        email: sanitizeQqText(payload.email || callbackUser.email, 160),
+        emailVerified: payload.email_verified === true || payload.email_verified === "true",
+        fullName: callbackUser.fullName
+      };
+      const accountCode = storedState?.bindMode
+        ? await bindAppleIdentityToCode(storedState.code, identity)
+        : await accountCodeForAppleIdentity(identity, req);
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "apple_bind_success" : "apple_login_success", {
+        status: "success",
+        method: "apple",
+        accountCode,
+        detail: storedState?.bindMode ? "oauth_bind" : "oauth_callback"
+      });
+      const status = storedState?.bindMode ? "bind-ok" : "ok";
+      if (state) {
+        appleOAuthStates.set(completedAppleStateKey(state), {
+          createdAt: Date.now(),
+          popupMode: Boolean(storedState?.popupMode),
+          bindMode: Boolean(storedState?.bindMode),
+          status,
+          accountCode
+        });
+      }
+      const sid = await issueSession(accountCode);
+      const cookies = [buildSessionCookie(req, sid), clearAppleStateCookie(req)];
+      const extraParams = storedState?.bindMode ? { tab: "settings", settings: "bindings" } : {};
+      if (storedState?.popupMode) {
+        return sendAppleCallbackPage(req, res, status, { "Set-Cookie": cookies }, extraParams);
+      }
+      const target = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
+      target.searchParams.set("apple", status);
+      for (const [key, value] of Object.entries(extraParams)) {
+        target.searchParams.set(key, value);
+      }
+      return redirect(res, target.pathname + target.search, { "Set-Cookie": cookies });
+    } catch (error) {
+      console.error("Apple web login failed:", error.message);
+      const status = error.code === "REGISTRATION_CAPACITY_CLOSED"
+        ? "capacity"
+        : storedState?.bindMode
+          ? (error.statusCode === 409 ? "bind-conflict" : "bind-error")
+          : "error";
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "apple_bind_failed" : "apple_login_failed", {
+        status: error.code === "REGISTRATION_CAPACITY_CLOSED" ? "blocked" : "failure",
+        method: "apple",
+        accountCode: storedState?.code || "",
+        detail: error.message
+      });
+      if (storedState?.popupMode) {
+        return sendAppleCallbackPage(req, res, status, { "Set-Cookie": clearAppleStateCookie(req) });
+      }
+      return redirect(res, `${withBasePath("/")}?apple=${status}`, { "Set-Cookie": clearAppleStateCookie(req) });
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/api/auth/apple/native") {
+    let body = {};
+    try {
+      assertRateLimit(req, "auth", `apple:${privacyDigest(requestIp(req))}`);
+      body = await readRequestJson(req);
+      const payload = await verifyAppleIdentityToken(body.identityToken);
+      const fullName = sanitizeQqText(body.fullName, 60);
+      const email = sanitizeQqText(payload.email || body.email, 160);
+      const accountCode = await accountCodeForAppleIdentity({
+        sub: payload.sub,
+        email,
+        emailVerified: payload.email_verified === true || payload.email_verified === "true",
+        fullName
+      }, req);
+      await recordLoginAuditEvent(req, "apple_login_success", {
+        status: "success",
+        method: "apple",
+        accountCode,
+        detail: "native_identity_token"
+      });
+      const sid = await issueSession(accountCode);
+      return sendJson(
+        res,
+        200,
+        { ok: true, profile: publicProfile(accountCode) },
+        { "Set-Cookie": buildSessionCookie(req, sid) }
+      );
+    } catch (error) {
+      await recordLoginAuditEvent(req, "apple_login_failed", {
+        status: error.code === "REGISTRATION_CAPACITY_CLOSED" ? "blocked" : "failure",
+        method: "apple",
+        detail: error.message
+      });
+      return sendError(res, error.statusCode || 401, error.message || "Apple 登录失败。");
+    }
   }
 
   if (req.method === "GET" && pathname === "/api/auth/qq/callback") {
@@ -7191,13 +9162,22 @@ async function handleApi(req, res, pathname) {
     const stateValid = storedState?.syncMode ? memoryStateValid : (memoryStateValid || cookieStateMatches);
     if (completedState && Date.now() - completedState.createdAt <= QQ_OAUTH_TTL_MS) {
       const completedStatus = completedState.status || (completedState.syncMode ? "sync-ok" : "ok");
-      if ((completedStatus === "ok" || completedStatus === "sync-ok") && completedState.accountCode) {
+      if ((completedStatus === "ok" || completedStatus === "sync-ok" || completedStatus === "bind-ok") && completedState.accountCode) {
         const sid = await issueSession(completedState.accountCode);
         const target = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
         target.searchParams.set("qq", completedStatus);
-        const extraParams = completedStatus === "sync-ok" ? { tab: "settings", settings: "profile" } : {};
+        const extraParams = completedStatus === "sync-ok"
+          ? { tab: "settings", settings: "bindings" }
+          : completedStatus === "bind-ok"
+            ? { tab: "settings", settings: "bindings" }
+            : {};
         for (const [key, value] of Object.entries(extraParams)) {
           target.searchParams.set(key, value);
+        }
+        if (completedState.nativeMode) {
+          return sendQqNativeCallbackPage(req, res, completedStatus, {
+            "Set-Cookie": clearQqStateCookie(req)
+          }, extraParams, completedState.accountCode);
         }
         if (completedState.popupMode) {
           return sendQqCallbackPage(req, res, completedStatus, {
@@ -7208,6 +9188,9 @@ async function handleApi(req, res, pathname) {
           "Set-Cookie": [buildSessionCookie(req, sid), clearQqStateCookie(req)]
         });
       }
+      if (completedState.nativeMode) {
+        return sendQqNativeCallbackPage(req, res, completedStatus, { "Set-Cookie": clearQqStateCookie(req) });
+      }
       if (completedState.popupMode) {
         return sendQqCallbackPage(req, res, completedStatus, { "Set-Cookie": clearQqStateCookie(req) });
       }
@@ -7216,13 +9199,16 @@ async function handleApi(req, res, pathname) {
     const oauthError = requestUrl.searchParams.get("error") || requestUrl.searchParams.get("error_description");
     if (oauthError) {
       console.warn("QQ login returned an OAuth error:", String(oauthError).slice(0, 160));
-      const status = storedState?.syncMode ? "sync-denied" : "denied";
-      await recordLoginAuditEvent(req, storedState?.syncMode ? "qq_sync_denied" : "qq_login_denied", {
+      const status = storedState?.bindMode ? "bind-denied" : storedState?.syncMode ? "sync-denied" : "denied";
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "qq_bind_denied" : storedState?.syncMode ? "qq_sync_denied" : "qq_login_denied", {
         status: "failure",
         method: "qq",
         accountCode: storedState?.code || "",
         detail: String(oauthError).slice(0, 160)
       });
+      if (storedState?.nativeMode) {
+        return sendQqNativeCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
+      }
       if (storedState?.popupMode) {
         return sendQqCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
       }
@@ -7230,13 +9216,16 @@ async function handleApi(req, res, pathname) {
     }
     if (!code) {
       console.warn("QQ login callback missing code.");
-      const status = storedState?.syncMode ? "sync-error" : "callback";
-      await recordLoginAuditEvent(req, storedState?.syncMode ? "qq_sync_missing_code" : "qq_login_missing_code", {
+      const status = storedState?.bindMode ? "bind-error" : storedState?.syncMode ? "sync-error" : "callback";
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "qq_bind_missing_code" : storedState?.syncMode ? "qq_sync_missing_code" : "qq_login_missing_code", {
         status: "failure",
         method: "qq",
         accountCode: storedState?.code || "",
         detail: "missing_code"
       });
+      if (storedState?.nativeMode) {
+        return sendQqNativeCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
+      }
       if (storedState?.popupMode) {
         return sendQqCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
       }
@@ -7251,13 +9240,16 @@ async function handleApi(req, res, pathname) {
         cookieStateMatches,
         host: req.headers.host || ""
       });
-      const status = storedState?.syncMode ? "sync-state" : "state";
-      await recordLoginAuditEvent(req, storedState?.syncMode ? "qq_sync_state_failed" : "qq_login_state_failed", {
+      const status = storedState?.bindMode ? "bind-state" : storedState?.syncMode ? "sync-state" : "state";
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "qq_bind_state_failed" : storedState?.syncMode ? "qq_sync_state_failed" : "qq_login_state_failed", {
         status: "failure",
         method: "qq",
         accountCode: storedState?.code || "",
         detail: `state=${Boolean(state)} signed=${Boolean(signedState)} cookie=${cookieStateMatches}`
       });
+      if (storedState?.nativeMode) {
+        return sendQqNativeCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
+      }
       if (storedState?.popupMode) {
         return sendQqCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
       }
@@ -7275,7 +9267,10 @@ async function handleApi(req, res, pathname) {
       const tokenData = await fetchQqJson(tokenUrl);
       const accessToken = tokenData.access_token;
       if (!accessToken) {
-        const status = storedState?.syncMode ? "sync-error" : "error";
+        const status = storedState?.bindMode ? "bind-error" : storedState?.syncMode ? "sync-error" : "error";
+        if (storedState?.nativeMode) {
+          return sendQqNativeCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
+        }
         if (storedState?.popupMode) {
           return sendQqCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
         }
@@ -7285,7 +9280,10 @@ async function handleApi(req, res, pathname) {
       const meData = await fetchQqMe(accessToken);
       const openid = meData.openid;
       if (!openid) {
-        const status = storedState?.syncMode ? "sync-error" : "error";
+        const status = storedState?.bindMode ? "bind-error" : storedState?.syncMode ? "sync-error" : "error";
+        if (storedState?.nativeMode) {
+          return sendQqNativeCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
+        }
         if (storedState?.popupMode) {
           return sendQqCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
         }
@@ -7293,6 +9291,35 @@ async function handleApi(req, res, pathname) {
       }
 
       const qqProfile = await fetchQqProfile(accessToken, meData);
+      if (storedState?.bindMode) {
+        const accountCode = await bindQqOpenidToCode(storedState.code, openid, qqProfile);
+        await recordLoginAuditEvent(req, "qq_bind_success", {
+          status: "success",
+          method: "qq",
+          accountCode,
+          detail: "oauth_bind"
+        });
+        if (state) {
+          qqOAuthStates.set(completedQqStateKey(state), {
+            createdAt: Date.now(),
+            popupMode: Boolean(storedState.popupMode),
+            nativeMode: false,
+            bindMode: true,
+            status: "bind-ok",
+            accountCode
+          });
+        }
+        const sid = await issueSession(accountCode);
+        const bindCookies = [buildSessionCookie(req, sid), clearQqStateCookie(req)];
+        if (storedState.popupMode) {
+          return sendQqCallbackPage(req, res, "bind-ok", { "Set-Cookie": bindCookies }, { tab: "settings", settings: "bindings" });
+        }
+        const target = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
+        target.searchParams.set("qq", "bind-ok");
+        target.searchParams.set("tab", "settings");
+        target.searchParams.set("settings", "bindings");
+        return redirect(res, target.pathname + target.search, { "Set-Cookie": bindCookies });
+      }
       if (storedState?.syncMode) {
         const openidDigest = qqOpenidDigest(openid);
         if (!storedState.openidDigest || !secureStringEquals(openidDigest, storedState.openidDigest)) {
@@ -7306,6 +9333,9 @@ async function handleApi(req, res, pathname) {
             accountCode: storedState.code || "",
             detail: "openid_mismatch"
           });
+          if (storedState.nativeMode) {
+            return sendQqNativeCallbackPage(req, res, "sync-mismatch", { "Set-Cookie": clearQqStateCookie(req) });
+          }
           if (storedState.popupMode) {
             return sendQqCallbackPage(req, res, "sync-mismatch", { "Set-Cookie": clearQqStateCookie(req) });
           }
@@ -7323,6 +9353,9 @@ async function handleApi(req, res, pathname) {
             accountCode: storedState.code || accountCode,
             detail: "account_code_mismatch"
           });
+          if (storedState.nativeMode) {
+            return sendQqNativeCallbackPage(req, res, "sync-mismatch", { "Set-Cookie": clearQqStateCookie(req) });
+          }
           if (storedState.popupMode) {
             return sendQqCallbackPage(req, res, "sync-mismatch", { "Set-Cookie": clearQqStateCookie(req) });
           }
@@ -7338,6 +9371,7 @@ async function handleApi(req, res, pathname) {
           qqOAuthStates.set(completedQqStateKey(state), {
             createdAt: Date.now(),
             popupMode: storedState.popupMode,
+            nativeMode: Boolean(storedState.nativeMode),
             syncMode: true,
             status: "sync-ok",
             accountCode
@@ -7345,13 +9379,16 @@ async function handleApi(req, res, pathname) {
         }
         const sid = await issueSession(accountCode);
         const syncCookies = [buildSessionCookie(req, sid), clearQqStateCookie(req)];
+        if (storedState.nativeMode) {
+          return sendQqNativeCallbackPage(req, res, "sync-ok", { "Set-Cookie": clearQqStateCookie(req) }, { tab: "settings", settings: "bindings" }, accountCode);
+        }
         if (storedState.popupMode) {
-          return sendQqCallbackPage(req, res, "sync-ok", { "Set-Cookie": syncCookies }, { tab: "settings", settings: "profile" });
+          return sendQqCallbackPage(req, res, "sync-ok", { "Set-Cookie": syncCookies }, { tab: "settings", settings: "bindings" });
         }
         const target = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
         target.searchParams.set("qq", "sync-ok");
         target.searchParams.set("tab", "settings");
-        target.searchParams.set("settings", "profile");
+        target.searchParams.set("settings", "bindings");
         return redirect(res, target.pathname + target.search, { "Set-Cookie": syncCookies });
       }
 
@@ -7366,6 +9403,7 @@ async function handleApi(req, res, pathname) {
         qqOAuthStates.set(completedQqStateKey(state), {
           createdAt: Date.now(),
           popupMode: Boolean(storedState?.popupMode),
+          nativeMode: Boolean(storedState?.nativeMode),
           syncMode: false,
           status: "ok",
           accountCode
@@ -7374,6 +9412,9 @@ async function handleApi(req, res, pathname) {
       const sid = await issueSession(accountCode);
       const target = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
       target.searchParams.set("qq", "ok");
+      if (storedState?.nativeMode) {
+        return sendQqNativeCallbackPage(req, res, "ok", { "Set-Cookie": clearQqStateCookie(req) }, {}, accountCode);
+      }
       if (storedState?.popupMode) {
         return sendQqCallbackPage(req, res, "ok", {
           "Set-Cookie": [buildSessionCookie(req, sid), clearQqStateCookie(req)]
@@ -7386,28 +9427,98 @@ async function handleApi(req, res, pathname) {
       console.error("QQ login failed:", error.message);
       const status = error.code === "REGISTRATION_CAPACITY_CLOSED"
         ? "capacity"
-        : storedState?.syncMode ? "sync-error" : "error";
-      await recordLoginAuditEvent(req, storedState?.syncMode ? "qq_sync_failed" : "qq_login_failed", {
+        : storedState?.bindMode
+          ? (error.statusCode === 409 ? "bind-conflict" : "bind-error")
+          : storedState?.syncMode ? "sync-error" : "error";
+      await recordLoginAuditEvent(req, storedState?.bindMode ? "qq_bind_failed" : storedState?.syncMode ? "qq_sync_failed" : "qq_login_failed", {
         status: error.code === "REGISTRATION_CAPACITY_CLOSED" ? "blocked" : "failure",
         method: "qq",
         accountCode: storedState?.code || "",
         detail: error.message
       });
+      if (storedState?.nativeMode) {
+        return sendQqNativeCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
+      }
       if (storedState?.popupMode) {
         return sendQqCallbackPage(req, res, status, { "Set-Cookie": clearQqStateCookie(req) });
       }
       return redirect(res, `${withBasePath("/")}?qq=${status}`, { "Set-Cookie": clearQqStateCookie(req) });
     }
   }
+
+  if (req.method === "GET" && pathname === "/api/auth/qq/native-complete") {
+    const requestUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+    const token = sanitizeQqText(requestUrl.searchParams.get("token"), 160);
+    cleanupQqNativeAuthTokens();
+    const entry = token ? qqNativeAuthTokens.get(token) : null;
+    if (token) {
+      qqNativeAuthTokens.delete(token);
+    }
+
+    if (!entry) {
+      return redirect(res, `${withBasePath("/")}?qq=native-state`, { "Set-Cookie": clearQqStateCookie(req) });
+    }
+
+    const status = sanitizeQqText(entry.status, 40) || "error";
+    const target = new URL(withBasePath("/"), `${isSecureRequest(req) ? "https" : "http"}://${req.headers.host || "furby.top"}`);
+    target.searchParams.set("qq", status);
+    for (const [key, value] of Object.entries(entry.extraParams || {})) {
+      target.searchParams.set(key, value);
+    }
+
+    if ((status === "ok" || status === "sync-ok") && entry.accountCode) {
+      const sid = await issueSession(entry.accountCode);
+      return redirect(res, target.pathname + target.search, {
+        "Set-Cookie": [buildSessionCookie(req, sid), clearQqStateCookie(req)]
+      });
+    }
+
+    return redirect(res, target.pathname + target.search, { "Set-Cookie": clearQqStateCookie(req) });
+  }
+
+  if (req.method === "POST" && pathname === "/api/test-login") {
+    try {
+      assertRateLimit(req, "auth", `test-login:${privacyDigest(requestIp(req))}`);
+      const code = await ensureTestLoginAccount(req);
+      await recordLoginAuditEvent(req, "test_login_success", {
+        status: "success",
+        method: "test",
+        accountCode: code,
+        detail: "fixed_test_account"
+      });
+      return createSession(req, res, code);
+    } catch (error) {
+      await recordLoginAuditEvent(req, "test_login_failed", {
+        status: "failure",
+        method: "test",
+        detail: error.message
+      });
+      return sendError(res, error.statusCode || 500, error.message);
+    }
+  }
 	
   if (req.method === "POST" && pathname === "/api/passkeys/client-log") {
     const body = await readRequestJson(req);
-    recordUserPasskeyEvent(req, `client_${sanitizeLogText(body.event, 48) || "event"}`, {
+    const clientEventName = sanitizeLogText(body.event, 48) || "event";
+    recordUserPasskeyEvent(req, `client_${clientEventName}`, {
       attemptId: sanitizeLogText(body.attemptId, 80),
+      logArea: sanitizeLogText(body.logArea, 48),
       stage: sanitizeLogText(body.stage, 48),
       source: sanitizeLogText(body.source, 48),
       variant: sanitizeLogText(body.variant, 48),
       supported: Boolean(body.supported),
+      nativeSupported: Boolean(body.nativeSupported),
+      nativeMarker: Boolean(body.nativeMarker),
+      nativeShell: Boolean(body.nativeShell),
+      nativeHealthBridge: Boolean(body.nativeHealthBridge),
+      nativeFaceBridge: Boolean(body.nativeFaceBridge),
+      legacyNativeFaceBridge: Boolean(body.legacyNativeFaceBridge),
+      nativePasskeyBridge: Boolean(body.nativePasskeyBridge),
+      nativePlatform: sanitizeLogText(body.nativePlatform, 48),
+      nativeFaceEngine: sanitizeLogText(body.nativeFaceEngine, 48),
+      webkitHandlers: Array.isArray(body.webkitHandlers) ? body.webkitHandlers.map((item) => sanitizeLogText(item, 48)).slice(0, 12) : [],
+      cacheStorageAvailable: Boolean(body.cacheStorageAvailable),
+      faceModelCacheName: sanitizeLogText(body.faceModelCacheName, 80),
       isSecureContext: Boolean(body.isSecureContext),
       visibilityState: sanitizeLogText(body.visibilityState, 32),
       documentHasFocus: Boolean(body.documentHasFocus),
@@ -7418,6 +9529,7 @@ async function handleApi(req, res, pathname) {
       focusChanges: Number.isFinite(Number(body.focusChanges)) ? Math.round(Number(body.focusChanges)) : null,
       blurChanges: Number.isFinite(Number(body.blurChanges)) ? Math.round(Number(body.blurChanges)) : null,
       elapsedMs: Number.isFinite(Number(body.elapsedMs)) ? Math.round(Number(body.elapsedMs)) : null,
+      totalElapsedMs: Number.isFinite(Number(body.totalElapsedMs)) ? Math.round(Number(body.totalElapsedMs)) : null,
       credentialCount: Number.isFinite(Number(body.credentialCount)) ? Math.round(Number(body.credentialCount)) : null,
       credentialType: sanitizeLogText(body.credentialType, 32),
       transports: Array.isArray(body.transports) ? body.transports.map((item) => sanitizeLogText(item, 24)).slice(0, 12) : [],
@@ -7438,14 +9550,84 @@ async function handleApi(req, res, pathname) {
       cookieEnabled: Boolean(body.cookieEnabled),
       viewport: sanitizeLogText(body.viewport, 40),
       screen: sanitizeLogText(body.screen, 40),
+      appScriptPath: sanitizeLogText(body.appScriptPath, 160),
+      appScriptVersion: sanitizeLogText(body.appScriptVersion, 80),
       uaPlatform: sanitizeLogText(body.uaPlatform, 80),
       uaMobile: body.uaMobile === null || body.uaMobile === undefined ? null : Boolean(body.uaMobile),
       uaBrands: sanitizeLogText(body.uaBrands, 160),
+      modelUrl: sanitizeLogText(body.modelUrl, 260),
+      modelUrlDigest: privacyDigest(body.modelUrl || ""),
+      modelUrlKind: sanitizeLogText(body.modelUrlKind, 32),
+      modelUrlIndex: Number.isFinite(Number(body.modelUrlIndex)) ? Math.round(Number(body.modelUrlIndex)) : null,
+      modelUrlCount: Number.isFinite(Number(body.modelUrlCount)) ? Math.round(Number(body.modelUrlCount)) : null,
+      modelUrlOrder: Array.isArray(body.modelUrlOrder) ? body.modelUrlOrder.map((item) => sanitizeLogText(item, 32)).slice(0, 8) : [],
+      modelBytes: Number.isFinite(Number(body.modelBytes)) ? Math.round(Number(body.modelBytes)) : null,
+      modelContentLength: Number.isFinite(Number(body.modelContentLength)) ? Math.round(Number(body.modelContentLength)) : null,
+      modelCacheStatus: sanitizeLogText(body.modelCacheStatus, 80),
+      modelContentType: sanitizeLogText(body.modelContentType, 80),
+      useModelBuffer: Boolean(body.useModelBuffer),
+      hasFallback: Boolean(body.hasFallback),
+      faceModelReady: Boolean(body.faceModelReady),
+      faceModelSource: sanitizeLogText(body.faceModelSource, 260),
+      faceModelMode: sanitizeLogText(body.faceModelMode, 48),
+      faceModelSourceDigest: privacyDigest(body.faceModelSource || ""),
+      cdnConfigured: Boolean(body.cdnConfigured),
+      cdnBase: sanitizeLogText(body.cdnBase, 180),
+      localModelUrl: sanitizeLogText(body.localModelUrl, 180),
+      importUrl: sanitizeLogText(body.importUrl, 180),
+      wasmUrl: sanitizeLogText(body.wasmUrl, 180),
+      hardwareConcurrency: Number.isFinite(Number(body.hardwareConcurrency)) ? Math.round(Number(body.hardwareConcurrency)) : null,
+      deviceMemory: Number.isFinite(Number(body.deviceMemory)) ? Number(body.deviceMemory) : null,
       platformAuthenticatorAvailable: body.platformAuthenticatorAvailable === null || body.platformAuthenticatorAvailable === undefined ? null : Boolean(body.platformAuthenticatorAvailable),
       conditionalMediationAvailable: body.conditionalMediationAvailable === null || body.conditionalMediationAvailable === undefined ? null : Boolean(body.conditionalMediationAvailable),
       capabilityError: sanitizeLogText(body.capabilityError, 160),
       clientUaDigest: privacyDigest(body.clientUserAgent || "")
     });
+    const clientLogText = [
+      clientEventName,
+      body.errorName,
+      body.errorMessage,
+      body.stage,
+      body.source,
+      body.variant,
+      body.message,
+      body.faceModelSource,
+      body.faceModelMode
+    ].filter(Boolean).join(" ");
+    const shouldRecordRuntime = ["warning", "error"].includes(String(body.severity))
+      || /fail|failed|error|fallback|timeout|abort|degrade|unsupported|cancel|denied|失败|降级|兜底|超时/i.test(clientLogText);
+    if (shouldRecordRuntime) {
+      await recordRuntimeEvent(req, {
+        level: String(body.severity) === "error" || /error|failed|失败/i.test(clientLogText) ? "error" : "warning",
+        area: sanitizeLogText(body.logArea || "client", 48) || "client",
+        event: `client_${clientEventName}`,
+        message: sanitizeLogText(body.message || body.errorMessage || body.stage || clientEventName, 220),
+        source: "client",
+        details: {
+          event: clientEventName,
+          stage: sanitizeLogText(body.stage, 48),
+          source: sanitizeLogText(body.source, 48),
+          severity: sanitizeLogText(body.severity, 24),
+          variant: sanitizeLogText(body.variant, 48),
+          errorName: sanitizeLogText(body.errorName, 80),
+          errorMessage: sanitizeLogText(body.errorMessage, 240),
+          nativeShell: Boolean(body.nativeShell),
+          nativeFaceBridge: Boolean(body.nativeFaceBridge),
+          legacyNativeFaceBridge: Boolean(body.legacyNativeFaceBridge),
+          nativePlatform: sanitizeLogText(body.nativePlatform, 48),
+          nativeFaceEngine: sanitizeLogText(body.nativeFaceEngine, 48),
+          nativePasskeyBridge: Boolean(body.nativePasskeyBridge),
+          cacheStorageAvailable: Boolean(body.cacheStorageAvailable),
+          faceModelCacheName: sanitizeLogText(body.faceModelCacheName, 80),
+          faceModelSource: sanitizeLogText(body.faceModelSource, 120),
+          faceModelMode: sanitizeLogText(body.faceModelMode, 48),
+          modelUrlKind: sanitizeLogText(body.modelUrlKind, 32),
+          modelUrlIndex: Number.isFinite(Number(body.modelUrlIndex)) ? Math.round(Number(body.modelUrlIndex)) : null,
+          elapsedMs: Number.isFinite(Number(body.elapsedMs)) ? Math.round(Number(body.elapsedMs)) : null,
+          appScriptVersion: sanitizeLogText(body.appScriptVersion, 80)
+        }
+      });
+    }
     return sendJson(res, 202, { ok: true });
   }
 
@@ -7664,12 +9846,12 @@ async function handleApi(req, res, pathname) {
   }
 
   if (req.method === "POST" && pathname === "/api/passkeys/prompt-seen") {
-    const qqAccount = qqAccountForCode(session.code);
-    if (qqAccount && !qqAccount.passkeyPromptedAt) {
+    const identity = identityAccountForCode(session.code);
+    if (identity.account && !identity.account.passkeyPromptedAt) {
       const now = new Date().toISOString();
-      qqAccount.passkeyPromptedAt = now;
-      qqAccount.updatedAt = now;
-      await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+      identity.account.passkeyPromptedAt = now;
+      identity.account.updatedAt = now;
+      await writeJson(identity.provider === "apple" ? APPLE_ACCOUNTS_PATH : QQ_ACCOUNTS_PATH, identity.provider === "apple" ? appleAccounts : qqAccounts);
     }
     return sendJson(res, 200, {
       ok: true,
@@ -7686,7 +9868,8 @@ async function handleApi(req, res, pathname) {
 
   if (req.method === "PATCH" && pathname === "/api/profile") {
     const qqAccount = qqAccountForCode(session.code);
-    if (!qqAccount) {
+    const appleAccount = appleAccountForCode(session.code);
+    if (!qqAccount && !appleAccount) {
       return sendError(res, 400, "当前账户暂不支持编辑个人资料。");
     }
     let body = {};
@@ -7702,10 +9885,19 @@ async function handleApi(req, res, pathname) {
     if (rawBirthday && !birthday) {
       return sendError(res, 400, "生日格式不正确。");
     }
-    qqAccount.gender = gender;
-    qqAccount.birthday = birthday;
-    qqAccount.updatedAt = new Date().toISOString();
-    await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+    const now = new Date().toISOString();
+    if (qqAccount) {
+      qqAccount.gender = gender;
+      qqAccount.birthday = birthday;
+      qqAccount.updatedAt = now;
+      await writeJson(QQ_ACCOUNTS_PATH, qqAccounts);
+    }
+    if (appleAccount) {
+      appleAccount.gender = gender;
+      appleAccount.birthday = birthday;
+      appleAccount.updatedAt = now;
+      await writeJson(APPLE_ACCOUNTS_PATH, appleAccounts);
+    }
     return sendJson(res, 200, {
       ok: true,
       profile: publicProfile(session.code)
@@ -7717,7 +9909,7 @@ async function handleApi(req, res, pathname) {
   }
 
   if (req.method === "POST" && pathname === "/api/feedback") {
-    const body = await readRequestJson(req);
+    const body = await readRequestJson(req, MAX_FEEDBACK_BODY_BYTES, "反馈内容太大，请减少图片数量或压缩后再试。");
     try {
       assertRateLimit(req, "user-text", `user:${session.code}:feedback`);
       const item = await createModerationQueueItem(req, session.code, body);
@@ -7939,9 +10131,6 @@ async function handleApi(req, res, pathname) {
     if (!member) {
       return sendError(res, 404, "这位用户当前没有共享记录。");
     }
-    if (member.code === session.code) {
-      return sendError(res, 400, "不能给自己的社区档案点赞。");
-    }
     const body = await readRequestJson(req);
     try {
       assertRateLimit(req, "mutation", `user:${session.code}:like`);
@@ -8039,13 +10228,12 @@ async function handleApi(req, res, pathname) {
     if (!member || !filename) {
       return sendError(res, 404, "这张共享饮食照片当前不可查看。");
     }
-    const fullPath = path.join(PHOTO_DIR, member.code, filename);
-    const ext = path.extname(filename).toLowerCase();
-    writeResponseHead(res, 200, {
-      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": "private, max-age=3600"
+    return serveMediaFile(req, res, {
+      code: member.code,
+      filename,
+      cacheControl: "private, max-age=3600",
+      notFoundMessage: "这张共享饮食照片当前不可查看。"
     });
-    return fs.createReadStream(fullPath).pipe(res);
   }
 
   const communityPhotoMatch = pathname.match(/^\/api\/community\/(photos|thumbnails)\/([^/]+)\/([^/]+)$/);
@@ -8061,13 +10249,12 @@ async function handleApi(req, res, pathname) {
     if (!member || !filename) {
       return sendError(res, 404, "这张共享照片当前不可查看。");
     }
-    const fullPath = path.join(PHOTO_DIR, member.code, filename);
-    const ext = path.extname(filename).toLowerCase();
-    writeResponseHead(res, 200, {
-      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": "private, max-age=3600"
+    return serveMediaFile(req, res, {
+      code: member.code,
+      filename,
+      cacheControl: "private, max-age=3600",
+      notFoundMessage: "这张共享照片当前不可查看。"
     });
-    return fs.createReadStream(fullPath).pipe(res);
   }
 
   if (req.method === "GET" && pathname === "/api/records") {
@@ -8116,6 +10303,7 @@ async function handleApi(req, res, pathname) {
       const environment = parseAiEnvironmentHeader(req);
       const userInput = normalizeAiMoodUserInput(req.headers["x-ai-mood-user-input"], true);
       const buffer = await readRequestBuffer(req, ALIYUN_QWEN_MAX_IMAGE_BYTES, `AI 心情照片必须小于 ${Math.round(ALIYUN_QWEN_MAX_IMAGE_BYTES / 1024 / 1024)}MB。`);
+      await moderateUserImageOrThrow(req, session.code, `ai-mood:${context}`, buffer);
       const result = await generateAiMoodWithQwen(buffer, session.code, context, { signal, environment, userInput });
       if (signal.aborted || res.destroyed || res.writableEnded) return;
       return sendJson(res, 200, { ok: true, ...result });
@@ -8141,6 +10329,7 @@ async function handleApi(req, res, pathname) {
     try {
       const signal = requestAbortSignal(req);
       const buffer = await readRequestBuffer(req, ALIYUN_QWEN_MAX_IMAGE_BYTES, `食物识别图片必须小于 ${Math.round(ALIYUN_QWEN_MAX_IMAGE_BYTES / 1024 / 1024)}MB。`);
+      await moderateUserImageOrThrow(req, session.code, "food-analyze", buffer);
       const foods = await analyzeFoodImageWithQwen(buffer, session.code, { signal });
       if (signal.aborted || res.destroyed || res.writableEnded) return;
       return sendJson(res, 200, { ok: true, foods });
@@ -8325,6 +10514,7 @@ async function handleApi(req, res, pathname) {
     }
     try {
       const buffer = await readRequestBuffer(req, MAX_PHOTO_BYTES, `单张照片必须小于 ${Math.round(MAX_PHOTO_BYTES / 1024 / 1024)}MB。`);
+      await moderateUserImageOrThrow(req, session.code, "food-photo", buffer);
       const photoId = crypto.randomUUID();
       const file = await savePhotoBuffer(session.code, `${record.id}-food-${record.foodPhotos.length + 1}-${photoId}`, buffer, contentType);
       const photo = {
@@ -8355,6 +10545,7 @@ async function handleApi(req, res, pathname) {
     }
     try {
       const buffer = await readRequestBuffer(req);
+      await moderateUserImageOrThrow(req, session.code, "food-thumbnail", buffer);
       photo.thumbnailFile = await saveThumbnailBuffer(session.code, `${record.id}-food-${photo.id}`, buffer, req.headers["content-type"]);
       await writeJson(RECORDS_PATH, records);
       return sendJson(res, 200, { ok: true, photo: publicFoodPhotos(record).find((item) => item.id === photo.id) });
@@ -8383,7 +10574,15 @@ async function handleApi(req, res, pathname) {
     const { mood, error: moodError } = normalizeMood(submittedMood, isBinaryPhoto);
     const rawWeight = submittedWeight === "" || submittedWeight === null || submittedWeight === undefined ? null : Number(submittedWeight);
     const hasWeight = rawWeight !== null && Number.isFinite(rawWeight);
-    const hasPhoto = Boolean(photoBuffer || body.photoDataUrl);
+    let dataUrlPhoto = null;
+    if (!isBinaryPhoto && body.photoDataUrl) {
+      try {
+        dataUrlPhoto = parsePhotoDataUrl(body.photoDataUrl);
+      } catch (error) {
+        return sendError(res, error.statusCode || 400, error.message);
+      }
+    }
+    const hasPhoto = Boolean(photoBuffer || dataUrlPhoto);
     const inheritedWeight = rawWeight === null && hasPhoto ? latestWeightFor(session.code) : null;
 
     if (moodError) {
@@ -8422,9 +10621,22 @@ async function handleApi(req, res, pathname) {
     }
 
     const id = crypto.randomUUID();
+    if (photoBuffer) {
+      try {
+        await moderateUserImageOrThrow(req, session.code, "body-photo", photoBuffer);
+      } catch (moderationError) {
+        return sendError(res, moderationError.statusCode || 400, moderationError.message);
+      }
+    } else if (dataUrlPhoto) {
+      try {
+        await moderateUserImageOrThrow(req, session.code, "body-photo", dataUrlPhoto.buffer);
+      } catch (moderationError) {
+        return sendError(res, moderationError.statusCode || 400, moderationError.message);
+      }
+    }
     const photoFile = isBinaryPhoto
       ? await savePhotoBuffer(session.code, id, photoBuffer, contentType)
-      : await savePhotoFromDataUrl(session.code, id, body.photoDataUrl);
+      : (dataUrlPhoto ? await savePhotoBuffer(session.code, id, dataUrlPhoto.buffer, dataUrlPhoto.contentType) : null);
     const record = {
       id,
       timestamp: new Date().toISOString(),
@@ -8474,10 +10686,15 @@ async function handleApi(req, res, pathname) {
     if (!record?.photoFile) {
       return sendError(res, 404, "没有找到对应的照片记录。");
     }
-    const buffer = await readRequestBuffer(req);
-    record.thumbnailFile = await saveThumbnailBuffer(session.code, id, buffer, req.headers["content-type"]);
-    await writeJson(RECORDS_PATH, records);
-    return sendJson(res, 200, { ok: true, thumbnailUrl: publicRecord(record).thumbnailUrl });
+    try {
+      const buffer = await readRequestBuffer(req);
+      await moderateUserImageOrThrow(req, session.code, "body-thumbnail", buffer);
+      record.thumbnailFile = await saveThumbnailBuffer(session.code, id, buffer, req.headers["content-type"]);
+      await writeJson(RECORDS_PATH, records);
+      return sendJson(res, 200, { ok: true, thumbnailUrl: publicRecord(record).thumbnailUrl });
+    } catch (error) {
+      return sendError(res, error.statusCode || 400, error.message);
+    }
   }
 
   const foodPhotoMatch = pathname.match(/^\/api\/food-(photos|thumbnails)\/([^/]+)\/([^/]+)$/);
@@ -8490,12 +10707,12 @@ async function handleApi(req, res, pathname) {
     if (!record || !filename) {
       return sendError(res, 404, "没有找到这张饮食照片。");
     }
-    const ext = path.extname(filename).toLowerCase();
-    writeResponseHead(res, 200, {
-      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": "private, max-age=604800, immutable"
+    return serveMediaFile(req, res, {
+      code: session.code,
+      filename,
+      cacheControl: "private, max-age=604800, immutable",
+      notFoundMessage: "没有找到这张饮食照片。"
     });
-    return fs.createReadStream(path.join(PHOTO_DIR, session.code, filename)).pipe(res);
   }
 
   const photoMatch = pathname.match(/^\/api\/photos\/([^/]+)$/);
@@ -8506,13 +10723,12 @@ async function handleApi(req, res, pathname) {
       return sendError(res, 404, "没有找到这张照片。");
     }
 
-    const fullPath = path.join(PHOTO_DIR, session.code, record.photoFile);
-    const ext = path.extname(record.photoFile).toLowerCase();
-    writeResponseHead(res, 200, {
-      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": "private, max-age=604800, immutable"
+    return serveMediaFile(req, res, {
+      code: session.code,
+      filename: record.photoFile,
+      cacheControl: "private, max-age=604800, immutable",
+      notFoundMessage: "没有找到这张照片。"
     });
-    return fs.createReadStream(fullPath).pipe(res);
   }
 
   const thumbnailMatch = pathname.match(/^\/api\/thumbnails\/([^/]+)$/);
@@ -8523,11 +10739,12 @@ async function handleApi(req, res, pathname) {
       return sendError(res, 404, "没有找到这张缩略图。");
     }
 
-    writeResponseHead(res, 200, {
-      "Content-Type": "image/jpeg",
-      "Cache-Control": "private, max-age=604800, immutable"
+    return serveMediaFile(req, res, {
+      code: session.code,
+      filename: record.thumbnailFile,
+      cacheControl: "private, max-age=604800, immutable",
+      notFoundMessage: "没有找到这张缩略图。"
     });
-    return fs.createReadStream(path.join(PHOTO_DIR, session.code, record.thumbnailFile)).pipe(res);
   }
 
   return sendError(res, 404, "没有找到接口。");
@@ -8612,6 +10829,24 @@ async function serveStatic(req, res, pathname) {
     writeResponseHead(res, 404, { "Content-Type": "text/plain; charset=utf-8" });
     return res.end("页面不存在");
   }
+}
+
+function serveAppleAppSiteAssociation(req, res) {
+  if (!["GET", "HEAD"].includes(req.method)) {
+    writeResponseHead(res, 405, { "Content-Type": "text/plain; charset=utf-8", Allow: "GET, HEAD" });
+    return res.end("方法不允许");
+  }
+  const payload = {
+    webcredentials: {
+      apps: ["A82X46N3WS.top.furby.wellecho"]
+    }
+  };
+  writeResponseHead(res, 200, {
+    "Content-Type": "application/json",
+    "Cache-Control": "public, max-age=300"
+  });
+  if (req.method === "HEAD") return res.end();
+  return res.end(JSON.stringify(payload));
 }
 
 function proxyToTestEnvironment(req, res) {
@@ -8704,6 +10939,9 @@ async function handleRequest(req, res) {
     }
     if (appPathname.startsWith("/api/")) {
       return await handleApi(req, res, appPathname);
+    }
+    if (appPathname === "/.well-known/apple-app-site-association" || appPathname === "/apple-app-site-association") {
+      return serveAppleAppSiteAssociation(req, res);
     }
 
     return await serveStatic(req, res, appPathname);

@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
   --bg: #f7f9fb;
   --surface: #ffffff;
   --ink: #17201c;
@@ -75,9 +75,28 @@ img {
 .community-comment-bubble p,
 .history-mood,
 .ranking-info,
-.policy-content {
+.policy-content,
+.settings-option-button,
+.settings-option-button span,
+.settings-option-button strong,
+.settings-option-button em,
+.privacy-status,
+.account-mode-badge,
+.record-entry-button,
+.ai-advice-button,
+.apple-login-entry,
+.passkey-login-entry {
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+button,
+a,
+span,
+strong,
+em,
+small {
+  min-width: 0;
 }
 
 html {
@@ -106,6 +125,622 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overscroll-behavior-y: none;
   scrollbar-width: none;
+}
+
+html[data-theme^="glass-"] {
+  color-scheme: light dark;
+  --bg: #f7fbff;
+  --surface: rgba(255, 255, 255, 0.58);
+  --ink: #172029;
+  --muted: #667480;
+  --line: rgba(156, 185, 198, 0.24);
+  --primary: #4b9fb2;
+  --primary-strong: #2f7280;
+  --coral: #d886b5;
+  --gain-soft: #d98a9e;
+  --loss-soft: #64a9bd;
+  --gold: #d4aa66;
+  --chart-loss: #67aebe;
+  --chart-gain: #d98da3;
+  --chart-selected: #7797c7;
+  --chart-selected-soft: rgba(143, 169, 212, 0.18);
+  --chart-grid: rgba(154, 188, 202, 0.2);
+  --chart-axis: rgba(128, 163, 181, 0.26);
+  --chart-empty: rgba(103, 174, 190, 0.2);
+  --calorie-gold: #a97724;
+  --calorie-gold-soft: rgba(169, 119, 36, 0.13);
+  --calendar-loss: #69b7cf;
+  --calendar-gain: #df8ca6;
+  --calendar-neutral: rgba(255, 255, 255, 0.46);
+  --calendar-selected: #5688a7;
+  --calendar-selected-bg: rgba(255, 255, 255, 0.18);
+  --log-accent: #8a9fc8;
+  --food-accent: #b58bd0;
+  --food-accent-soft: rgba(246, 236, 255, 0.58);
+  --shadow: 0 26px 74px rgba(73, 95, 112, 0.18);
+  --safe-bg: #eef7fb;
+  --glass-fill: rgba(255, 255, 255, 0.52);
+  --glass-fill-strong: rgba(255, 255, 255, 0.72);
+  --glass-stroke: rgba(255, 255, 255, 0.72);
+  --glass-stroke-cool: rgba(123, 198, 220, 0.2);
+  --glass-inner-line: rgba(255, 255, 255, 0.44);
+  --glass-shadow: 0 28px 78px rgba(80, 102, 119, 0.17), inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  --glass-shadow-soft: 0 16px 42px rgba(80, 102, 119, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --glass-glow-a: rgba(255, 224, 247, 0.38);
+  --glass-glow-b: rgba(188, 244, 255, 0.44);
+  --glass-button-glow-a: rgba(255, 217, 244, 0.28);
+  --glass-button-glow-b: rgba(184, 238, 255, 0.36);
+  --glass-avatar-glow: rgba(255, 219, 246, 0.34);
+  --glass-panel-glow-a: rgba(255, 218, 246, 0.3);
+  --glass-panel-glow-b: rgba(183, 238, 255, 0.36);
+  --glass-active-gradient: linear-gradient(90deg, #dba9e9, #85d8ec);
+  --glass-active-shadow: rgba(123, 198, 220, 0.32);
+  --page-bg:
+    radial-gradient(72% 44% at 16% 8%, rgba(255, 194, 232, 0.42) 0%, rgba(255, 194, 232, 0) 66%),
+    radial-gradient(70% 50% at 88% 10%, rgba(128, 217, 235, 0.52) 0%, rgba(128, 217, 235, 0) 68%),
+    radial-gradient(82% 58% at 50% 92%, rgba(174, 162, 239, 0.24) 0%, rgba(174, 162, 239, 0) 72%),
+    linear-gradient(180deg, #f9fbff 0%, #edf8fa 45%, #f8fbff 100%);
+}
+
+html[data-theme^="glass-"] .app-shell {
+  width: min(1120px, calc(100% - 28px));
+}
+
+html[data-theme^="glass-"] .login-panel,
+html[data-theme^="glass-"] .history-section,
+html[data-theme^="glass-"] .community-share-panel,
+html[data-theme^="glass-"] .community-content-tabs,
+html[data-theme^="glass-"] .community-card,
+html[data-theme^="glass-"] .ranking-periods,
+html[data-theme^="glass-"] .ranking-item,
+html[data-theme^="glass-"] .account-profile-card,
+html[data-theme^="glass-"] .account-binding-card,
+html[data-theme^="glass-"] .passkey-card,
+html[data-theme^="glass-"] .native-health-card,
+html[data-theme^="glass-"] .chart-card,
+html[data-theme^="glass-"] .calendar-card,
+html[data-theme^="glass-"] .timeline-card,
+html[data-theme^="glass-"] .record-card,
+html[data-theme^="glass-"] .food-history-card,
+html[data-theme^="glass-"] .capture-panel,
+html[data-theme^="glass-"] .food-record-panel {
+  border-color: var(--glass-stroke);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.34)),
+    radial-gradient(120% 120% at 0% 0%, var(--glass-glow-a), rgba(255, 255, 255, 0) 46%),
+    radial-gradient(120% 110% at 100% 16%, var(--glass-glow-b), rgba(255, 255, 255, 0) 50%);
+  box-shadow: var(--glass-shadow-soft);
+  -webkit-backdrop-filter: blur(26px) saturate(1.24);
+  backdrop-filter: blur(26px) saturate(1.24);
+}
+
+html[data-theme^="glass-"] .food-record-panel {
+  border-color: rgba(255, 255, 255, 0.48);
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .login-panel,
+html[data-theme^="glass-"] .community-share-panel,
+html[data-theme^="glass-"] .community-card,
+html[data-theme^="glass-"] .history-section {
+  box-shadow: var(--glass-shadow);
+}
+
+html[data-theme^="glass-"] .login-copy h1,
+html[data-theme^="glass-"] .topbar h1,
+html[data-theme^="glass-"] .settings-group h2,
+html[data-theme^="glass-"] .community-ranking h2 {
+  color: rgba(20, 32, 40, 0.92);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+html[data-theme^="glass-"] .eyebrow,
+html[data-theme^="glass-"] .settings-kicker,
+html[data-theme^="glass-"] .community-ranking-kicker {
+  color: #5c94a8;
+}
+
+html[data-theme^="glass-"] button,
+html[data-theme^="glass-"] .apple-login-entry,
+html[data-theme^="glass-"] .qq-login-entry,
+html[data-theme^="glass-"] .passkey-login-entry,
+html[data-theme^="glass-"] .test-login-entry,
+html[data-theme^="glass-"] .record-entry-button,
+html[data-theme^="glass-"] .ai-summary-button,
+html[data-theme^="glass-"] .replay-launch-button,
+html[data-theme^="glass-"] .settings-option-button {
+  border-color: rgba(255, 255, 255, 0.66);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.36)),
+    radial-gradient(120% 120% at 0% 0%, var(--glass-button-glow-a), rgba(255, 255, 255, 0) 54%);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 8px 24px rgba(81, 107, 126, 0.11);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+  backdrop-filter: blur(18px) saturate(1.18);
+}
+
+html[data-theme^="glass-"] button:hover:not(:disabled),
+html[data-theme^="glass-"] button:focus-visible,
+html[data-theme^="glass-"] .apple-login-entry:hover:not(:disabled),
+html[data-theme^="glass-"] .apple-login-entry:focus-visible,
+html[data-theme^="glass-"] .qq-login-entry:hover,
+html[data-theme^="glass-"] .qq-login-entry:focus-visible,
+html[data-theme^="glass-"] .passkey-login-entry:hover:not(:disabled),
+html[data-theme^="glass-"] .passkey-login-entry:focus-visible,
+html[data-theme^="glass-"] .test-login-entry:hover:not(:disabled),
+html[data-theme^="glass-"] .test-login-entry:focus-visible {
+  border-color: rgba(255, 255, 255, 0.86);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.46)),
+    radial-gradient(120% 110% at 100% 0%, var(--glass-button-glow-b), rgba(255, 255, 255, 0) 58%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 13px 32px rgba(81, 107, 126, 0.15);
+}
+
+html[data-theme^="glass-"] button:active:not(:disabled),
+html[data-theme^="glass-"] .apple-login-entry:active:not(:disabled),
+html[data-theme^="glass-"] .qq-login-entry:active,
+html[data-theme^="glass-"] .passkey-login-entry:active:not(:disabled),
+html[data-theme^="glass-"] .test-login-entry:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 8px rgba(117, 144, 160, 0.13), 0 5px 16px rgba(81, 107, 126, 0.11);
+}
+
+html[data-theme^="glass-"] .community-card:hover,
+html[data-theme^="glass-"] .community-card:focus-visible,
+html[data-theme^="glass-"] .ranking-item:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 30px 82px rgba(80, 102, 119, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+html[data-theme^="glass-"] .profile-avatar,
+html[data-theme^="glass-"] .settings-account-avatar,
+html[data-theme^="glass-"] .community-member-avatar,
+html[data-theme^="glass-"] .ranking-avatar,
+html[data-theme^="glass-"] .community-detail-avatar,
+html[data-theme^="glass-"] .community-comment-avatar {
+  border-color: rgba(255, 255, 255, 0.7);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.68), rgba(229, 246, 250, 0.42)),
+    radial-gradient(120% 120% at 12% 0%, var(--glass-avatar-glow), rgba(255, 255, 255, 0) 54%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76), 0 12px 28px rgba(77, 104, 122, 0.12);
+}
+
+html[data-theme^="glass-"] .community-weight-mini,
+html[data-theme^="glass-"] .weight-chart,
+html[data-theme^="glass-"] .calendar-grid,
+html[data-theme^="glass-"] .native-health-grid,
+html[data-theme^="glass-"] .ai-summary-output {
+  border-color: rgba(255, 255, 255, 0.58);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.22)),
+    radial-gradient(100% 120% at 100% 0%, rgba(170, 230, 244, 0.24), rgba(255, 255, 255, 0) 56%);
+}
+
+html[data-theme^="glass-"] .chart-section {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .bottom-tabs {
+  border: 0;
+  background:
+    linear-gradient(180deg, rgba(248, 252, 255, 0) 0%, rgba(248, 252, 255, 0.38) 24%, rgba(255, 255, 255, 0.66) 100%),
+    radial-gradient(80% 120% at 14% 0%, rgba(255, 218, 246, 0.22), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(80% 120% at 90% 0%, rgba(183, 238, 255, 0.24), rgba(255, 255, 255, 0) 64%);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  backdrop-filter: blur(24px) saturate(1.2);
+}
+
+html[data-theme^="glass-"] .bottom-tabs::before {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 18px;
+  background:
+    linear-gradient(180deg, rgba(248, 252, 255, 0), rgba(248, 252, 255, 0.38) 68%, rgba(255, 255, 255, 0.62)),
+    radial-gradient(80% 120% at 18% 100%, rgba(255, 218, 246, 0.16), rgba(255, 255, 255, 0) 66%),
+    radial-gradient(80% 120% at 88% 100%, rgba(183, 238, 255, 0.18), rgba(255, 255, 255, 0) 66%);
+  content: "";
+  pointer-events: none;
+}
+
+html[data-theme^="glass-"] .bottom-tab,
+html[data-theme^="glass-"] .bottom-tab:hover:not(:disabled),
+html[data-theme^="glass-"] .bottom-tab:focus-visible,
+html[data-theme^="glass-"] .bottom-tab:active:not(:disabled),
+html[data-theme^="glass-"] .bottom-tab.is-active,
+html[data-theme^="glass-"] .bottom-tab.is-active:hover:not(:disabled),
+html[data-theme^="glass-"] .bottom-tab.is-active:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .bottom-tab.is-active {
+  color: #397b8d;
+}
+
+html[data-theme^="glass-"] .bottom-tab.is-active::before {
+  display: none;
+}
+
+html[data-theme^="glass-"] .profile-avatar.has-image,
+html[data-theme^="glass-"] .settings-account-avatar.has-image,
+html[data-theme^="glass-"] .community-detail-avatar.has-image,
+html[data-theme^="glass-"] .community-comment-avatar.has-image {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.48), rgba(229, 246, 250, 0.24)),
+    radial-gradient(120% 120% at 12% 0%, var(--glass-avatar-glow), rgba(255, 255, 255, 0) 54%);
+}
+
+html[data-theme^="glass-"] .community-detail-panel,
+html[data-theme^="glass-"] .community-comments-panel,
+html[data-theme^="glass-"] .ai-summary-panel,
+html[data-theme^="glass-"] .policy-panel,
+html[data-theme^="glass-"] .privacy-consent-dialog,
+html[data-theme^="glass-"] .confirmation-dialog,
+html[data-theme^="glass-"] .feedback-dialog,
+html[data-theme^="glass-"] .replay-modal-panel {
+  border-color: rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(245, 251, 255, 0.58)),
+    radial-gradient(120% 80% at 4% 0%, var(--glass-panel-glow-a), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(110% 90% at 100% 0%, var(--glass-panel-glow-b), rgba(255, 255, 255, 0) 58%);
+  box-shadow: 0 34px 100px rgba(69, 88, 105, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  -webkit-backdrop-filter: blur(30px) saturate(1.28);
+  backdrop-filter: blur(30px) saturate(1.28);
+}
+
+html[data-theme^="glass-"] .community-detail-backdrop.is-open,
+html[data-theme^="glass-"] .community-comments-backdrop.is-open,
+html[data-theme^="glass-"] .replay-modal-backdrop.is-open {
+  background: rgba(230, 241, 246, 0.08);
+  -webkit-backdrop-filter: blur(10px) saturate(1.12);
+  backdrop-filter: blur(10px) saturate(1.12);
+}
+
+html[data-theme^="glass-"] input,
+html[data-theme^="glass-"] textarea,
+html[data-theme^="glass-"] select {
+  border-color: rgba(255, 255, 255, 0.64);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+html[data-theme^="glass-"] input:focus,
+html[data-theme^="glass-"] textarea:focus,
+html[data-theme^="glass-"] select:focus {
+  border-color: rgba(119, 189, 210, 0.54);
+  box-shadow: 0 0 0 4px rgba(138, 207, 226, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+html[data-theme^="glass-"] .account-mode-badge,
+html[data-theme^="glass-"] .privacy-status {
+  border-color: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+
+  html[data-theme^="glass-"] {
+    color-scheme: dark;
+    --bg: #111925;
+    --surface: rgba(20, 30, 42, 0.72);
+    --ink: #f2f8fb;
+    --muted: #a7b6c3;
+    --line: rgba(255, 255, 255, 0.14);
+    --primary: #83d3e5;
+    --primary-strong: #b9eef8;
+    --coral: #eca1c6;
+    --gain-soft: #d987a1;
+    --loss-soft: #68bdd2;
+    --gold: #e0b56e;
+    --chart-loss: #75c3d5;
+    --chart-gain: #df8fa8;
+    --chart-selected: #a6c9f3;
+    --chart-selected-soft: rgba(166, 201, 243, 0.16);
+    --chart-grid: rgba(174, 210, 222, 0.16);
+    --chart-axis: rgba(191, 223, 234, 0.2);
+    --chart-empty: rgba(117, 195, 213, 0.18);
+    --calorie-gold: #d8a85b;
+    --calorie-gold-soft: rgba(216, 168, 91, 0.14);
+    --calendar-loss: #7dc5d8;
+    --calendar-gain: #e39aad;
+    --calendar-neutral: rgba(255, 255, 255, 0.08);
+    --calendar-selected: #bdefff;
+    --calendar-selected-bg: rgba(189, 239, 255, 0.08);
+    --log-accent: #aebdf0;
+    --food-accent: #c8a8ea;
+    --food-accent-soft: rgba(80, 98, 135, 0.26);
+    --shadow: 0 28px 78px rgba(0, 0, 0, 0.28);
+    --safe-bg: #101823;
+    --glass-fill: rgba(21, 32, 45, 0.68);
+    --glass-fill-strong: rgba(29, 43, 58, 0.78);
+    --glass-stroke: rgba(255, 255, 255, 0.18);
+    --glass-stroke-cool: rgba(132, 218, 238, 0.2);
+    --glass-inner-line: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 32px 88px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.13);
+    --glass-shadow-soft: 0 18px 54px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    --glass-glow-a: rgba(216, 134, 181, 0.16);
+    --glass-glow-b: rgba(75, 159, 178, 0.2);
+    --glass-button-glow-a: rgba(216, 134, 181, 0.12);
+    --glass-button-glow-b: rgba(111, 207, 226, 0.18);
+    --glass-avatar-glow: rgba(216, 134, 181, 0.16);
+    --glass-panel-glow-a: rgba(216, 134, 181, 0.12);
+    --glass-panel-glow-b: rgba(111, 207, 226, 0.16);
+    --glass-active-gradient: linear-gradient(90deg, #de9bd8, #86d7ea);
+    --glass-active-shadow: rgba(71, 180, 207, 0.22);
+    --page-bg:
+      radial-gradient(70% 42% at 12% 8%, rgba(167, 52, 108, 0.28) 0%, rgba(167, 52, 108, 0) 66%),
+      radial-gradient(78% 54% at 90% 6%, rgba(54, 150, 177, 0.26) 0%, rgba(54, 150, 177, 0) 68%),
+      radial-gradient(82% 58% at 56% 96%, rgba(86, 119, 183, 0.16) 0%, rgba(86, 119, 183, 0) 72%),
+      linear-gradient(180deg, #121724 0%, #111d2a 46%, #0e1722 100%);
+  }
+
+  html[data-theme^="glass-"],
+  html[data-theme^="glass-"] body {
+    background-color: var(--safe-bg);
+  }
+
+  html[data-theme^="glass-"] .login-panel,
+  html[data-theme^="glass-"] .history-section,
+  html[data-theme^="glass-"] .community-share-panel,
+  html[data-theme^="glass-"] .community-content-tabs,
+  html[data-theme^="glass-"] .community-card,
+  html[data-theme^="glass-"] .ranking-periods,
+  html[data-theme^="glass-"] .ranking-item,
+  html[data-theme^="glass-"] .account-profile-card,
+  html[data-theme^="glass-"] .account-binding-card,
+  html[data-theme^="glass-"] .passkey-card,
+  html[data-theme^="glass-"] .native-health-card,
+  html[data-theme^="glass-"] .chart-card,
+  html[data-theme^="glass-"] .calendar-card,
+  html[data-theme^="glass-"] .timeline-card,
+  html[data-theme^="glass-"] .record-card,
+  html[data-theme^="glass-"] .food-history-card,
+  html[data-theme^="glass-"] .capture-panel,
+  html[data-theme^="glass-"] .food-record-panel {
+    border-color: var(--glass-stroke);
+    background:
+      linear-gradient(145deg, rgba(28, 40, 54, 0.76), rgba(16, 25, 36, 0.48)),
+      radial-gradient(120% 120% at 0% 0%, var(--glass-glow-a), rgba(16, 25, 36, 0) 48%),
+      radial-gradient(120% 110% at 100% 16%, var(--glass-glow-b), rgba(16, 25, 36, 0) 52%);
+    box-shadow: var(--glass-shadow-soft);
+  }
+
+  html[data-theme^="glass-"] .food-record-panel,
+  html[data-theme^="glass-"] .chart-section {
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  html[data-theme^="glass-"] .login-copy h1,
+  html[data-theme^="glass-"] .topbar h1,
+  html[data-theme^="glass-"] .settings-group h2,
+  html[data-theme^="glass-"] .community-ranking h2 {
+    color: rgba(245, 250, 253, 0.96);
+    text-shadow: none;
+  }
+
+  html[data-theme^="glass-"] .eyebrow,
+  html[data-theme^="glass-"] .settings-kicker,
+  html[data-theme^="glass-"] .community-ranking-kicker {
+    color: #8dd8e8;
+  }
+
+  html[data-theme^="glass-"] button,
+  html[data-theme^="glass-"] .qq-login-entry,
+  html[data-theme^="glass-"] .passkey-login-entry,
+  html[data-theme^="glass-"] .test-login-entry,
+  html[data-theme^="glass-"] .record-entry-button,
+  html[data-theme^="glass-"] .ai-summary-button,
+  html[data-theme^="glass-"] .replay-launch-button,
+  html[data-theme^="glass-"] .settings-option-button {
+    border-color: rgba(255, 255, 255, 0.17);
+    background:
+      linear-gradient(145deg, rgba(32, 45, 59, 0.74), rgba(19, 29, 41, 0.5)),
+      radial-gradient(120% 120% at 0% 0%, var(--glass-button-glow-a), rgba(19, 29, 41, 0) 54%);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 28px rgba(0, 0, 0, 0.18);
+  }
+
+  html[data-theme^="glass-"] button:hover:not(:disabled),
+  html[data-theme^="glass-"] button:focus-visible,
+  html[data-theme^="glass-"] .qq-login-entry:hover,
+  html[data-theme^="glass-"] .qq-login-entry:focus-visible,
+  html[data-theme^="glass-"] .passkey-login-entry:hover:not(:disabled),
+  html[data-theme^="glass-"] .passkey-login-entry:focus-visible,
+  html[data-theme^="glass-"] .test-login-entry:hover:not(:disabled),
+  html[data-theme^="glass-"] .test-login-entry:focus-visible {
+    border-color: rgba(189, 239, 255, 0.34);
+    background:
+      linear-gradient(145deg, rgba(42, 58, 74, 0.78), rgba(24, 35, 48, 0.58)),
+      radial-gradient(120% 110% at 100% 0%, var(--glass-button-glow-b), rgba(24, 35, 48, 0) 58%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 14px 34px rgba(0, 0, 0, 0.24);
+  }
+
+  html[data-theme^="glass-"] button:active:not(:disabled),
+  html[data-theme^="glass-"] .qq-login-entry:active,
+  html[data-theme^="glass-"] .passkey-login-entry:active:not(:disabled),
+  html[data-theme^="glass-"] .test-login-entry:active:not(:disabled) {
+    background: rgba(26, 39, 53, 0.78);
+    color: var(--ink);
+    box-shadow: inset 0 1px 8px rgba(0, 0, 0, 0.18), 0 6px 18px rgba(0, 0, 0, 0.18);
+  }
+
+  html[data-theme^="glass-"] .profile-avatar,
+  html[data-theme^="glass-"] .settings-account-avatar,
+  html[data-theme^="glass-"] .community-member-avatar,
+  html[data-theme^="glass-"] .ranking-avatar,
+  html[data-theme^="glass-"] .community-detail-avatar,
+  html[data-theme^="glass-"] .community-comment-avatar {
+    border-color: rgba(255, 255, 255, 0.22);
+    background:
+      linear-gradient(145deg, rgba(36, 50, 64, 0.76), rgba(20, 30, 42, 0.46)),
+      radial-gradient(120% 120% at 12% 0%, var(--glass-avatar-glow), rgba(20, 30, 42, 0) 54%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 14px 34px rgba(0, 0, 0, 0.18);
+  }
+
+  html[data-theme^="glass-"] .community-weight-mini,
+  html[data-theme^="glass-"] .weight-chart,
+  html[data-theme^="glass-"] .calendar-grid,
+  html[data-theme^="glass-"] .native-health-grid,
+  html[data-theme^="glass-"] .ai-summary-output {
+    border-color: rgba(255, 255, 255, 0.14);
+    background:
+      linear-gradient(145deg, rgba(27, 39, 53, 0.58), rgba(16, 24, 35, 0.34)),
+      radial-gradient(100% 120% at 100% 0%, rgba(104, 203, 226, 0.12), rgba(16, 24, 35, 0) 56%);
+  }
+
+  html[data-theme^="glass-"] .bottom-tabs {
+    background:
+      linear-gradient(180deg, rgba(16, 24, 35, 0) 0%, rgba(15, 23, 34, 0.52) 24%, rgba(13, 20, 30, 0.82) 100%),
+      radial-gradient(80% 120% at 14% 0%, rgba(216, 134, 181, 0.14), rgba(13, 20, 30, 0) 62%),
+      radial-gradient(80% 120% at 90% 0%, rgba(104, 203, 226, 0.16), rgba(13, 20, 30, 0) 64%);
+  }
+
+  html[data-theme^="glass-"] .bottom-tabs::before {
+    background:
+      linear-gradient(180deg, rgba(16, 24, 35, 0), rgba(15, 23, 34, 0.34) 68%, rgba(13, 20, 30, 0.58)),
+      radial-gradient(80% 120% at 18% 100%, rgba(216, 134, 181, 0.08), rgba(13, 20, 30, 0) 66%),
+      radial-gradient(80% 120% at 88% 100%, rgba(104, 203, 226, 0.1), rgba(13, 20, 30, 0) 66%);
+  }
+
+  html[data-theme^="glass-"] .bottom-tab.is-active {
+    color: #9eddea;
+  }
+
+  html[data-theme^="glass-"] .community-detail-panel,
+  html[data-theme^="glass-"] .community-comments-panel,
+  html[data-theme^="glass-"] .ai-summary-panel,
+  html[data-theme^="glass-"] .policy-panel,
+  html[data-theme^="glass-"] .privacy-consent-dialog,
+  html[data-theme^="glass-"] .confirmation-dialog,
+  html[data-theme^="glass-"] .feedback-dialog,
+  html[data-theme^="glass-"] .replay-modal-panel {
+    border-color: rgba(255, 255, 255, 0.18);
+    background:
+      linear-gradient(145deg, rgba(29, 41, 55, 0.84), rgba(16, 25, 36, 0.68)),
+      radial-gradient(120% 80% at 4% 0%, var(--glass-panel-glow-a), rgba(16, 25, 36, 0) 58%),
+      radial-gradient(110% 90% at 100% 0%, var(--glass-panel-glow-b), rgba(16, 25, 36, 0) 58%);
+    box-shadow: 0 36px 104px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  }
+
+  html[data-theme^="glass-"] .community-detail-backdrop.is-open,
+  html[data-theme^="glass-"] .community-comments-backdrop.is-open,
+  html[data-theme^="glass-"] .replay-modal-backdrop.is-open {
+    background: rgba(8, 13, 19, 0.12);
+  }
+
+  html[data-theme^="glass-"] input,
+  html[data-theme^="glass-"] textarea,
+  html[data-theme^="glass-"] select {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(19, 29, 41, 0.68);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  html[data-theme^="glass-"] input::placeholder,
+  html[data-theme^="glass-"] textarea::placeholder {
+    color: rgba(221, 232, 239, 0.48);
+  }
+
+  html[data-theme^="glass-"] input:focus,
+  html[data-theme^="glass-"] textarea:focus,
+  html[data-theme^="glass-"] select:focus {
+    border-color: rgba(139, 218, 236, 0.42);
+    box-shadow: 0 0 0 4px rgba(93, 188, 214, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  html[data-theme^="glass-"] .account-mode-badge,
+  html[data-theme^="glass-"] .privacy-status {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(21, 32, 45, 0.48);
+    color: var(--ink);
+  }
+
+  html[data-theme^="glass-"] .site-footer,
+  html[data-theme^="glass-"] .lead,
+  html[data-theme^="glass-"] .form-message {
+    color: var(--muted);
+  }
+
+  html[data-theme^="glass-"] .form-message.success {
+    color: #9eddea;
+  }
+
+  html[data-theme^="glass-"] .form-message.error {
+    color: #ff9fb5;
+  }
+}
+
+html[data-theme^="glass-"] .account-mode-badge[data-mode="full"],
+html[data-theme^="glass-"] .privacy-status.is-signed {
+  border-color: rgba(126, 197, 217, 0.28);
+  background: rgba(238, 249, 252, 0.42);
+}
+
+html[data-theme^="glass-"] .account-profile-card,
+html[data-theme^="glass-"] .account-binding-card,
+html[data-theme^="glass-"] .account-binding-icon,
+html[data-theme^="glass-"] .account-profile-readonly span,
+html[data-theme^="glass-"] .passkey-card,
+html[data-theme^="glass-"] .native-health-card,
+html[data-theme^="glass-"] .native-health-json {
+  border-color: rgba(255, 255, 255, 0.54);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.22)),
+    radial-gradient(90% 110% at 100% 0%, rgba(188, 244, 255, 0.18), rgba(255, 255, 255, 0) 58%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62), 0 10px 24px rgba(80, 102, 119, 0.08);
+}
+
+html[data-theme^="glass-"] .settings-content {
+  border-top: 0;
+}
+
+html[data-theme^="glass-"] .settings-panel {
+  gap: 14px;
+}
+
+html[data-theme^="glass-"] .settings-group {
+  border-bottom: 0;
+}
+
+html[data-theme^="glass-"] .settings-option-button {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .settings-option-button:hover:not(:disabled),
+html[data-theme^="glass-"] .settings-option-button:focus-visible {
+  border-color: rgba(126, 197, 217, 0.24);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+html[data-theme^="glass-"] .settings-option-button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: none;
 }
 
 body.community-consent-open,
@@ -223,7 +858,10 @@ label,
 [role="button"],
 [role="tab"],
 .share-switch,
+.apple-login-entry,
 .qq-login-entry,
+.account-bind-button,
+.test-login-entry,
 .timeline-panel input[type="range"] {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -429,6 +1067,30 @@ body.is-community-tab .site-footer {
   transform: none;
 }
 
+html[data-theme^="glass-"] .footer-policy-link,
+html[data-theme^="glass-"] .footer-policy-link:hover:not(:disabled),
+html[data-theme^="glass-"] .footer-policy-link:focus-visible,
+html[data-theme^="glass-"] .footer-policy-link:active:not(:disabled) {
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transform: none;
+}
+
+html[data-theme^="glass-"] .footer-policy-link:hover:not(:disabled),
+html[data-theme^="glass-"] .footer-policy-link:focus-visible,
+html[data-theme^="glass-"] .footer-policy-link:active:not(:disabled) {
+  color: var(--primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .login-copy h1,
 .topbar h1 {
   margin: 0;
@@ -500,13 +1162,19 @@ body.is-community-tab .site-footer {
   font-size: 14px;
 }
 
-.qq-only-login-panel > .form-message {
-  position: absolute;
-  right: 28px;
-  bottom: 14px;
-  left: 28px;
-  margin: 0;
+#loginMessage {
+  grid-column: 2;
+  justify-self: center;
+  width: min(100%, 420px);
+  min-height: 28px;
+  margin: 20px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
   text-align: center;
+}
+
+#loginMessage:empty {
+  visibility: hidden;
 }
 
 .capture-message {
@@ -521,6 +1189,7 @@ body.is-community-tab .site-footer {
   color: var(--primary-strong);
 }
 
+.apple-login-entry,
 .qq-login-entry {
   width: 100%;
   min-height: 46px;
@@ -540,7 +1209,15 @@ body.is-community-tab .site-footer {
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-.passkey-login-entry {
+.apple-login-entry {
+  border-color: rgba(17, 24, 32, 0.18);
+  background: #111820;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(17, 24, 32, 0.12);
+}
+
+.passkey-login-entry,
+.test-login-entry {
   width: 100%;
   min-height: 46px;
   display: inline-flex;
@@ -559,15 +1236,33 @@ body.is-community-tab .site-footer {
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
+.test-login-entry {
+  border-color: rgba(120, 107, 83, 0.18);
+  color: #75664b;
+  background: linear-gradient(180deg, rgba(255, 252, 244, 0.96), rgba(255, 255, 255, 0.96));
+}
+
+.apple-login-entry:hover:not(:disabled),
+.apple-login-entry:focus-visible,
 .qq-login-entry:hover,
 .qq-login-entry:focus-visible,
 .passkey-login-entry:hover:not(:disabled),
-.passkey-login-entry:focus-visible {
+.passkey-login-entry:focus-visible,
+.test-login-entry:hover:not(:disabled),
+.test-login-entry:focus-visible {
   border-color: rgba(18, 150, 219, 0.42);
   background: #fff;
   box-shadow: 0 10px 24px rgba(18, 150, 219, 0.12);
   outline: none;
   transform: translateY(-1px);
+}
+
+.apple-login-entry:hover:not(:disabled),
+.apple-login-entry:focus-visible {
+  border-color: rgba(17, 24, 32, 0.3);
+  background: #17202a;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(17, 24, 32, 0.16);
 }
 
 .passkey-login-entry:hover:not(:disabled),
@@ -578,12 +1273,29 @@ body.is-community-tab .site-footer {
   box-shadow: 0 10px 24px rgba(31, 122, 90, 0.1);
 }
 
+.test-login-entry:hover:not(:disabled),
+.test-login-entry:focus-visible {
+  border-color: rgba(120, 107, 83, 0.34);
+  color: #695838;
+  background: linear-gradient(180deg, rgba(255, 250, 239, 0.98), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 10px 24px rgba(120, 107, 83, 0.11);
+}
+
+.apple-login-entry:active:not(:disabled),
 .qq-login-entry:active,
-.passkey-login-entry:active:not(:disabled) {
+.passkey-login-entry:active:not(:disabled),
+.test-login-entry:active:not(:disabled) {
   border-color: rgba(18, 150, 219, 0.36);
   background: #fff;
   box-shadow: 0 5px 14px rgba(18, 150, 219, 0.1);
   transform: translateY(0) scale(0.985);
+}
+
+.apple-login-entry:active:not(:disabled) {
+  border-color: rgba(17, 24, 32, 0.28);
+  background: #111820;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(17, 24, 32, 0.12);
 }
 
 .passkey-login-entry:active:not(:disabled) {
@@ -593,13 +1305,54 @@ body.is-community-tab .site-footer {
   box-shadow: 0 5px 14px rgba(31, 122, 90, 0.08);
 }
 
+.test-login-entry:active:not(:disabled) {
+  border-color: rgba(120, 107, 83, 0.3);
+  color: #695838;
+  background: linear-gradient(180deg, rgba(255, 250, 239, 0.98), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 5px 14px rgba(120, 107, 83, 0.08);
+}
+
+.apple-login-entry:focus:not(:focus-visible),
 .qq-login-entry:focus:not(:focus-visible),
 .passkey-login-entry:focus:not(:focus-visible),
-.passkey-login-entry:not(:disabled):not(:hover):not(:active):not(:focus-visible) {
+.test-login-entry:focus:not(:focus-visible),
+.passkey-login-entry:not(:disabled):not(:hover):not(:active):not(:focus-visible),
+.test-login-entry:not(:disabled):not(:hover):not(:active):not(:focus-visible) {
   background: #fff;
   box-shadow: none;
   outline: none;
   transform: none;
+}
+
+.apple-login-entry:not(:disabled):not(:hover):not(:active):not(:focus-visible) {
+  background: #111820;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(17, 24, 32, 0.12);
+}
+
+.test-login-entry:not(:disabled):not(:hover):not(:active):not(:focus-visible) {
+  background: linear-gradient(180deg, rgba(255, 252, 244, 0.96), rgba(255, 255, 255, 0.96));
+}
+
+.apple-login-entry:focus:not(:focus-visible) {
+  background: #111820;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(17, 24, 32, 0.12);
+}
+
+.apple-login-mark {
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.apple-login-mark svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
 }
 
 .qq-login-mark {
@@ -617,6 +1370,11 @@ body.is-community-tab .site-footer {
   display: block;
   max-width: 100%;
   object-fit: contain;
+}
+
+.account-binding-icon.qq-login-mark {
+  width: 38px;
+  height: 38px;
 }
 
 .passkey-icon {
@@ -637,6 +1395,118 @@ body.is-community-tab .site-footer {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.75;
+}
+
+html[data-theme^="glass-"] .login-options .apple-login-entry,
+html[data-theme^="glass-"] .login-options .apple-login-entry:visited,
+html[data-theme^="glass-"] .login-options .apple-login-entry:focus,
+html[data-theme^="glass-"] .login-options .apple-login-entry:focus-visible,
+html[data-theme^="glass-"] .login-options .apple-login-entry:hover:not(:disabled) {
+  border-color: rgba(17, 24, 32, 0.28);
+  background: linear-gradient(180deg, #151d26, #0f171f);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(17, 24, 32, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  outline: none;
+}
+
+html[data-theme^="glass-"] .login-options .apple-login-entry:active:not(:disabled) {
+  border-color: rgba(17, 24, 32, 0.34);
+  background: linear-gradient(180deg, #0f171f, #0b1118);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(17, 24, 32, 0.16), inset 0 1px 6px rgba(0, 0, 0, 0.16);
+  transform: translateY(0) scale(0.985);
+}
+
+html[data-theme^="glass-"] .login-options .qq-login-entry,
+html[data-theme^="glass-"] .login-options .qq-login-entry:visited,
+html[data-theme^="glass-"] .login-options .qq-login-entry:focus,
+html[data-theme^="glass-"] .login-options .qq-login-entry:focus-visible,
+html[data-theme^="glass-"] .login-options .qq-login-entry:hover {
+  border-color: rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.5)),
+    radial-gradient(120% 110% at 100% 0%, rgba(188, 244, 255, 0.3), rgba(255, 255, 255, 0) 58%);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 9px 24px rgba(81, 107, 126, 0.1);
+  outline: none;
+}
+
+html[data-theme^="glass-"] .login-options .passkey-login-entry,
+html[data-theme^="glass-"] .login-options .passkey-login-entry:focus,
+html[data-theme^="glass-"] .login-options .passkey-login-entry:focus-visible,
+html[data-theme^="glass-"] .login-options .passkey-login-entry:hover:not(:disabled),
+html[data-theme^="glass-"] .login-options .passkey-login-entry[aria-busy="true"] {
+  border-color: rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.5)),
+    radial-gradient(120% 110% at 0% 0%, rgba(255, 217, 244, 0.22), rgba(255, 255, 255, 0) 58%);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 9px 24px rgba(81, 107, 126, 0.1);
+  outline: none;
+}
+
+html[data-theme^="glass-"] .login-options .qq-login-entry:active,
+html[data-theme^="glass-"] .login-options .passkey-login-entry:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.64);
+  color: var(--ink);
+  box-shadow: inset 0 1px 8px rgba(117, 144, 160, 0.12), 0 5px 14px rgba(81, 107, 126, 0.1);
+  transform: translateY(0) scale(0.985);
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] .login-options .apple-login-entry,
+  html[data-theme^="glass-"] .login-options .apple-login-entry:visited,
+  html[data-theme^="glass-"] .login-options .apple-login-entry:focus,
+  html[data-theme^="glass-"] .login-options .apple-login-entry:focus-visible,
+  html[data-theme^="glass-"] .login-options .apple-login-entry:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.72);
+    background: linear-gradient(180deg, #ffffff, #f1f7fa);
+    color: #070b10;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    outline: none;
+  }
+
+  html[data-theme^="glass-"] .login-options .apple-login-entry:active:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.62);
+    background: linear-gradient(180deg, #eff6fa, #e4edf3);
+    color: #070b10;
+    box-shadow: 0 7px 18px rgba(0, 0, 0, 0.18), inset 0 1px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  html[data-theme^="glass-"] .login-options .qq-login-entry,
+  html[data-theme^="glass-"] .login-options .qq-login-entry:visited,
+  html[data-theme^="glass-"] .login-options .qq-login-entry:focus,
+  html[data-theme^="glass-"] .login-options .qq-login-entry:focus-visible,
+  html[data-theme^="glass-"] .login-options .qq-login-entry:hover,
+  html[data-theme^="glass-"] .login-options .passkey-login-entry,
+  html[data-theme^="glass-"] .login-options .passkey-login-entry:focus,
+  html[data-theme^="glass-"] .login-options .passkey-login-entry:focus-visible,
+  html[data-theme^="glass-"] .login-options .passkey-login-entry:hover:not(:disabled),
+  html[data-theme^="glass-"] .login-options .passkey-login-entry[aria-busy="true"] {
+    border-color: rgba(255, 255, 255, 0.18);
+    background:
+      linear-gradient(145deg, rgba(36, 50, 65, 0.76), rgba(21, 31, 43, 0.56)),
+      radial-gradient(120% 110% at 100% 0%, rgba(111, 207, 226, 0.14), rgba(21, 31, 43, 0) 58%);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 28px rgba(0, 0, 0, 0.18);
+    outline: none;
+  }
+
+  html[data-theme^="glass-"] .login-options .passkey-login-entry .passkey-icon {
+    color: #b9eef8;
+  }
+
+  html[data-theme^="glass-"] .login-options .qq-login-entry:active,
+  html[data-theme^="glass-"] .login-options .passkey-login-entry:active:not(:disabled) {
+    background: rgba(26, 39, 53, 0.82);
+    color: var(--ink);
+    box-shadow: inset 0 1px 8px rgba(0, 0, 0, 0.16), 0 6px 18px rgba(0, 0, 0, 0.18);
+    transform: translateY(0) scale(0.985);
+  }
 }
 
 .dashboard {
@@ -906,6 +1776,37 @@ body.has-bottom-tabs .app-shell {
   outline: none;
 }
 
+html[data-theme^="glass-"] .community-content-tab:not(.is-active),
+html[data-theme^="glass-"] .community-content-tab:not(.is-active):hover:not(:disabled),
+html[data-theme^="glass-"] .community-content-tab:not(.is-active):focus-visible,
+html[data-theme^="glass-"] .community-content-tab:not(.is-active):active:not(:disabled),
+html[data-theme^="glass-"] .ranking-period:not(.is-active),
+html[data-theme^="glass-"] .ranking-period:not(.is-active):hover:not(:disabled),
+html[data-theme^="glass-"] .ranking-period:not(.is-active):focus-visible,
+html[data-theme^="glass-"] .ranking-period:not(.is-active):active:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: rgba(37, 49, 58, 0.78);
+  transform: none;
+}
+
+html[data-theme^="glass-"] .community-content-tab.is-active,
+html[data-theme^="glass-"] .community-content-tab.is-active:hover:not(:disabled),
+html[data-theme^="glass-"] .community-content-tab.is-active:focus-visible,
+html[data-theme^="glass-"] .ranking-period.is-active,
+html[data-theme^="glass-"] .ranking-period.is-active:hover:not(:disabled),
+html[data-theme^="glass-"] .ranking-period.is-active:focus-visible {
+  border-color: rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.38)),
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 218, 246, 0.18), rgba(255, 255, 255, 0) 56%);
+  color: #2f7280;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 8px 22px rgba(80, 102, 119, 0.1);
+}
+
 .ranking-list {
   min-height: 82px;
   display: grid;
@@ -1037,9 +1938,14 @@ body.has-bottom-tabs .app-shell {
 
 .community-card {
   --community-media-width: 112px;
+  --community-cover-height: 149px;
+  --community-food-row-height: 56px;
+  --community-media-gap: 8px;
+  --community-card-content-height: calc(var(--community-cover-height) + var(--community-media-gap) + var(--community-food-row-height));
   min-width: 0;
   display: grid;
   grid-template-columns: var(--community-media-width) minmax(0, 1fr);
+  grid-template-rows: var(--community-card-content-height);
   align-items: stretch;
   align-self: start;
   gap: 14px;
@@ -1071,22 +1977,26 @@ body.has-bottom-tabs .app-shell {
 
 .community-card-media {
   width: var(--community-media-width);
+  height: var(--community-card-content-height);
   min-width: 0;
   align-self: start;
   display: grid;
   grid-auto-rows: max-content;
-  gap: 8px;
+  gap: var(--community-media-gap);
+  overflow: hidden;
+  background: transparent;
 }
 
 .community-cover {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  height: var(--community-cover-height);
+  aspect-ratio: auto;
   align-self: start;
   display: grid;
   place-items: center;
   overflow: hidden;
   border-radius: 7px;
-  background: #e7f0eb;
+  background: transparent;
   color: var(--primary-strong);
   font-size: 12px;
   font-weight: 780;
@@ -1101,16 +2011,19 @@ body.has-bottom-tabs .app-shell {
 
 .community-food-preview {
   width: 100%;
+  height: var(--community-food-row-height);
   min-width: 0;
   align-self: start;
-  display: grid;
-  gap: 5px;
+  position: relative;
+  display: block;
+  overflow: hidden;
   pointer-events: none;
 }
 
 .community-food-carousel {
   --community-food-index: 0;
   width: 100%;
+  height: 100%;
   min-width: 0;
   display: flex;
   align-items: flex-start;
@@ -1129,11 +2042,11 @@ body.has-bottom-tabs .app-shell {
 
 .community-food-group {
   flex: 0 0 100%;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  aspect-ratio: 1 / 1;
-  height: auto;
+  grid-template-rows: minmax(0, 1fr);
+  aspect-ratio: auto;
   gap: 4px;
   scroll-snap-align: none;
   transform: translateX(calc(var(--community-food-index) * -100%));
@@ -1150,7 +2063,7 @@ body.has-bottom-tabs .app-shell {
   overflow: hidden;
   border: 1px solid rgba(31, 122, 90, 0.1);
   border-radius: 6px;
-  background: #eef6f1;
+  background: transparent;
 }
 
 .community-food-thumb img {
@@ -1163,16 +2076,20 @@ body.has-bottom-tabs .app-shell {
 }
 
 .community-food-thumb.is-empty {
-  border-style: dashed;
-  background: rgba(238, 246, 241, 0.44);
+  border-color: transparent;
+  background: transparent;
 }
 
 .community-food-dots {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  left: 4px;
   display: flex;
   justify-content: center;
-  min-height: 4px;
   gap: 4px;
   line-height: 0;
+  pointer-events: none;
 }
 
 .community-food-dots span {
@@ -1189,13 +2106,23 @@ body.has-bottom-tabs .app-shell {
 
 .community-card-body {
   min-width: 0;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "identity"
+    "mood"
+    "chart"
+    "separator"
+    "footer";
+  grid-template-rows: auto minmax(0, auto) minmax(54px, 1fr) 1px auto;
   align-items: stretch;
+  row-gap: 6px;
+  overflow: hidden;
 }
 
 .community-card-identity {
+  grid-area: identity;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -1278,6 +2205,19 @@ body.has-bottom-tabs .app-shell {
   color: var(--chart-loss);
 }
 
+.community-card .community-weight-mini {
+  grid-area: chart;
+  min-height: 0;
+  height: 100%;
+  margin-top: 0;
+  padding: 2px 5px;
+}
+
+.community-card .community-weight-mini.is-empty {
+  min-height: 0;
+  height: 100%;
+}
+
 .community-weight-mini svg {
   width: 100%;
   height: 100%;
@@ -1324,10 +2264,13 @@ body.has-bottom-tabs .app-shell {
 }
 
 .community-card-mood {
+  grid-area: mood;
   display: block;
   overflow: hidden;
-  min-height: 18px;
+  min-height: 0;
+  margin: 0;
   color: var(--ink);
+  line-height: 1.28;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1337,14 +2280,17 @@ body.has-bottom-tabs .app-shell {
 }
 
 .community-card-separator {
+  grid-area: separator;
   width: 100%;
   height: 1px;
-  margin: 10px 0 8px;
+  margin: 0;
   background: var(--line);
 }
 
 .community-card-footer {
+  grid-area: footer;
   width: 100%;
+  min-height: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1622,9 +2568,21 @@ body.has-bottom-tabs .app-shell {
 }
 
 .community-detail-avatar {
-  width: 40px;
-  height: 40px;
-  font-size: 15px;
+  width: 44px;
+  height: 44px;
+  font-size: 17px;
+  box-shadow: 0 10px 24px rgba(25, 42, 35, 0.08);
+}
+
+.community-detail-avatar.has-image {
+  border-color: rgba(31, 122, 90, 0.12);
+  background-color: #eef6f2;
+}
+
+.community-detail-avatar img {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .community-detail-close {
@@ -1830,6 +2788,11 @@ body.has-bottom-tabs .app-shell {
   min-height: 276px;
 }
 
+.community-detail-record-area > .weight-calendar {
+  width: 100%;
+  min-width: 0;
+}
+
 .community-detail-history-section {
   padding: 16px;
   box-shadow: 0 14px 38px rgba(25, 42, 35, 0.06);
@@ -1959,6 +2922,26 @@ body.has-bottom-tabs .app-shell {
   border-color: rgba(31, 122, 90, 0.26);
   background: #ddf0e7;
   color: var(--primary-strong);
+}
+
+html[data-theme^="glass-"] .community-detail-replay {
+  border-color: rgba(105, 183, 207, 0.26);
+  background: rgba(255, 255, 255, 0.34);
+  color: #2f7280;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 8px 20px rgba(80, 102, 119, 0.08);
+}
+
+html[data-theme^="glass-"] .community-detail-replay:hover:not(:disabled),
+html[data-theme^="glass-"] .community-detail-replay:focus-visible {
+  border-color: rgba(105, 183, 207, 0.38);
+  background: rgba(255, 255, 255, 0.48);
+  color: #2f7280;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 24px rgba(80, 102, 119, 0.1);
+}
+
+html[data-theme^="glass-"] .community-self-badge,
+html[data-theme^="glass-"] .community-card-records {
+  color: #2f7280;
 }
 
 .community-social-button {
@@ -2282,43 +3265,57 @@ body.has-bottom-tabs .app-shell {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 7px;
   margin-top: 4px;
-  border: 1px solid rgba(31, 122, 90, 0.12);
-  border-radius: 999px;
-  padding: 3px;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 10px 28px rgba(25, 42, 35, 0.05);
-  backdrop-filter: blur(14px);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
   margin-bottom: 0;
 }
 
 .community-comment-form::before {
-  position: absolute;
-  right: 10px;
-  bottom: calc(100% - 1px);
-  left: 10px;
-  height: 12px;
-  background: linear-gradient(to top, rgba(248, 250, 249, 0.86), rgba(248, 250, 249, 0));
-  content: "";
-  pointer-events: none;
+  display: none;
+  content: none;
 }
 
 .community-comment-form input {
-  min-height: 32px;
-  border: 0;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.64);
   border-radius: 999px;
-  padding: 0 12px;
-  background: rgba(243, 247, 245, 0.88);
+  padding: 0 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.66), rgba(244, 252, 255, 0.42)),
+    rgba(255, 255, 255, 0.52);
+  box-shadow:
+    0 14px 34px rgba(78, 127, 150, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px) saturate(1.14);
+  font-size: 16px;
 }
 
 .community-comment-form input:focus {
-  box-shadow: none;
+  border-color: rgba(103, 174, 190, 0.42);
+  box-shadow:
+    0 0 0 3px rgba(103, 174, 190, 0.1),
+    0 14px 34px rgba(78, 127, 150, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .community-comment-form button {
   min-width: 62px;
-  min-height: 32px;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
   border-radius: 999px;
   padding: 0 16px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(244, 252, 255, 0.48)),
+    rgba(255, 255, 255, 0.58);
+  color: var(--ink);
+  box-shadow:
+    0 12px 28px rgba(78, 127, 150, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px) saturate(1.14);
 }
 
 .community-detail-message {
@@ -2866,18 +3863,21 @@ body.has-bottom-tabs .app-shell {
 }
 
 .replay-modal-backdrop.is-open {
-  background: rgba(12, 20, 17, 0.62);
-  backdrop-filter: blur(8px);
+  background: rgba(232, 243, 249, 0.24);
+  backdrop-filter: blur(12px) saturate(1.14);
 }
 
 .replay-modal-panel {
   width: 80vw;
   height: 80dvh;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 8px;
-  background: #101615;
-  box-shadow: 0 34px 100px rgba(4, 12, 8, 0.44);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(246, 251, 255, 0.46)),
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 219, 246, 0.2), rgba(255, 255, 255, 0) 52%),
+    radial-gradient(120% 110% at 100% 16%, rgba(184, 238, 255, 0.28), rgba(255, 255, 255, 0) 56%);
+  box-shadow: 0 34px 100px rgba(69, 88, 105, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.82);
   opacity: 0;
   transform: scale(0.94);
   transform-origin: center;
@@ -2895,7 +3895,45 @@ body.has-bottom-tabs .app-shell {
   height: 100%;
   display: block;
   border: 0;
-  background: #101615;
+  background: #f4fbff;
+}
+
+html[data-theme^="glass-"] .replay-modal-backdrop.is-open {
+  background: rgba(232, 243, 249, 0.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.14);
+  backdrop-filter: blur(12px) saturate(1.14);
+}
+
+html[data-theme^="glass-"] .replay-modal-panel {
+  border-color: rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(246, 251, 255, 0.46)),
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 219, 246, 0.2), rgba(255, 255, 255, 0) 52%),
+    radial-gradient(120% 110% at 100% 16%, rgba(184, 238, 255, 0.28), rgba(255, 255, 255, 0) 56%);
+  box-shadow: 0 34px 100px rgba(69, 88, 105, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+html[data-theme^="glass-"] .replay-modal-panel iframe {
+  background: #f4fbff;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] .replay-modal-backdrop.is-open {
+    background: rgba(8, 13, 19, 0.12);
+  }
+
+  html[data-theme^="glass-"] .replay-modal-panel {
+    border-color: rgba(255, 255, 255, 0.18);
+    background:
+      linear-gradient(145deg, rgba(29, 41, 55, 0.84), rgba(16, 25, 36, 0.68)),
+      radial-gradient(120% 120% at 0% 0%, rgba(216, 134, 181, 0.12), rgba(16, 25, 36, 0) 52%),
+      radial-gradient(120% 110% at 100% 16%, rgba(111, 207, 226, 0.16), rgba(16, 25, 36, 0) 56%);
+    box-shadow: 0 36px 104px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  }
+
+  html[data-theme^="glass-"] .replay-modal-panel iframe {
+    background: #101823;
+  }
 }
 
 .topbar {
@@ -2954,6 +3992,17 @@ body.has-bottom-tabs .app-shell {
 .settings-account-avatar.has-image {
   border-color: rgba(31, 122, 90, 0.12);
   background-color: #eef6f2;
+}
+
+.profile-avatar img,
+.settings-account-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .ghost-button,
@@ -3196,6 +4245,60 @@ body.has-bottom-tabs .app-shell {
   color: var(--primary-strong);
   font-size: 14px;
   font-weight: 820;
+}
+
+html[data-theme^="glass-"] .ai-advice-button {
+  border-color: rgba(255, 255, 255, 0.62);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.26)),
+    radial-gradient(110% 120% at 0% 0%, rgba(255, 218, 246, 0.24), rgba(255, 255, 255, 0) 56%),
+    radial-gradient(110% 120% at 100% 0%, rgba(183, 238, 255, 0.3), rgba(255, 255, 255, 0) 58%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68), 0 16px 38px rgba(80, 102, 119, 0.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.16);
+  backdrop-filter: blur(18px) saturate(1.16);
+}
+
+html[data-theme^="glass-"] .ai-advice-button:hover:not(:disabled),
+html[data-theme^="glass-"] .ai-advice-button:focus-visible {
+  border-color: rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.34)),
+    radial-gradient(110% 120% at 0% 0%, rgba(255, 218, 246, 0.3), rgba(255, 255, 255, 0) 56%),
+    radial-gradient(110% 120% at 100% 0%, rgba(183, 238, 255, 0.34), rgba(255, 255, 255, 0) 58%);
+  color: var(--ink);
+}
+
+html[data-theme^="glass-"] .ai-advice-button small,
+html[data-theme^="glass-"] .ai-advice-action {
+  color: #2f7280;
+}
+
+html[data-theme^="glass-"] .ai-advice-action {
+  border-color: rgba(105, 183, 207, 0.24);
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+html[data-theme^="glass-"] .body-record-entry {
+  border-color: rgba(105, 183, 207, 0.24);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.28)),
+    radial-gradient(105% 120% at 0% 0%, rgba(255, 218, 246, 0.2), rgba(255, 255, 255, 0) 58%);
+}
+
+html[data-theme^="glass-"] .food-record-entry {
+  border-color: rgba(188, 160, 211, 0.28);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.26)),
+    radial-gradient(105% 120% at 100% 0%, rgba(183, 238, 255, 0.28), rgba(255, 255, 255, 0) 58%);
+  color: var(--ink);
+}
+
+html[data-theme^="glass-"] .record-entry-button:hover:not(:disabled),
+html[data-theme^="glass-"] .record-entry-button:focus-visible,
+html[data-theme^="glass-"] .replay-launch-button:hover:not(:disabled),
+html[data-theme^="glass-"] .replay-launch-button:focus-visible {
+  color: #2f7280;
 }
 
 .section-heading {
@@ -4486,8 +5589,12 @@ body.has-bottom-tabs .app-shell {
   box-shadow: none;
 }
 
+.calendar-section {
+  min-width: 0;
+}
+
 .weight-calendar {
-  margin-bottom: 14px;
+  margin: 0;
   border: 1px solid rgba(38, 79, 64, 0.12);
   border-radius: 8px;
   padding: 10px 12px 12px;
@@ -4659,6 +5766,91 @@ button.calendar-day.is-selected:active:not(:disabled) {
   font-size: 13px;
 }
 
+html[data-theme^="glass-"] .weight-calendar {
+  border-color: rgba(255, 255, 255, 0.58);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.2)),
+    radial-gradient(105% 115% at 8% 0%, rgba(255, 219, 246, 0.2), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(105% 115% at 96% 4%, rgba(184, 238, 255, 0.28), rgba(255, 255, 255, 0) 60%);
+  box-shadow: var(--glass-shadow-soft);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+  backdrop-filter: blur(18px) saturate(1.18);
+}
+
+html[data-theme^="glass-"] .calendar-detail {
+  border-color: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.32);
+  color: rgba(58, 76, 88, 0.74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
+}
+
+html[data-theme^="glass-"] .calendar-detail-date,
+html[data-theme^="glass-"] .calendar-detail strong {
+  color: #2f7280;
+}
+
+html[data-theme^="glass-"] .calendar-weekdays {
+  color: rgba(58, 76, 88, 0.58);
+}
+
+html[data-theme^="glass-"] .calendar-day,
+html[data-theme^="glass-"] button.calendar-day {
+  border-color: rgba(86, 136, 167, 0.24);
+  background: var(--day-color, rgba(255, 255, 255, 0.42));
+  color: rgba(29, 40, 50, 0.82);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme^="glass-"] button.calendar-day:hover:not(:disabled),
+html[data-theme^="glass-"] button.calendar-day:focus-visible,
+html[data-theme^="glass-"] button.calendar-day:active:not(:disabled) {
+  border-color: rgba(86, 136, 167, 0.48);
+  background: var(--day-color, rgba(255, 255, 255, 0.42));
+  box-shadow: 0 0 0 2px rgba(105, 183, 207, 0.16);
+  color: rgba(29, 40, 50, 0.9);
+}
+
+html[data-theme^="glass-"] .calendar-day.is-selected {
+  border-color: rgba(86, 136, 167, 0.82);
+  background: var(--day-color, var(--calendar-selected-bg));
+  box-shadow: 0 0 0 2px rgba(105, 183, 207, 0.2), 0 2px 8px rgba(87, 130, 158, 0.08);
+  color: rgba(22, 33, 43, 0.95);
+}
+
+html[data-theme^="glass-"] button.calendar-day.is-selected:hover:not(:disabled),
+html[data-theme^="glass-"] button.calendar-day.is-selected:focus-visible,
+html[data-theme^="glass-"] button.calendar-day.is-selected:active:not(:disabled) {
+  border-color: rgba(86, 136, 167, 0.82);
+  background: var(--day-color, var(--calendar-selected-bg));
+  box-shadow: 0 0 0 2px rgba(105, 183, 207, 0.24), 0 2px 8px rgba(87, 130, 158, 0.08);
+}
+
+html[data-theme^="glass-"] .calendar-day.is-up {
+  border-color: rgba(223, 140, 166, 0.34);
+  color: rgba(103, 46, 65, 0.86);
+}
+
+html[data-theme^="glass-"] .calendar-day.is-down {
+  border-color: rgba(105, 183, 207, 0.36);
+  color: rgba(36, 89, 108, 0.88);
+}
+
+html[data-theme^="glass-"] .calendar-day.is-empty {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.24);
+  color: rgba(67, 82, 94, 0.48);
+}
+
+html[data-theme^="glass-"] .chart-y-axis {
+  border-right-color: rgba(255, 255, 255, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    radial-gradient(120% 100% at 0% 0%, rgba(255, 219, 246, 0.14), rgba(255, 255, 255, 0) 58%);
+  color: rgba(67, 82, 94, 0.66);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+  backdrop-filter: blur(10px) saturate(1.08);
+}
+
 .history-heading-actions {
   display: inline-flex;
   align-items: center;
@@ -4712,9 +5904,10 @@ button.calendar-day.is-selected:active:not(:disabled) {
 
 .history-item {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) auto auto;
-  gap: 14px;
-  align-items: center;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  column-gap: 14px;
+  row-gap: 4px;
+  align-items: start;
   min-height: 86px;
   padding: 10px;
   border: 1px solid var(--line);
@@ -4727,7 +5920,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
   aspect-ratio: 3 / 4;
   height: auto;
   border-radius: 7px;
-  background: #edf3ef;
+  background: #edf7fb;
   object-fit: cover;
   display: grid;
   place-items: center;
@@ -4736,12 +5929,42 @@ button.calendar-day.is-selected:active:not(:disabled) {
   font-weight: 760;
 }
 
+.history-body-photo {
+  width: 72px;
+  aspect-ratio: 3 / 4;
+  height: auto;
+  border-radius: 8px;
+  background: #edf7fb;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.history-body-photo.is-empty {
+  border: 1px solid var(--line);
+}
+
 .history-item.is-food {
   grid-template-columns: 72px minmax(0, 1fr);
   align-items: start;
 }
 
+.history-item.is-body-record {
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: start;
+}
+
 .history-item.is-food .history-food-gallery {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.history-item.is-body-record .history-body-photo {
   grid-column: 1;
   grid-row: 1;
 }
@@ -4753,7 +5976,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
   overflow-x: auto;
   overflow-y: hidden;
   border-radius: 8px;
-  background: #edf3ef;
+  background: #edf7fb;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   scrollbar-width: none;
@@ -4767,7 +5990,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  background: #edf3ef;
+  background: #edf7fb;
   color: var(--muted);
   font-size: 12px;
   font-weight: 760;
@@ -4787,7 +6010,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
   flex: 0 0 100%;
   border: 0;
   border-radius: 8px;
-  background: #edf3ef;
+  background: #edf7fb;
   object-fit: cover;
   box-shadow: none;
   scroll-snap-align: start;
@@ -4805,10 +6028,9 @@ button.calendar-day.is-selected:active:not(:disabled) {
   min-width: 0;
 }
 
-.history-item.is-food .delete-record-button {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  width: 100%;
+.history-item.is-body-record .history-main {
+  grid-column: 2;
+  min-width: 0;
 }
 
 .history-time {
@@ -4816,15 +6038,28 @@ button.calendar-day.is-selected:active:not(:disabled) {
   font-weight: 780;
 }
 
+.history-head {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-head .history-time {
+  min-width: 0;
+  padding-top: 3px;
+}
+
 .history-note {
-  margin: 5px 0 0;
+  margin: 3px 0 0;
   color: var(--muted);
   font-size: 14px;
 }
 
 .history-mood {
   max-width: 46ch;
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: var(--ink);
   font-size: 14px;
   line-height: 1.45;
@@ -4837,6 +6072,8 @@ button.calendar-day.is-selected:active:not(:disabled) {
 }
 
 .history-weight {
+  align-self: start;
+  padding-top: 0;
   color: var(--primary-strong);
   font-size: 20px;
   font-weight: 820;
@@ -4851,10 +6088,10 @@ button.calendar-day.is-selected:active:not(:disabled) {
 
 .history-food-entry {
   max-width: 100%;
-  border: 1px solid rgba(31, 122, 90, 0.1);
+  border: 1px solid rgba(75, 159, 178, 0.12);
   border-radius: 8px;
   padding: 6px 7px;
-  background: rgba(240, 248, 244, 0.82);
+  background: rgba(239, 250, 253, 0.82);
 }
 
 .history-food-entry > strong,
@@ -4883,7 +6120,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-top: 7px;
+  margin-top: 5px;
 }
 
 .history-food-summary strong,
@@ -4897,15 +6134,20 @@ button.calendar-day.is-selected:active:not(:disabled) {
 }
 
 .history-food-summary strong {
-  background: rgba(156, 108, 25, 0.1);
-  color: #9c6c19;
+  background: var(--calorie-gold-soft, rgba(156, 108, 25, 0.1));
+  color: var(--calorie-gold, #9c6c19);
   font-size: 12px;
   font-weight: 860;
 }
 
+.history-weight-summary strong {
+  background: rgba(74, 147, 190, 0.13);
+  color: #397c9f;
+}
+
 .history-food-summary span {
-  background: rgba(31, 122, 90, 0.07);
-  color: #65716c;
+  background: rgba(75, 159, 178, 0.1);
+  color: #607480;
   font-size: 11px;
   font-weight: 740;
 }
@@ -4915,10 +6157,10 @@ button.calendar-day.is-selected:active:not(:disabled) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid rgba(31, 122, 90, 0.1);
+  border: 1px solid rgba(75, 159, 178, 0.12);
   border-radius: 999px;
   padding: 4px 8px;
-  background: rgba(240, 248, 244, 0.82);
+  background: rgba(239, 250, 253, 0.82);
   color: var(--ink);
   font-size: 12px;
   font-weight: 760;
@@ -4931,31 +6173,75 @@ button.calendar-day.is-selected:active:not(:disabled) {
 }
 
 .history-food-calories {
-  color: #9c6c19;
+  color: var(--calorie-gold, #9c6c19);
   font-size: 18px;
   font-weight: 860;
   white-space: nowrap;
 }
 
 .delete-record-button {
-  min-height: 38px;
-  border: 1px solid rgba(186, 57, 43, 0.22);
-  background: #fff;
-  background-clip: padding-box;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: #ba392b;
-  padding: 0 12px;
+  padding: 0;
   overflow: hidden;
+  box-shadow: none;
 }
 
 .delete-record-button:hover:not(:disabled) {
-  background: #fff1ef;
+  background: rgba(186, 57, 43, 0.08);
   box-shadow: none;
 }
 
 .delete-record-button:active:not(:disabled) {
-  background: #ffe7e3;
+  background: rgba(186, 57, 43, 0.12);
   box-shadow: none;
   transform: scale(0.985);
+}
+
+.delete-record-button .community-trash-icon {
+  width: 15px;
+  height: 15px;
+}
+
+html[data-theme^="glass-"] .delete-record-button,
+html[data-theme^="glass-"] .delete-record-button:focus:not(:focus-visible) {
+  border: 0;
+  background: transparent;
+  color: #b94d52;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .delete-record-button:hover:not(:disabled),
+html[data-theme^="glass-"] .delete-record-button:focus-visible,
+html[data-theme^="glass-"] .delete-record-button:active:not(:disabled) {
+  border: 0;
+  background: rgba(185, 77, 82, 0.1);
+  color: #a83f48;
+  box-shadow: none;
+}
+
+html[data-theme^="glass-"] .history-food-summary strong,
+html[data-theme^="glass-"] .history-food-calories {
+  color: #a97724;
+}
+
+html[data-theme^="glass-"] .history-food-summary strong {
+  background: rgba(169, 119, 36, 0.12);
+}
+
+html[data-theme^="glass-"] .history-weight-summary strong {
+  background: rgba(83, 158, 202, 0.16);
+  color: #327894;
 }
 
 .settings-content {
@@ -4966,11 +6252,11 @@ button.calendar-day.is-selected:active:not(:disabled) {
 
 .settings-panel {
   display: grid;
-  gap: 0;
+  gap: 12px;
 }
 
 .settings-group {
-  padding: 28px 2px;
+  padding: 20px 2px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -5035,7 +6321,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
 
 .account-profile-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   margin-top: 22px;
@@ -5043,6 +6329,100 @@ button.calendar-day.is-selected:active:not(:disabled) {
   border-radius: 8px;
   padding: 14px;
   background: rgba(250, 253, 251, 0.88);
+}
+
+.account-binding-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.account-binding-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(31, 122, 90, 0.12);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(250, 253, 251, 0.88);
+}
+
+.account-binding-card > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.account-binding-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.account-binding-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.account-binding-card em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.account-binding-icon {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(115, 166, 184, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #17202a;
+}
+
+.account-binding-icon.qq-login-mark {
+  border-radius: 999px;
+}
+
+.account-binding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.account-bind-button {
+  min-height: 36px;
+  border: 1px solid rgba(76, 159, 178, 0.22);
+  border-radius: 999px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--primary-strong);
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.account-bind-button.subtle {
+  color: var(--muted);
+}
+
+.account-bind-button:hover:not(:disabled),
+.account-bind-button:focus-visible {
+  border-color: rgba(76, 159, 178, 0.36);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 18px rgba(80, 102, 119, 0.1);
+  transform: none;
+}
+
+.account-bind-button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
+  transform: scale(0.985);
 }
 
 .account-profile-readonly {
@@ -5345,15 +6725,20 @@ button.calendar-day.is-selected:active:not(:disabled) {
   color: #b45143;
 }
 
-.settings-options {
+.settings-options,
+.native-health-sync {
   display: grid;
-  gap: 0;
+  gap: 12px;
   padding: 0;
+}
+
+.native-health-sync .settings-option-button {
+  min-height: 68px;
 }
 
 .settings-option-button {
   width: 100%;
-  min-height: 82px;
+  min-height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5361,7 +6746,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
   border: 0;
   border-bottom: 1px solid var(--line);
   border-radius: 8px;
-  padding: 18px 10px;
+  padding: 13px 12px;
   background: transparent;
   background-clip: padding-box;
   color: var(--ink);
@@ -5387,7 +6772,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
 .settings-option-button > span:first-child {
   min-width: 0;
   display: grid;
-  gap: 5px;
+  gap: 3px;
 }
 
 .settings-option-button small {
@@ -5399,6 +6784,7 @@ button.calendar-day.is-selected:active:not(:disabled) {
 .settings-option-button strong {
   color: var(--ink);
   font-size: 16px;
+  line-height: 1.18;
 }
 
 .settings-option-button em {
@@ -5407,6 +6793,28 @@ button.calendar-day.is-selected:active:not(:disabled) {
   font-style: normal;
   font-weight: 560;
   line-height: 1.45;
+}
+
+html[data-locale="en"] .settings-option-button {
+  gap: 12px;
+  padding-block: 12px;
+}
+
+html[data-locale="en"] .settings-option-button strong {
+  font-size: clamp(14px, 3.65vw, 16px);
+}
+
+html[data-locale="en"] .settings-option-button em {
+  font-size: clamp(12px, 3.2vw, 13px);
+  line-height: 1.35;
+}
+
+html[data-locale="en"] .privacy-status,
+html[data-locale="en"] .account-mode-badge {
+  max-width: 38%;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
 }
 
 .settings-option-arrow {
@@ -5419,6 +6827,62 @@ button.calendar-day.is-selected:active:not(:disabled) {
   display: flex;
   justify-content: center;
   padding: 26px 0 6px;
+}
+
+.native-health-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.native-health-actions button {
+  min-width: 132px;
+}
+
+.native-health-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.native-health-card {
+  min-width: 0;
+  border: 1px solid rgba(31, 122, 90, 0.14);
+  border-radius: 10px;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(242, 249, 245, 0.88), rgba(255, 255, 255, 0.92));
+}
+
+.native-health-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.native-health-card strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.native-health-json {
+  display: block;
+  max-height: 220px;
+  margin: 14px 0 0;
+  border: 1px solid rgba(31, 122, 90, 0.12);
+  border-radius: 10px;
+  padding: 12px;
+  overflow: auto;
+  background: rgba(248, 251, 249, 0.92);
+  color: #33413b;
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .settings-logout-button {
@@ -5997,6 +7461,83 @@ button.calendar-day.is-selected:active:not(:disabled) {
 
 .feedback-dialog textarea {
   min-height: 118px;
+  font-size: 16px;
+}
+
+.feedback-dialog select {
+  font-size: 16px;
+}
+
+.feedback-attachments {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 12px;
+}
+
+.feedback-attachments-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.feedback-upload-button {
+  min-height: 34px;
+  padding: 0 14px;
+}
+
+.feedback-image-preview-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.feedback-image-preview {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.58), rgba(241, 250, 254, 0.34)),
+    rgba(255, 255, 255, 0.42);
+  box-shadow: 0 10px 24px rgba(78, 127, 150, 0.09);
+}
+
+.feedback-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.feedback-image-preview button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  box-shadow: 0 8px 18px rgba(20, 36, 45, 0.12);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.feedback-attachments small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .feedback-message {
@@ -6078,6 +7619,545 @@ button.calendar-day.is-selected:active:not(:disabled) {
   color: #b83d34;
 }
 
+html[data-theme^="glass-"] .settings-detail-panel {
+  gap: 16px;
+}
+
+html[data-theme^="glass-"] .settings-detail-panel .settings-group {
+  padding-top: 18px;
+}
+
+html[data-theme^="glass-"] .settings-back-button,
+html[data-theme^="glass-"] .settings-back-button:hover:not(:disabled),
+html[data-theme^="glass-"] .settings-back-button:focus-visible,
+html[data-theme^="glass-"] .settings-back-button:active:not(:disabled) {
+  width: fit-content;
+  min-height: 34px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary-strong);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transform: none;
+}
+
+html[data-theme^="glass-"] .settings-back-button:hover:not(:disabled),
+html[data-theme^="glass-"] .settings-back-button:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+html[data-theme^="glass-"] .settings-back-button::before {
+  color: #6baec4;
+}
+
+html[data-theme^="glass-"] .account-profile-card,
+html[data-theme^="glass-"] .account-binding-card,
+html[data-theme^="glass-"] .account-binding-icon,
+html[data-theme^="glass-"] .account-profile-readonly span,
+html[data-theme^="glass-"] .birthday-picker,
+html[data-theme^="glass-"] .birthday-picker-column,
+html[data-theme^="glass-"] .privacy-audit-summary,
+html[data-theme^="glass-"] .privacy-audit-summary span,
+html[data-theme^="glass-"] .passkey-card,
+html[data-theme^="glass-"] .passkey-list-item,
+html[data-theme^="glass-"] .passkey-empty,
+html[data-theme^="glass-"] .native-health-card,
+html[data-theme^="glass-"] .native-health-json,
+html[data-theme^="glass-"] .privacy-highlights span,
+html[data-theme^="glass-"] .passkey-prompt-visual {
+  border-color: rgba(255, 255, 255, 0.54);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.22)),
+    radial-gradient(90% 110% at 100% 0%, rgba(188, 244, 255, 0.18), rgba(255, 255, 255, 0) 58%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62), 0 10px 24px rgba(80, 102, 119, 0.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+  backdrop-filter: blur(18px) saturate(1.12);
+}
+
+html[data-theme^="glass-"] .privacy-audit-summary {
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+html[data-theme^="glass-"] .account-status-notice {
+  border-color: rgba(216, 138, 158, 0.28);
+  background: rgba(255, 239, 245, 0.46);
+  color: #9b566f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme^="glass-"] .account-status-notice[data-status="frozen"] {
+  border-color: rgba(212, 170, 102, 0.34);
+  background: rgba(255, 248, 232, 0.5);
+  color: #8a6828;
+}
+
+html[data-theme^="glass-"] .profile-gender-options button,
+html[data-theme^="glass-"] .birthday-picker-toggle,
+html[data-theme^="glass-"] .birthday-picker-done,
+html[data-theme^="glass-"] .birthday-picker-head button,
+html[data-theme^="glass-"] .mode-selector button,
+html[data-theme^="glass-"] .qq-sync-button,
+html[data-theme^="glass-"] .account-bind-button,
+html[data-theme^="glass-"] .ghost-button,
+html[data-theme^="glass-"] .secondary-button,
+html[data-theme^="glass-"] .passkey-add-button,
+html[data-theme^="glass-"] .settings-logout-button,
+html[data-theme^="glass-"] .copy-phrase-button {
+  border-color: rgba(255, 255, 255, 0.58);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.26)),
+    radial-gradient(120% 110% at 100% 0%, rgba(184, 238, 255, 0.2), rgba(255, 255, 255, 0) 58%);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 8px 20px rgba(80, 102, 119, 0.08);
+  -webkit-backdrop-filter: blur(16px) saturate(1.12);
+  backdrop-filter: blur(16px) saturate(1.12);
+}
+
+html[data-theme^="glass-"] .profile-gender-options button:hover:not(:disabled),
+html[data-theme^="glass-"] .birthday-picker-toggle:hover:not(:disabled),
+html[data-theme^="glass-"] .birthday-picker-done:hover:not(:disabled),
+html[data-theme^="glass-"] .birthday-picker-head button:hover:not(:disabled),
+html[data-theme^="glass-"] .mode-selector button:hover:not(:disabled),
+html[data-theme^="glass-"] .qq-sync-button:hover:not(:disabled),
+html[data-theme^="glass-"] .account-bind-button:hover:not(:disabled),
+html[data-theme^="glass-"] .account-bind-button:focus-visible,
+html[data-theme^="glass-"] .ghost-button:hover:not(:disabled),
+html[data-theme^="glass-"] .secondary-button:hover:not(:disabled),
+html[data-theme^="glass-"] .passkey-add-button:hover:not(:disabled),
+html[data-theme^="glass-"] .settings-logout-button:hover:not(:disabled),
+html[data-theme^="glass-"] .copy-phrase-button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.34)),
+    radial-gradient(120% 110% at 100% 0%, rgba(184, 238, 255, 0.28), rgba(255, 255, 255, 0) 58%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 10px 24px rgba(80, 102, 119, 0.1);
+  transform: none;
+}
+
+html[data-theme^="glass-"] .profile-gender-options button:active:not(:disabled),
+html[data-theme^="glass-"] .birthday-picker-toggle:active:not(:disabled),
+html[data-theme^="glass-"] .birthday-picker-done:active:not(:disabled),
+html[data-theme^="glass-"] .birthday-picker-head button:active:not(:disabled),
+html[data-theme^="glass-"] .mode-selector button:active:not(:disabled),
+html[data-theme^="glass-"] .qq-sync-button:active:not(:disabled),
+html[data-theme^="glass-"] .account-bind-button:active:not(:disabled),
+html[data-theme^="glass-"] .ghost-button:active:not(:disabled),
+html[data-theme^="glass-"] .secondary-button:active:not(:disabled),
+html[data-theme^="glass-"] .passkey-add-button:active:not(:disabled),
+html[data-theme^="glass-"] .settings-logout-button:active:not(:disabled),
+html[data-theme^="glass-"] .copy-phrase-button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.46);
+  box-shadow: inset 0 1px 8px rgba(117, 144, 160, 0.12), 0 5px 14px rgba(80, 102, 119, 0.08);
+  transform: scale(0.985);
+}
+
+html[data-theme^="glass-"] .qq-sync-button,
+html[data-theme^="glass-"] .account-bind-button,
+html[data-theme^="glass-"] .passkey-add-button,
+html[data-theme^="glass-"] .birthday-picker-done {
+  color: var(--primary-strong);
+}
+
+html[data-theme^="glass-"] .qq-sync-button:disabled {
+  border-color: rgba(255, 255, 255, 0.44);
+  background: rgba(255, 255, 255, 0.24);
+  color: rgba(102, 116, 128, 0.66);
+}
+
+html[data-theme^="glass-"] .profile-gender-options button.is-active,
+html[data-theme^="glass-"] .mode-selector button.is-active,
+html[data-theme^="glass-"] .mode-selector button.is-active:hover:not(:disabled),
+html[data-theme^="glass-"] .mode-selector button.is-active:focus-visible,
+html[data-theme^="glass-"] .birthday-picker-column button.is-selected {
+  border-color: rgba(103, 174, 190, 0.5);
+  background:
+    linear-gradient(145deg, rgba(239, 250, 253, 0.66), rgba(255, 241, 249, 0.34)),
+    radial-gradient(110% 110% at 100% 0%, rgba(184, 238, 255, 0.34), rgba(255, 255, 255, 0) 58%);
+  color: var(--primary-strong);
+  box-shadow: inset 0 0 0 1px rgba(103, 174, 190, 0.16), 0 0 0 3px rgba(103, 174, 190, 0.08);
+}
+
+html[data-theme^="glass-"] .birthday-picker-column button,
+html[data-theme^="glass-"] .document-link,
+html[data-theme^="glass-"] .consent-document-row button {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .birthday-picker-column button:hover:not(:disabled),
+html[data-theme^="glass-"] .birthday-picker-column button:focus-visible {
+  background: rgba(255, 255, 255, 0.32);
+  color: var(--primary-strong);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme^="glass-"] .document-link,
+html[data-theme^="glass-"] .document-link:hover:not(:disabled),
+html[data-theme^="glass-"] .document-link:focus-visible,
+html[data-theme^="glass-"] .document-link:active:not(:disabled),
+html[data-theme^="glass-"] .consent-document-row button,
+html[data-theme^="glass-"] .consent-document-row button:hover:not(:disabled),
+html[data-theme^="glass-"] .consent-document-row button:focus-visible,
+html[data-theme^="glass-"] .consent-document-row button:active:not(:disabled) {
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary-strong);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transform: none;
+}
+
+html[data-theme^="glass-"] .document-link:hover:not(:disabled),
+html[data-theme^="glass-"] .document-link:focus-visible,
+html[data-theme^="glass-"] .consent-document-row button:hover:not(:disabled),
+html[data-theme^="glass-"] .consent-document-row button:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html[data-theme^="glass-"] .account-personal-fields input,
+html[data-theme^="glass-"] .account-personal-fields select,
+html[data-theme^="glass-"] .feedback-dialog textarea,
+html[data-theme^="glass-"] .confirmation-dialog input {
+  border-color: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme^="glass-"] .account-personal-fields input:focus,
+html[data-theme^="glass-"] .account-personal-fields select:focus,
+html[data-theme^="glass-"] .feedback-dialog textarea:focus,
+html[data-theme^="glass-"] .confirmation-dialog input:focus {
+  border-color: rgba(103, 174, 190, 0.44);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 0 0 3px rgba(103, 174, 190, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme^="glass-"] .withdraw-button,
+html[data-theme^="glass-"] .account-delete-button,
+html[data-theme^="glass-"] .danger-confirm-button {
+  border-color: rgba(216, 138, 158, 0.32);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.56), rgba(255, 240, 246, 0.32)),
+    radial-gradient(110% 120% at 100% 0%, rgba(255, 190, 212, 0.22), rgba(255, 255, 255, 0) 58%);
+  color: #a7465d;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 8px 20px rgba(150, 72, 94, 0.08);
+}
+
+html[data-theme^="glass-"] .withdraw-button:hover:not(:disabled),
+html[data-theme^="glass-"] .account-delete-button:hover:not(:disabled),
+html[data-theme^="glass-"] .account-delete-button:focus-visible,
+html[data-theme^="glass-"] .danger-confirm-button:hover:not(:disabled),
+html[data-theme^="glass-"] .danger-confirm-button:focus-visible {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.66), rgba(255, 232, 241, 0.42)),
+    radial-gradient(110% 120% at 100% 0%, rgba(255, 190, 212, 0.3), rgba(255, 255, 255, 0) 58%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 10px 24px rgba(150, 72, 94, 0.1);
+  transform: none;
+}
+
+html[data-theme^="glass-"] .withdraw-button:active:not(:disabled),
+html[data-theme^="glass-"] .account-delete-button:active:not(:disabled),
+html[data-theme^="glass-"] .danger-confirm-button:active:not(:disabled) {
+  background: rgba(255, 235, 243, 0.5);
+  box-shadow: inset 0 1px 8px rgba(150, 72, 94, 0.12);
+  transform: scale(0.985);
+}
+
+html[data-theme^="glass-"] .passkey-delete-button,
+html[data-theme^="glass-"] .passkey-delete-button:hover:not(:disabled),
+html[data-theme^="glass-"] .passkey-delete-button:focus-visible,
+html[data-theme^="glass-"] .passkey-delete-button:active:not(:disabled) {
+  border: 0;
+  background: transparent;
+  color: #a7465d;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .passkey-delete-button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+html[data-theme^="glass-"] .copy-phrase-button.is-copied {
+  border-color: rgba(103, 174, 190, 0.36);
+  background: rgba(229, 247, 251, 0.58);
+  color: var(--primary-strong);
+}
+
+html[data-theme^="glass-"] .copy-phrase-button.is-copy-failed {
+  border-color: rgba(216, 138, 158, 0.34);
+  background: rgba(255, 238, 244, 0.58);
+  color: #a7465d;
+}
+
+html[data-theme^="glass-"] .weight-chart,
+html[data-theme^="glass-"] .community-detail-weight-chart {
+  border-color: rgba(255, 255, 255, 0.62);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2)),
+    radial-gradient(100% 120% at 0% 0%, rgba(255, 219, 246, 0.18), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(100% 120% at 100% 0%, rgba(184, 238, 255, 0.28), rgba(255, 255, 255, 0) 58%);
+  box-shadow: var(--glass-shadow-soft);
+  -webkit-backdrop-filter: blur(20px) saturate(1.18);
+  backdrop-filter: blur(20px) saturate(1.18);
+}
+
+html[data-theme^="glass-"] .chart-y-axis {
+  border-right-color: rgba(255, 255, 255, 0.48);
+  background: transparent;
+  color: rgba(67, 82, 94, 0.66);
+  box-shadow: 10px 0 20px rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .chart-detail {
+  border-color: rgba(255, 255, 255, 0.62);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.4)),
+    radial-gradient(110% 120% at 100% 0%, rgba(184, 238, 255, 0.22), rgba(255, 255, 255, 0) 58%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 12px 28px rgba(80, 102, 119, 0.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.16);
+  backdrop-filter: blur(18px) saturate(1.16);
+}
+
+html[data-theme^="glass-"] .community-detail-header,
+html[data-theme^="glass-"] .ai-summary-header,
+html[data-theme^="glass-"] .community-comments-modal-header {
+  border-bottom-color: rgba(255, 255, 255, 0.42);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.28)),
+    radial-gradient(100% 120% at 0% 0%, rgba(255, 219, 246, 0.16), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(100% 120% at 100% 0%, rgba(184, 238, 255, 0.2), rgba(255, 255, 255, 0) 60%);
+  -webkit-backdrop-filter: blur(18px) saturate(1.16);
+  backdrop-filter: blur(18px) saturate(1.16);
+}
+
+html[data-theme^="glass-"] .community-detail-profile,
+html[data-theme^="glass-"] .community-detail-record-area {
+  border-bottom-color: rgba(255, 255, 255, 0.36);
+  background:
+    radial-gradient(90% 100% at 0% 0%, rgba(255, 219, 246, 0.12), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(90% 100% at 100% 0%, rgba(184, 238, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+}
+
+html[data-theme^="glass-"] .community-detail-cover,
+html[data-theme^="glass-"] .history-thumb,
+html[data-theme^="glass-"] .history-body-photo,
+html[data-theme^="glass-"] .history-food-gallery,
+html[data-theme^="glass-"] .history-food-gallery.is-empty,
+html[data-theme^="glass-"] .history-food-track img {
+  background: rgba(232, 247, 252, 0.5);
+  color: #2f7280;
+}
+
+html[data-theme^="glass-"] .community-detail-history-section,
+html[data-theme^="glass-"] .history-item,
+html[data-theme^="glass-"] .food-history-card {
+  border-color: rgba(255, 255, 255, 0.54);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.18)),
+    radial-gradient(100% 120% at 100% 0%, rgba(184, 238, 255, 0.14), rgba(255, 255, 255, 0) 58%);
+}
+
+html[data-theme^="glass-"] .history-food-entry,
+html[data-theme^="glass-"] .history-food-list > span {
+  border-color: rgba(105, 183, 207, 0.18);
+  background: rgba(229, 247, 251, 0.42);
+}
+
+html[data-theme^="glass-"] .history-food-summary span,
+html[data-theme^="glass-"] .food-nutrition-grid span,
+html[data-theme^="glass-"] .food-selection-nutrition span,
+html[data-theme^="glass-"] .history-food-nutrition span,
+html[data-theme^="glass-"] .food-selection-data span {
+  border-color: rgba(105, 183, 207, 0.14);
+  background: rgba(229, 247, 251, 0.5);
+  color: rgba(68, 91, 106, 0.82);
+}
+
+html[data-theme^="glass-"] .history-food-mood {
+  color: rgba(23, 32, 41, 0.82);
+}
+
+html[data-theme^="glass-"] .ai-summary-content {
+  background:
+    radial-gradient(88% 72% at 0% 0%, rgba(255, 219, 246, 0.18), rgba(255, 255, 255, 0) 64%),
+    radial-gradient(88% 72% at 100% 0%, rgba(184, 238, 255, 0.22), rgba(255, 255, 255, 0) 64%),
+    linear-gradient(180deg, rgba(248, 252, 255, 0.38), rgba(255, 255, 255, 0.18));
+}
+
+html[data-theme^="glass-"] .ai-summary-output {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-theme^="glass-"] .ai-summary-output code {
+  background: rgba(229, 247, 251, 0.58);
+  color: #2f7280;
+}
+
+html[data-theme^="glass-"] .ai-summary-output blockquote {
+  border-left-color: rgba(216, 138, 181, 0.34);
+  background: rgba(255, 241, 249, 0.28);
+}
+
+html[data-theme^="glass-"] .markdown-table-wrap {
+  border-color: rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
+}
+
+html[data-theme^="glass-"] .markdown-table-wrap th,
+html[data-theme^="glass-"] .markdown-table-wrap td {
+  border-bottom-color: rgba(105, 183, 207, 0.16);
+}
+
+html[data-theme^="glass-"] .markdown-table-wrap th {
+  background: rgba(229, 247, 251, 0.5);
+  color: #2f7280;
+}
+
+html[data-theme^="glass-"] .ai-summary-output.is-typing::after {
+  border-right-color: rgba(75, 159, 178, 0.72);
+}
+
+html[data-theme^="glass-"] .food-selection-dialog,
+html[data-theme^="glass-"] .manual-food-dialog {
+  border-color: rgba(255, 255, 255, 0.62);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(245, 251, 255, 0.54)),
+    radial-gradient(110% 90% at 0% 0%, rgba(255, 219, 246, 0.16), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(110% 90% at 100% 0%, rgba(184, 238, 255, 0.2), rgba(255, 255, 255, 0) 60%);
+  box-shadow: 0 30px 86px rgba(69, 88, 105, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+html[data-theme^="glass-"] .food-selection-item {
+  border-color: rgba(105, 183, 207, 0.16);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+html[data-theme^="glass-"] .food-selection-item.is-selected {
+  border-color: rgba(105, 183, 207, 0.34);
+  background: rgba(229, 247, 251, 0.5);
+}
+
+html[data-theme^="glass-"] .food-selection-edit-button,
+html[data-theme^="glass-"] .food-portion-control button,
+html[data-theme^="glass-"] .modal-icon-button,
+html[data-theme^="glass-"] .food-selection-manual-button {
+  border-color: rgba(105, 183, 207, 0.2);
+  background: rgba(229, 247, 251, 0.42);
+  color: #2f7280;
+}
+
+html[data-theme^="glass-"] .food-selection-edit-button:hover:not(:disabled),
+html[data-theme^="glass-"] .food-selection-edit-button:focus-visible,
+html[data-theme^="glass-"] .food-portion-control button:hover:not(:disabled),
+html[data-theme^="glass-"] .food-portion-control button:focus-visible,
+html[data-theme^="glass-"] .modal-icon-button:hover:not(:disabled),
+html[data-theme^="glass-"] .modal-icon-button:focus-visible,
+html[data-theme^="glass-"] .food-selection-manual-button:hover:not(:disabled),
+html[data-theme^="glass-"] .food-selection-manual-button:focus-visible {
+  border-color: rgba(105, 183, 207, 0.3);
+  background: rgba(229, 247, 251, 0.58);
+}
+
+html[data-theme^="glass-"] .food-selection-ai-button {
+  background: linear-gradient(135deg, rgba(238, 242, 255, 0.78), rgba(229, 247, 251, 0.5));
+}
+
+html[data-theme^="glass-"] .food-selection-ai-button:hover:not(:disabled),
+html[data-theme^="glass-"] .food-selection-ai-button:focus-visible {
+  background: linear-gradient(135deg, rgba(232, 238, 255, 0.86), rgba(218, 244, 252, 0.62));
+}
+
+html[data-theme^="glass-"] .food-candidate-editor,
+html[data-theme^="glass-"] .food-candidate-editor input,
+html[data-theme^="glass-"] .food-portion-control input,
+html[data-theme^="glass-"] .food-selection-summary,
+html[data-theme^="glass-"] .food-selection-loading,
+html[data-theme^="glass-"] .food-empty-state {
+  border-color: rgba(105, 183, 207, 0.16);
+  background: rgba(229, 247, 251, 0.34);
+}
+
+html[data-theme^="glass-"] .food-selection-loading .food-selection-spinner {
+  border-color: rgba(75, 159, 178, 0.16);
+  border-top-color: #4b9fb2;
+}
+
+html[data-theme^="glass-"] .community-food-dots span {
+  background: rgba(105, 183, 207, 0.28);
+}
+
+html[data-theme^="glass-"] .community-food-dots span.is-active {
+  background: rgba(216, 138, 181, 0.72);
+}
+
+html[data-theme^="glass-"] .community-social-button,
+html[data-theme^="glass-"] .community-like-button {
+  border-color: rgba(105, 183, 207, 0.18);
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56), 0 8px 18px rgba(80, 102, 119, 0.08);
+}
+
+html[data-theme^="glass-"] .community-social-button:hover:not(:disabled),
+html[data-theme^="glass-"] .community-social-button:focus-visible,
+html[data-theme^="glass-"] .community-like-button:hover:not(:disabled),
+html[data-theme^="glass-"] .community-like-button:focus-visible {
+  border-color: rgba(105, 183, 207, 0.3);
+  background: rgba(229, 247, 251, 0.5);
+  color: #2f7280;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68), 0 10px 22px rgba(80, 102, 119, 0.1);
+}
+
+html[data-theme^="glass-"] .community-social-button:active:not(:disabled),
+html[data-theme^="glass-"] .community-like-button:active:not(:disabled) {
+  background: rgba(229, 247, 251, 0.42);
+  box-shadow: inset 0 1px 8px rgba(80, 102, 119, 0.1);
+}
+
+html[data-theme^="glass-"] .community-like-button.is-liked {
+  background: rgba(255, 250, 240, 0.56);
+}
+
+html[data-theme^="glass-"] .community-comment-bubble,
+html[data-theme^="glass-"] .community-comment-empty {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54), 0 8px 22px rgba(80, 102, 119, 0.06);
+}
+
+html[data-theme^="glass-"] .community-comment-item.is-own .community-comment-bubble {
+  border-color: rgba(105, 183, 207, 0.18);
+  background: rgba(229, 247, 251, 0.46);
+}
+
+html[data-theme^="glass-"] .community-comment-empty-icon {
+  background: rgba(229, 247, 251, 0.58);
+  color: #2f7280;
+}
+
 @media (max-width: 1120px) {
   .community-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6092,6 +8172,12 @@ button.calendar-day.is-selected:active:not(:disabled) {
   .login-view {
     align-content: center;
     gap: 28px;
+  }
+
+  #loginMessage {
+    grid-column: 1;
+    width: min(100%, 360px);
+    margin-top: -8px;
   }
 
   .community-detail-content {
@@ -6293,13 +8379,23 @@ button.calendar-day.is-selected:active:not(:disabled) {
     grid-template-columns: 66px minmax(0, 1fr);
   }
 
+  .history-item.is-body-record {
+    grid-template-columns: 66px minmax(0, 1fr);
+  }
+
   .history-thumb {
     width: 66px;
     height: auto;
   }
 
+  .history-body-photo {
+    width: 66px;
+  }
+
   .history-weight {
     grid-column: 2;
+    margin-top: -2px;
+    padding-top: 0;
     font-size: 18px;
   }
 
@@ -6312,8 +8408,9 @@ button.calendar-day.is-selected:active:not(:disabled) {
   }
 
   .delete-record-button {
-    grid-column: 1 / -1;
-    width: 100%;
+    width: 30px;
+    height: 30px;
+    min-height: 30px;
   }
 
   .site-footer {
@@ -6365,6 +8462,9 @@ button.calendar-day.is-selected:active:not(:disabled) {
 
   .community-card {
     --community-media-width: 92px;
+    --community-cover-height: 123px;
+    --community-food-row-height: 46px;
+    --community-card-content-height: calc(var(--community-cover-height) + var(--community-media-gap) + var(--community-food-row-height));
     grid-template-columns: var(--community-media-width) minmax(0, 1fr);
   }
 
@@ -6546,6 +8646,11 @@ button.calendar-day.is-selected:active:not(:disabled) {
     padding: 22px 1px;
   }
 
+  .settings-options,
+  .native-health-sync {
+    padding: 0;
+  }
+
   .settings-option-button {
     align-items: flex-start;
     gap: 12px;
@@ -6563,6 +8668,19 @@ button.calendar-day.is-selected:active:not(:disabled) {
     width: 100%;
   }
 
+  .native-health-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .native-health-actions button {
+    width: 100%;
+  }
+
+  .native-health-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .settings-group-heading,
   .danger-zone {
     align-items: flex-start;
@@ -6572,8 +8690,18 @@ button.calendar-day.is-selected:active:not(:disabled) {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .account-profile-card .qq-sync-button {
+  .account-binding-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .account-binding-card .account-binding-actions,
+  .account-binding-card > .account-bind-button {
     grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .account-binding-actions .account-bind-button,
+  .account-binding-card > .account-bind-button {
     width: 100%;
   }
 
@@ -6648,6 +8776,9 @@ button.calendar-day.is-selected:active:not(:disabled) {
 @media (max-width: 380px) {
   .community-card {
     --community-media-width: 78px;
+    --community-cover-height: 104px;
+    --community-food-row-height: 39px;
+    --community-card-content-height: calc(var(--community-cover-height) + var(--community-media-gap) + var(--community-food-row-height));
     grid-template-columns: var(--community-media-width) minmax(0, 1fr);
     gap: 10px;
   }
@@ -6693,5 +8824,1128 @@ button.calendar-day.is-selected:active:not(:disabled) {
   .community-food-group {
     animation: none;
     transition: none;
+  }
+}
+
+/* Final dark-mode audit layer. Keep late-added user surfaces on the same glass palette. */
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] {
+    --dark-panel:
+      linear-gradient(145deg, rgba(28, 40, 54, 0.84), rgba(14, 23, 35, 0.62)),
+      radial-gradient(110% 95% at 0% 0%, rgba(216, 134, 181, 0.12), rgba(14, 23, 35, 0) 58%),
+      radial-gradient(110% 95% at 100% 0%, rgba(111, 207, 226, 0.16), rgba(14, 23, 35, 0) 58%);
+    --dark-panel-soft:
+      linear-gradient(145deg, rgba(32, 45, 60, 0.66), rgba(16, 25, 37, 0.42)),
+      radial-gradient(110% 105% at 100% 0%, rgba(111, 207, 226, 0.12), rgba(16, 25, 37, 0) 60%);
+    --dark-control:
+      linear-gradient(145deg, rgba(38, 53, 69, 0.78), rgba(21, 32, 45, 0.58)),
+      radial-gradient(120% 110% at 100% 0%, rgba(111, 207, 226, 0.13), rgba(21, 32, 45, 0) 58%);
+    --dark-control-hover:
+      linear-gradient(145deg, rgba(48, 65, 82, 0.84), rgba(25, 38, 52, 0.64)),
+      radial-gradient(120% 110% at 100% 0%, rgba(111, 207, 226, 0.18), rgba(25, 38, 52, 0) 58%);
+    --dark-chip: rgba(107, 198, 220, 0.12);
+    --dark-chip-border: rgba(139, 218, 236, 0.18);
+    --dark-danger: #ff9cab;
+    --dark-danger-soft: rgba(255, 114, 137, 0.14);
+    --dark-warning: #e4bb72;
+    --dark-warning-soft: rgba(224, 181, 110, 0.14);
+    --dark-shadow: 0 30px 92px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  html[data-theme^="glass-"] .login-panel,
+  html[data-theme^="glass-"] .history-section,
+  html[data-theme^="glass-"] .community-share-panel,
+  html[data-theme^="glass-"] .community-content-tabs,
+  html[data-theme^="glass-"] .community-card,
+  html[data-theme^="glass-"] .ranking-periods,
+  html[data-theme^="glass-"] .ranking-item,
+  html[data-theme^="glass-"] .settings-panel,
+  html[data-theme^="glass-"] .settings-detail-panel,
+  html[data-theme^="glass-"] .settings-group,
+  html[data-theme^="glass-"] .account-profile-card,
+  html[data-theme^="glass-"] .account-binding-card,
+  html[data-theme^="glass-"] .passkey-card,
+  html[data-theme^="glass-"] .native-health-card,
+  html[data-theme^="glass-"] .chart-card,
+  html[data-theme^="glass-"] .calendar-card,
+  html[data-theme^="glass-"] .timeline-card,
+  html[data-theme^="glass-"] .record-card,
+  html[data-theme^="glass-"] .capture-panel,
+  html[data-theme^="glass-"] .food-record-panel,
+  html[data-theme^="glass-"] .consent-dialog,
+  html[data-theme^="glass-"] .community-detail-panel,
+  html[data-theme^="glass-"] .community-comments-panel,
+  html[data-theme^="glass-"] .ai-summary-panel,
+  html[data-theme^="glass-"] .policy-panel,
+  html[data-theme^="glass-"] .privacy-consent-dialog,
+  html[data-theme^="glass-"] .confirmation-dialog,
+  html[data-theme^="glass-"] .feedback-dialog,
+  html[data-theme^="glass-"] .replay-modal-panel,
+  html[data-theme^="glass-"] .food-selection-dialog,
+  html[data-theme^="glass-"] .manual-food-dialog {
+    border-color: var(--glass-stroke);
+    background: var(--dark-panel);
+    color: var(--ink);
+    box-shadow: var(--dark-shadow);
+  }
+
+  html[data-theme^="glass-"] .account-binding-icon,
+  html[data-theme^="glass-"] .account-profile-readonly span,
+  html[data-theme^="glass-"] .birthday-picker,
+  html[data-theme^="glass-"] .birthday-picker-column,
+  html[data-theme^="glass-"] .privacy-audit-summary,
+  html[data-theme^="glass-"] .privacy-audit-summary span,
+  html[data-theme^="glass-"] .passkey-list-item,
+  html[data-theme^="glass-"] .passkey-empty,
+  html[data-theme^="glass-"] .native-health-json,
+  html[data-theme^="glass-"] .privacy-highlights span,
+  html[data-theme^="glass-"] .passkey-prompt-visual,
+  html[data-theme^="glass-"] .weight-chart,
+  html[data-theme^="glass-"] .community-detail-weight-chart,
+  html[data-theme^="glass-"] .calendar-grid,
+  html[data-theme^="glass-"] .community-weight-mini,
+  html[data-theme^="glass-"] .feedback-image-preview,
+  html[data-theme^="glass-"] .food-selection-item,
+  html[data-theme^="glass-"] .food-candidate-editor,
+  html[data-theme^="glass-"] .food-selection-summary,
+  html[data-theme^="glass-"] .food-selection-loading,
+  html[data-theme^="glass-"] .food-empty-state,
+  html[data-theme^="glass-"] .community-comment-bubble,
+  html[data-theme^="glass-"] .community-comment-empty,
+  html[data-theme^="glass-"] .markdown-table-wrap {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: var(--dark-panel-soft);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  html[data-theme^="glass-"] .community-detail-header,
+  html[data-theme^="glass-"] .ai-summary-header,
+  html[data-theme^="glass-"] .community-comments-modal-header,
+  html[data-theme^="glass-"] .community-detail-profile,
+  html[data-theme^="glass-"] .community-detail-record-area,
+  html[data-theme^="glass-"] .ai-summary-content {
+    border-color: rgba(255, 255, 255, 0.12);
+    background:
+      linear-gradient(145deg, rgba(28, 40, 54, 0.64), rgba(14, 23, 35, 0.34)),
+      radial-gradient(100% 120% at 0% 0%, rgba(216, 134, 181, 0.1), rgba(14, 23, 35, 0) 58%),
+      radial-gradient(100% 120% at 100% 0%, rgba(111, 207, 226, 0.12), rgba(14, 23, 35, 0) 58%);
+  }
+
+  html[data-theme^="glass-"] .policy-content,
+  html[data-theme^="glass-"] .history-food-mood,
+  html[data-theme^="glass-"] .ai-summary-output,
+  html[data-theme^="glass-"] .markdown-table-wrap,
+  html[data-theme^="glass-"] .food-selection-check strong,
+  html[data-theme^="glass-"] .food-selection-total,
+  html[data-theme^="glass-"] .community-comment-bubble p {
+    color: var(--ink);
+  }
+
+  html[data-theme^="glass-"] .history-meta,
+  html[data-theme^="glass-"] .history-subtitle,
+  html[data-theme^="glass-"] .settings-description,
+  html[data-theme^="glass-"] .settings-option-button em,
+  html[data-theme^="glass-"] .food-selection-copy,
+  html[data-theme^="glass-"] .feedback-dialog label,
+  html[data-theme^="glass-"] .confirmation-dialog > p:not(.danger-kicker):not(.confirmation-message),
+  html[data-theme^="glass-"] .feedback-dialog > p:not(.eyebrow):not(.feedback-message),
+  html[data-theme^="glass-"] .account-profile-readonly span,
+  html[data-theme^="glass-"] .native-health-json {
+    color: var(--muted);
+  }
+
+  html[data-theme^="glass-"] .profile-gender-options button,
+  html[data-theme^="glass-"] .birthday-picker-toggle,
+  html[data-theme^="glass-"] .birthday-picker-done,
+  html[data-theme^="glass-"] .birthday-picker-head button,
+  html[data-theme^="glass-"] .mode-selector button,
+  html[data-theme^="glass-"] .qq-sync-button,
+  html[data-theme^="glass-"] .account-bind-button,
+  html[data-theme^="glass-"] .ghost-button,
+  html[data-theme^="glass-"] .secondary-button,
+  html[data-theme^="glass-"] .passkey-add-button,
+  html[data-theme^="glass-"] .settings-logout-button,
+  html[data-theme^="glass-"] .copy-phrase-button,
+  html[data-theme^="glass-"] .community-social-button,
+  html[data-theme^="glass-"] .community-like-button,
+  html[data-theme^="glass-"] .food-selection-edit-button,
+  html[data-theme^="glass-"] .food-selection-ai-button,
+  html[data-theme^="glass-"] .food-portion-control button,
+  html[data-theme^="glass-"] .modal-icon-button,
+  html[data-theme^="glass-"] .food-selection-manual-button,
+  html[data-theme^="glass-"] .feedback-upload-button {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: var(--dark-control);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.11), 0 8px 22px rgba(0, 0, 0, 0.18);
+  }
+
+  html[data-theme^="glass-"] .profile-gender-options button:hover:not(:disabled),
+  html[data-theme^="glass-"] .profile-gender-options button:focus-visible,
+  html[data-theme^="glass-"] .birthday-picker-toggle:hover:not(:disabled),
+  html[data-theme^="glass-"] .birthday-picker-toggle:focus-visible,
+  html[data-theme^="glass-"] .birthday-picker-done:hover:not(:disabled),
+  html[data-theme^="glass-"] .birthday-picker-done:focus-visible,
+  html[data-theme^="glass-"] .birthday-picker-head button:hover:not(:disabled),
+  html[data-theme^="glass-"] .birthday-picker-head button:focus-visible,
+  html[data-theme^="glass-"] .mode-selector button:hover:not(:disabled),
+  html[data-theme^="glass-"] .mode-selector button:focus-visible,
+  html[data-theme^="glass-"] .qq-sync-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .qq-sync-button:focus-visible,
+  html[data-theme^="glass-"] .account-bind-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .account-bind-button:focus-visible,
+  html[data-theme^="glass-"] .ghost-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .ghost-button:focus-visible,
+  html[data-theme^="glass-"] .secondary-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .secondary-button:focus-visible,
+  html[data-theme^="glass-"] .passkey-add-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .passkey-add-button:focus-visible,
+  html[data-theme^="glass-"] .settings-logout-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .settings-logout-button:focus-visible,
+  html[data-theme^="glass-"] .copy-phrase-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .copy-phrase-button:focus-visible,
+  html[data-theme^="glass-"] .community-social-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .community-social-button:focus-visible,
+  html[data-theme^="glass-"] .community-like-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .community-like-button:focus-visible,
+  html[data-theme^="glass-"] .food-selection-edit-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-edit-button:focus-visible,
+  html[data-theme^="glass-"] .food-selection-ai-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-ai-button:focus-visible,
+  html[data-theme^="glass-"] .food-portion-control button:hover:not(:disabled),
+  html[data-theme^="glass-"] .food-portion-control button:focus-visible,
+  html[data-theme^="glass-"] .modal-icon-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .modal-icon-button:focus-visible,
+  html[data-theme^="glass-"] .food-selection-manual-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-manual-button:focus-visible,
+  html[data-theme^="glass-"] .feedback-upload-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .feedback-upload-button:focus-visible {
+    border-color: rgba(189, 239, 255, 0.28);
+    background: var(--dark-control-hover);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 12px 30px rgba(0, 0, 0, 0.24);
+  }
+
+  html[data-theme^="glass-"] .profile-gender-options button:active:not(:disabled),
+  html[data-theme^="glass-"] .birthday-picker-toggle:active:not(:disabled),
+  html[data-theme^="glass-"] .birthday-picker-done:active:not(:disabled),
+  html[data-theme^="glass-"] .birthday-picker-head button:active:not(:disabled),
+  html[data-theme^="glass-"] .mode-selector button:active:not(:disabled),
+  html[data-theme^="glass-"] .qq-sync-button:active:not(:disabled),
+  html[data-theme^="glass-"] .account-bind-button:active:not(:disabled),
+  html[data-theme^="glass-"] .ghost-button:active:not(:disabled),
+  html[data-theme^="glass-"] .secondary-button:active:not(:disabled),
+  html[data-theme^="glass-"] .passkey-add-button:active:not(:disabled),
+  html[data-theme^="glass-"] .settings-logout-button:active:not(:disabled),
+  html[data-theme^="glass-"] .copy-phrase-button:active:not(:disabled),
+  html[data-theme^="glass-"] .community-social-button:active:not(:disabled),
+  html[data-theme^="glass-"] .community-like-button:active:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-edit-button:active:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-ai-button:active:not(:disabled),
+  html[data-theme^="glass-"] .food-portion-control button:active:not(:disabled),
+  html[data-theme^="glass-"] .modal-icon-button:active:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-manual-button:active:not(:disabled),
+  html[data-theme^="glass-"] .feedback-upload-button:active:not(:disabled) {
+    background: rgba(22, 34, 48, 0.84);
+    box-shadow: inset 0 1px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  html[data-theme^="glass-"] .profile-gender-options button.is-active,
+  html[data-theme^="glass-"] .mode-selector button.is-active,
+  html[data-theme^="glass-"] .mode-selector button.is-active:hover:not(:disabled),
+  html[data-theme^="glass-"] .mode-selector button.is-active:focus-visible,
+  html[data-theme^="glass-"] .birthday-picker-column button.is-selected,
+  html[data-theme^="glass-"] .food-selection-item.is-selected {
+    border-color: rgba(189, 239, 255, 0.38);
+    background:
+      linear-gradient(145deg, rgba(54, 75, 92, 0.72), rgba(21, 34, 48, 0.5)),
+      radial-gradient(110% 110% at 100% 0%, rgba(111, 207, 226, 0.22), rgba(21, 34, 48, 0) 58%);
+    color: var(--primary);
+    box-shadow: inset 0 0 0 1px rgba(189, 239, 255, 0.12), 0 0 0 3px rgba(111, 207, 226, 0.08);
+  }
+
+  html[data-theme^="glass-"] .birthday-picker-column button,
+  html[data-theme^="glass-"] .document-link,
+  html[data-theme^="glass-"] .consent-document-row button,
+  html[data-theme^="glass-"] .settings-back-button,
+  html[data-theme^="glass-"] .passkey-delete-button {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  html[data-theme^="glass-"] .birthday-picker-column button:hover:not(:disabled),
+  html[data-theme^="glass-"] .birthday-picker-column button:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--primary);
+  }
+
+  html[data-theme^="glass-"] .document-link,
+  html[data-theme^="glass-"] .document-link:hover:not(:disabled),
+  html[data-theme^="glass-"] .document-link:focus-visible,
+  html[data-theme^="glass-"] .document-link:active:not(:disabled),
+  html[data-theme^="glass-"] .consent-document-row button,
+  html[data-theme^="glass-"] .consent-document-row button:hover:not(:disabled),
+  html[data-theme^="glass-"] .consent-document-row button:focus-visible,
+  html[data-theme^="glass-"] .consent-document-row button:active:not(:disabled),
+  html[data-theme^="glass-"] .settings-back-button,
+  html[data-theme^="glass-"] .settings-back-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .settings-back-button:focus-visible,
+  html[data-theme^="glass-"] .settings-back-button:active:not(:disabled) {
+    color: var(--primary);
+  }
+
+  html[data-theme^="glass-"] .account-personal-fields input,
+  html[data-theme^="glass-"] .account-personal-fields select,
+  html[data-theme^="glass-"] .feedback-dialog textarea,
+  html[data-theme^="glass-"] .confirmation-dialog input,
+  html[data-theme^="glass-"] .food-candidate-editor input,
+  html[data-theme^="glass-"] .food-portion-control input,
+  html[data-theme^="glass-"] .manual-food-field input,
+  html[data-theme^="glass-"] .community-comment-form input,
+  html[data-theme^="glass-"] .community-comment-form textarea {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(12, 20, 31, 0.66);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  html[data-theme^="glass-"] .account-personal-fields input:focus,
+  html[data-theme^="glass-"] .account-personal-fields select:focus,
+  html[data-theme^="glass-"] .feedback-dialog textarea:focus,
+  html[data-theme^="glass-"] .confirmation-dialog input:focus,
+  html[data-theme^="glass-"] .food-candidate-editor input:focus,
+  html[data-theme^="glass-"] .food-portion-control input:focus,
+  html[data-theme^="glass-"] .manual-food-field input:focus,
+  html[data-theme^="glass-"] .community-comment-form input:focus,
+  html[data-theme^="glass-"] .community-comment-form textarea:focus {
+    border-color: rgba(189, 239, 255, 0.34);
+    background: rgba(15, 25, 38, 0.78);
+    box-shadow: 0 0 0 3px rgba(111, 207, 226, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  html[data-theme^="glass-"] input::placeholder,
+  html[data-theme^="glass-"] textarea::placeholder {
+    color: rgba(183, 198, 209, 0.58);
+  }
+
+  html[data-theme^="glass-"] .withdraw-button,
+  html[data-theme^="glass-"] .account-delete-button,
+  html[data-theme^="glass-"] .danger-confirm-button {
+    border-color: rgba(255, 156, 171, 0.28);
+    background:
+      linear-gradient(145deg, rgba(82, 36, 52, 0.64), rgba(40, 24, 35, 0.48)),
+      radial-gradient(110% 120% at 100% 0%, rgba(255, 156, 171, 0.16), rgba(40, 24, 35, 0) 58%);
+    color: var(--dark-danger);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  html[data-theme^="glass-"] .withdraw-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .account-delete-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .account-delete-button:focus-visible,
+  html[data-theme^="glass-"] .danger-confirm-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .danger-confirm-button:focus-visible {
+    background:
+      linear-gradient(145deg, rgba(94, 42, 59, 0.74), rgba(46, 26, 38, 0.58)),
+      radial-gradient(110% 120% at 100% 0%, rgba(255, 156, 171, 0.22), rgba(46, 26, 38, 0) 58%);
+  }
+
+  html[data-theme^="glass-"] .passkey-delete-button,
+  html[data-theme^="glass-"] .passkey-delete-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .passkey-delete-button:focus-visible,
+  html[data-theme^="glass-"] .passkey-delete-button:active:not(:disabled) {
+    color: var(--dark-danger);
+  }
+
+  html[data-theme^="glass-"] .copy-phrase-button.is-copied {
+    border-color: rgba(111, 207, 226, 0.32);
+    background: rgba(111, 207, 226, 0.14);
+    color: var(--primary);
+  }
+
+  html[data-theme^="glass-"] .copy-phrase-button.is-copy-failed,
+  html[data-theme^="glass-"] .account-status-notice {
+    border-color: rgba(255, 156, 171, 0.28);
+    background: var(--dark-danger-soft);
+    color: var(--dark-danger);
+  }
+
+  html[data-theme^="glass-"] .account-status-notice[data-status="frozen"] {
+    border-color: rgba(228, 187, 114, 0.28);
+    background: var(--dark-warning-soft);
+    color: var(--dark-warning);
+  }
+
+  html[data-theme^="glass-"] .chart-y-axis {
+    border-right-color: rgba(255, 255, 255, 0.14);
+    background: transparent;
+    color: rgba(222, 236, 242, 0.62);
+    box-shadow: none;
+  }
+
+  html[data-theme^="glass-"] .chart-detail {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: var(--dark-panel-soft);
+    color: var(--ink);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  html[data-theme^="glass-"] .calendar-day {
+    color: rgba(238, 248, 251, 0.86);
+  }
+
+  html[data-theme^="glass-"] .calendar-day.is-empty {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(167, 182, 195, 0.48);
+  }
+
+  html[data-theme^="glass-"] .community-detail-cover,
+  html[data-theme^="glass-"] .history-thumb,
+  html[data-theme^="glass-"] .history-body-photo,
+  html[data-theme^="glass-"] .history-food-gallery,
+  html[data-theme^="glass-"] .history-food-gallery.is-empty,
+  html[data-theme^="glass-"] .history-food-track img {
+    background: rgba(139, 218, 236, 0.1);
+    color: #9eddea;
+  }
+
+  html[data-theme^="glass-"] .community-detail-history-section,
+  html[data-theme^="glass-"] .history-item,
+  html[data-theme^="glass-"] .food-history-card,
+  html[data-theme^="glass-"] .history-food-entry,
+  html[data-theme^="glass-"] .history-food-list > span {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: var(--dark-panel-soft);
+  }
+
+  html[data-theme^="glass-"] .history-food-summary span,
+  html[data-theme^="glass-"] .food-nutrition-grid span,
+  html[data-theme^="glass-"] .food-selection-nutrition span,
+  html[data-theme^="glass-"] .history-food-nutrition span,
+  html[data-theme^="glass-"] .food-selection-data span {
+    border-color: var(--dark-chip-border);
+    background: var(--dark-chip);
+    color: rgba(225, 242, 248, 0.86);
+  }
+
+  html[data-theme^="glass-"] .ai-summary-output code {
+    background: rgba(111, 207, 226, 0.14);
+    color: #b9eef8;
+  }
+
+  html[data-theme^="glass-"] .ai-summary-output blockquote {
+    border-left-color: rgba(236, 161, 198, 0.36);
+    background: rgba(236, 161, 198, 0.1);
+  }
+
+  html[data-theme^="glass-"] .markdown-table-wrap th {
+    background: rgba(111, 207, 226, 0.12);
+    color: #b9eef8;
+  }
+
+  html[data-theme^="glass-"] .food-selection-loading .food-selection-spinner {
+    border-color: rgba(189, 239, 255, 0.16);
+    border-top-color: var(--primary);
+  }
+
+  html[data-theme^="glass-"] .food-selection-ai-button {
+    background:
+      linear-gradient(135deg, rgba(70, 56, 96, 0.66), rgba(31, 65, 82, 0.52)),
+      radial-gradient(110% 120% at 100% 0%, rgba(157, 218, 255, 0.16), rgba(31, 65, 82, 0) 58%);
+  }
+
+  html[data-theme^="glass-"] .community-food-dots span {
+    background: rgba(139, 218, 236, 0.24);
+  }
+
+  html[data-theme^="glass-"] .community-food-dots span.is-active {
+    background: rgba(236, 161, 198, 0.74);
+  }
+
+  html[data-theme^="glass-"] .community-like-button.is-liked {
+    background:
+      linear-gradient(145deg, rgba(78, 58, 34, 0.62), rgba(36, 29, 23, 0.46)),
+      radial-gradient(120% 120% at 100% 0%, rgba(255, 214, 123, 0.18), rgba(36, 29, 23, 0) 58%);
+  }
+
+  html[data-theme^="glass-"] .community-comment-item.is-own .community-comment-bubble {
+    border-color: rgba(139, 218, 236, 0.18);
+    background: rgba(111, 207, 226, 0.12);
+  }
+
+  html[data-theme^="glass-"] .community-comment-empty-icon {
+    background: rgba(111, 207, 226, 0.12);
+    color: var(--primary);
+  }
+}
+
+/* Dark palette polish. The red-blue glass theme needs darker glass layers, not milky panels. */
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] {
+    --dark-panel:
+      linear-gradient(145deg, rgba(18, 29, 43, 0.86), rgba(7, 14, 25, 0.74)),
+      radial-gradient(115% 95% at 0% 0%, rgba(216, 134, 181, 0.08), rgba(7, 14, 25, 0) 58%),
+      radial-gradient(115% 95% at 100% 0%, rgba(111, 207, 226, 0.11), rgba(7, 14, 25, 0) 58%);
+    --dark-panel-soft:
+      linear-gradient(145deg, rgba(22, 35, 50, 0.64), rgba(8, 16, 28, 0.54)),
+      radial-gradient(110% 105% at 100% 0%, rgba(111, 207, 226, 0.08), rgba(8, 16, 28, 0) 60%);
+    --dark-panel-faint: linear-gradient(145deg, rgba(21, 34, 48, 0.46), rgba(7, 14, 25, 0.38));
+    --dark-control:
+      linear-gradient(145deg, rgba(26, 41, 58, 0.78), rgba(10, 20, 34, 0.68)),
+      radial-gradient(120% 110% at 100% 0%, rgba(111, 207, 226, 0.1), rgba(10, 20, 34, 0) 58%);
+    --dark-control-hover:
+      linear-gradient(145deg, rgba(33, 50, 68, 0.86), rgba(13, 24, 39, 0.74)),
+      radial-gradient(120% 110% at 100% 0%, rgba(111, 207, 226, 0.15), rgba(13, 24, 39, 0) 58%);
+    --dark-selected:
+      linear-gradient(145deg, rgba(36, 72, 90, 0.7), rgba(14, 29, 45, 0.64)),
+      radial-gradient(115% 110% at 100% 0%, rgba(131, 211, 229, 0.22), rgba(14, 29, 45, 0) 58%);
+    --dark-border: rgba(163, 219, 234, 0.2);
+    --dark-border-strong: rgba(190, 239, 250, 0.34);
+    --dark-border-soft: rgba(255, 255, 255, 0.1);
+    --dark-text-muted: rgba(214, 229, 237, 0.7);
+    --dark-text-faint: rgba(190, 206, 217, 0.52);
+    --dark-shadow: 0 26px 82px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --chart-grid: rgba(196, 228, 238, 0.13);
+    --chart-axis: rgba(199, 231, 241, 0.18);
+    --chart-empty: rgba(117, 195, 213, 0.18);
+    --calendar-loss: #78c6d9;
+    --calendar-gain: #df91aa;
+    --calendar-neutral: rgba(255, 255, 255, 0.055);
+    --calendar-selected-bg: rgba(189, 239, 255, 0.08);
+    --calorie-gold: #d9ad65;
+    --calorie-gold-soft: rgba(217, 173, 101, 0.14);
+  }
+
+  html[data-theme^="glass-"] .history-section,
+  html[data-theme^="glass-"] .community-share-panel,
+  html[data-theme^="glass-"] .community-card,
+  html[data-theme^="glass-"] .ranking-item,
+  html[data-theme^="glass-"] .settings-panel,
+  html[data-theme^="glass-"] .settings-detail-panel,
+  html[data-theme^="glass-"] .settings-group,
+  html[data-theme^="glass-"] .account-profile-card,
+  html[data-theme^="glass-"] .account-binding-card,
+  html[data-theme^="glass-"] .passkey-card,
+  html[data-theme^="glass-"] .native-health-card,
+  html[data-theme^="glass-"] .chart-card,
+  html[data-theme^="glass-"] .calendar-card,
+  html[data-theme^="glass-"] .timeline-card,
+  html[data-theme^="glass-"] .record-card,
+  html[data-theme^="glass-"] .capture-panel,
+  html[data-theme^="glass-"] .food-record-panel,
+  html[data-theme^="glass-"] .consent-dialog,
+  html[data-theme^="glass-"] .community-detail-panel,
+  html[data-theme^="glass-"] .community-comments-panel,
+  html[data-theme^="glass-"] .ai-summary-panel,
+  html[data-theme^="glass-"] .policy-panel,
+  html[data-theme^="glass-"] .privacy-consent-dialog,
+  html[data-theme^="glass-"] .confirmation-dialog,
+  html[data-theme^="glass-"] .feedback-dialog,
+  html[data-theme^="glass-"] .replay-modal-panel,
+  html[data-theme^="glass-"] .food-selection-dialog,
+  html[data-theme^="glass-"] .manual-food-dialog {
+    border-color: var(--dark-border);
+    background: var(--dark-panel);
+    color: var(--ink);
+    box-shadow: var(--dark-shadow);
+  }
+
+  html[data-theme^="glass-"] .community-detail-header,
+  html[data-theme^="glass-"] .community-detail-profile,
+  html[data-theme^="glass-"] .community-detail-record-area,
+  html[data-theme^="glass-"] .community-comments-modal-header,
+  html[data-theme^="glass-"] .ai-summary-header,
+  html[data-theme^="glass-"] .ai-summary-content {
+    border-color: var(--dark-border-soft);
+    background:
+      linear-gradient(145deg, rgba(21, 34, 49, 0.72), rgba(8, 16, 28, 0.58)),
+      radial-gradient(100% 120% at 0% 0%, rgba(216, 134, 181, 0.07), rgba(8, 16, 28, 0) 58%),
+      radial-gradient(100% 120% at 100% 0%, rgba(111, 207, 226, 0.09), rgba(8, 16, 28, 0) 58%);
+    color: var(--ink);
+  }
+
+  html[data-theme^="glass-"] .community-content-tabs,
+  html[data-theme^="glass-"] .ranking-periods {
+    border-color: var(--dark-border-soft);
+    background: rgba(7, 14, 25, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  html[data-theme^="glass-"] .community-content-tab:not(.is-active),
+  html[data-theme^="glass-"] .community-content-tab:not(.is-active):hover:not(:disabled),
+  html[data-theme^="glass-"] .community-content-tab:not(.is-active):focus-visible,
+  html[data-theme^="glass-"] .community-content-tab:not(.is-active):active:not(:disabled),
+  html[data-theme^="glass-"] .ranking-period:not(.is-active),
+  html[data-theme^="glass-"] .ranking-period:not(.is-active):hover:not(:disabled),
+  html[data-theme^="glass-"] .ranking-period:not(.is-active):focus-visible,
+  html[data-theme^="glass-"] .ranking-period:not(.is-active):active:not(:disabled) {
+    border-color: transparent;
+    background: transparent;
+    color: rgba(214, 229, 237, 0.54);
+    box-shadow: none;
+  }
+
+  html[data-theme^="glass-"] .community-content-tab.is-active,
+  html[data-theme^="glass-"] .community-content-tab.is-active:hover:not(:disabled),
+  html[data-theme^="glass-"] .community-content-tab.is-active:focus-visible,
+  html[data-theme^="glass-"] .ranking-period.is-active,
+  html[data-theme^="glass-"] .ranking-period.is-active:hover:not(:disabled),
+  html[data-theme^="glass-"] .ranking-period.is-active:focus-visible {
+    border-color: var(--dark-border-strong);
+    background: var(--dark-selected);
+    color: #bdefff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 26px rgba(0, 0, 0, 0.18);
+  }
+
+  html[data-theme^="glass-"] .weight-chart,
+  html[data-theme^="glass-"] .community-detail-weight-chart,
+  html[data-theme^="glass-"] .community-detail-trend,
+  html[data-theme^="glass-"] .weight-calendar,
+  html[data-theme^="glass-"] .calendar-grid,
+  html[data-theme^="glass-"] .community-weight-mini,
+  html[data-theme^="glass-"] .history-item,
+  html[data-theme^="glass-"] .food-history-card,
+  html[data-theme^="glass-"] .history-food-entry,
+  html[data-theme^="glass-"] .history-food-list > span,
+  html[data-theme^="glass-"] .record-entry-button,
+  html[data-theme^="glass-"] .replay-launch-button,
+  html[data-theme^="glass-"] .community-detail-replay,
+  html[data-theme^="glass-"] .community-comment-empty,
+  html[data-theme^="glass-"] .community-comment-bubble,
+  html[data-theme^="glass-"] .food-selection-item,
+  html[data-theme^="glass-"] .food-selection-summary,
+  html[data-theme^="glass-"] .food-candidate-editor,
+  html[data-theme^="glass-"] .food-empty-state,
+  html[data-theme^="glass-"] .markdown-table-wrap {
+    border-color: var(--dark-border);
+    background: var(--dark-panel-soft);
+    color: var(--ink);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  html[data-theme^="glass-"] .calendar-detail,
+  html[data-theme^="glass-"] .chart-detail {
+    border-color: var(--dark-border-strong);
+    background:
+      linear-gradient(145deg, rgba(30, 45, 61, 0.9), rgba(11, 21, 35, 0.84)),
+      radial-gradient(100% 120% at 100% 0%, rgba(111, 207, 226, 0.14), rgba(11, 21, 35, 0) 58%);
+    color: var(--dark-text-muted);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  html[data-theme^="glass-"] .chart-detail-date,
+  html[data-theme^="glass-"] .calendar-detail-date {
+    color: #f4fbfd;
+  }
+
+  html[data-theme^="glass-"] .chart-detail strong,
+  html[data-theme^="glass-"] .calendar-detail strong {
+    color: #bdefff;
+  }
+
+  html[data-theme^="glass-"] .chart-y-axis {
+    border-right-color: var(--dark-border-soft);
+    background:
+      linear-gradient(180deg, rgba(12, 22, 35, 0.68), rgba(7, 14, 25, 0.48)),
+      radial-gradient(120% 100% at 0% 0%, rgba(111, 207, 226, 0.06), rgba(7, 14, 25, 0) 58%);
+    color: var(--dark-text-muted);
+    box-shadow: none;
+  }
+
+  html[data-theme^="glass-"] .chart-day-label,
+  html[data-theme^="glass-"] .community-detail-trend-day-label {
+    fill: var(--dark-text-muted);
+  }
+
+  html[data-theme^="glass-"] .calendar-weekdays,
+  html[data-theme^="glass-"] .calendar-head span,
+  html[data-theme^="glass-"] .community-card-time,
+  html[data-theme^="glass-"] .community-detail-latest,
+  html[data-theme^="glass-"] .history-note,
+  html[data-theme^="glass-"] .history-meta,
+  html[data-theme^="glass-"] .history-subtitle,
+  html[data-theme^="glass-"] .history-food-entry > span,
+  html[data-theme^="glass-"] .history-food-list em,
+  html[data-theme^="glass-"] .community-card-footer,
+  html[data-theme^="glass-"] .community-card-date,
+  html[data-theme^="glass-"] .community-card-meta,
+  html[data-theme^="glass-"] .settings-description {
+    color: var(--dark-text-muted);
+  }
+
+  html[data-theme^="glass-"] .calendar-head strong,
+  html[data-theme^="glass-"] .history-time,
+  html[data-theme^="glass-"] .history-food-entry > strong,
+  html[data-theme^="glass-"] .record-entry-button strong,
+  html[data-theme^="glass-"] .replay-launch-button,
+  html[data-theme^="glass-"] .community-detail-header h2,
+  html[data-theme^="glass-"] .community-comments-modal-header h2 {
+    color: var(--ink);
+  }
+
+  html[data-theme^="glass-"] .history-mood,
+  html[data-theme^="glass-"] .history-food-mood,
+  html[data-theme^="glass-"] .community-card-mood,
+  html[data-theme^="glass-"] .community-detail-mood {
+    color: rgba(239, 248, 251, 0.88);
+  }
+
+  html[data-theme^="glass-"] .history-weight,
+  html[data-theme^="glass-"] .history-weight-summary strong,
+  html[data-theme^="glass-"] .community-self-badge,
+  html[data-theme^="glass-"] .community-card-records {
+    color: #78cfe2;
+  }
+
+  html[data-theme^="glass-"] .history-weight-summary strong {
+    background: rgba(117, 195, 213, 0.14);
+  }
+
+  html[data-theme^="glass-"] .history-food-summary strong,
+  html[data-theme^="glass-"] .history-food-calories {
+    color: var(--calorie-gold);
+  }
+
+  html[data-theme^="glass-"] .history-food-summary strong {
+    background: var(--calorie-gold-soft);
+  }
+
+  html[data-theme^="glass-"] .history-food-summary span,
+  html[data-theme^="glass-"] .food-nutrition-grid span,
+  html[data-theme^="glass-"] .food-selection-nutrition span,
+  html[data-theme^="glass-"] .history-food-nutrition span,
+  html[data-theme^="glass-"] .food-selection-data span {
+    border-color: rgba(142, 216, 234, 0.2);
+    background: rgba(117, 195, 213, 0.13);
+    color: rgba(224, 244, 249, 0.9);
+  }
+
+  html[data-theme^="glass-"] .calendar-day,
+  html[data-theme^="glass-"] button.calendar-day {
+    border-color: rgba(163, 219, 234, 0.13);
+    background: var(--day-color, var(--calendar-neutral));
+    color: rgba(236, 246, 249, 0.84);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  html[data-theme^="glass-"] button.calendar-day:hover:not(:disabled),
+  html[data-theme^="glass-"] button.calendar-day:focus-visible,
+  html[data-theme^="glass-"] button.calendar-day:active:not(:disabled) {
+    border-color: rgba(190, 239, 250, 0.32);
+    background: var(--day-color, var(--calendar-neutral));
+    color: rgba(246, 252, 253, 0.92);
+    box-shadow: 0 0 0 1px rgba(190, 239, 250, 0.14), 0 0 12px rgba(111, 207, 226, 0.1);
+  }
+
+  html[data-theme^="glass-"] .calendar-day.is-selected,
+  html[data-theme^="glass-"] button.calendar-day.is-selected:hover:not(:disabled),
+  html[data-theme^="glass-"] button.calendar-day.is-selected:focus-visible,
+  html[data-theme^="glass-"] button.calendar-day.is-selected:active:not(:disabled) {
+    border-color: rgba(190, 239, 250, 0.58);
+    background: var(--day-color, var(--calendar-selected-bg));
+    color: #f6fcfd;
+    box-shadow: 0 0 0 1px rgba(190, 239, 250, 0.24), 0 0 14px rgba(111, 207, 226, 0.13);
+  }
+
+  html[data-theme^="glass-"] .calendar-day.is-up {
+    border-color: rgba(223, 145, 170, 0.32);
+    background: color-mix(in srgb, var(--day-color) 48%, rgba(8, 16, 28, 0.68));
+    color: #ffe1e8;
+  }
+
+  html[data-theme^="glass-"] .calendar-day.is-down {
+    border-color: rgba(120, 198, 217, 0.34);
+    background: color-mix(in srgb, var(--day-color) 48%, rgba(8, 16, 28, 0.68));
+    color: #def8ff;
+  }
+
+  html[data-theme^="glass-"] .calendar-day.is-empty {
+    border-color: rgba(255, 255, 255, 0.065);
+    background: rgba(255, 255, 255, 0.035);
+    color: rgba(188, 205, 216, 0.42);
+  }
+
+  html[data-theme^="glass-"] .record-entry-button small,
+  html[data-theme^="glass-"] .history-loader,
+  html[data-theme^="glass-"] .chart-empty,
+  html[data-theme^="glass-"] .calendar-empty {
+    color: var(--dark-text-muted);
+  }
+
+  html[data-theme^="glass-"] .community-detail-close,
+  html[data-theme^="glass-"] .community-comments-close,
+  html[data-theme^="glass-"] .community-social-button,
+  html[data-theme^="glass-"] .community-like-button,
+  html[data-theme^="glass-"] .history-toggle-button,
+  html[data-theme^="glass-"] .ghost-button,
+  html[data-theme^="glass-"] .secondary-button,
+  html[data-theme^="glass-"] .passkey-add-button,
+  html[data-theme^="glass-"] .settings-logout-button,
+  html[data-theme^="glass-"] .feedback-upload-button,
+  html[data-theme^="glass-"] .food-selection-edit-button,
+  html[data-theme^="glass-"] .food-selection-ai-button,
+  html[data-theme^="glass-"] .food-selection-manual-button,
+  html[data-theme^="glass-"] .modal-icon-button {
+    border-color: var(--dark-border);
+    background: var(--dark-control);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 22px rgba(0, 0, 0, 0.18);
+  }
+
+  html[data-theme^="glass-"] .community-detail-close:hover:not(:disabled),
+  html[data-theme^="glass-"] .community-detail-close:focus-visible,
+  html[data-theme^="glass-"] .community-comments-close:hover:not(:disabled),
+  html[data-theme^="glass-"] .community-comments-close:focus-visible,
+  html[data-theme^="glass-"] .community-social-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .community-social-button:focus-visible,
+  html[data-theme^="glass-"] .community-like-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .community-like-button:focus-visible,
+  html[data-theme^="glass-"] .history-toggle-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .history-toggle-button:focus-visible,
+  html[data-theme^="glass-"] .ghost-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .ghost-button:focus-visible,
+  html[data-theme^="glass-"] .secondary-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .secondary-button:focus-visible,
+  html[data-theme^="glass-"] .passkey-add-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .passkey-add-button:focus-visible,
+  html[data-theme^="glass-"] .settings-logout-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .settings-logout-button:focus-visible,
+  html[data-theme^="glass-"] .feedback-upload-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .feedback-upload-button:focus-visible,
+  html[data-theme^="glass-"] .food-selection-edit-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-edit-button:focus-visible,
+  html[data-theme^="glass-"] .food-selection-ai-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-ai-button:focus-visible,
+  html[data-theme^="glass-"] .food-selection-manual-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .food-selection-manual-button:focus-visible,
+  html[data-theme^="glass-"] .modal-icon-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .modal-icon-button:focus-visible {
+    border-color: var(--dark-border-strong);
+    background: var(--dark-control-hover);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 12px 30px rgba(0, 0, 0, 0.24);
+  }
+
+  html[data-theme^="glass-"] .community-like-button.is-liked {
+    border-color: rgba(237, 191, 105, 0.34);
+    background:
+      linear-gradient(145deg, rgba(72, 51, 28, 0.66), rgba(26, 23, 19, 0.54)),
+      radial-gradient(120% 120% at 100% 0%, rgba(255, 214, 123, 0.18), rgba(26, 23, 19, 0) 58%);
+    color: #e9b955;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 10px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  html[data-theme^="glass-"] .community-like-button.is-liked:hover:not(:disabled),
+  html[data-theme^="glass-"] .community-like-button.is-liked:focus-visible {
+    border-color: rgba(246, 208, 126, 0.46);
+    background:
+      linear-gradient(145deg, rgba(82, 58, 31, 0.74), rgba(32, 27, 21, 0.62)),
+      radial-gradient(120% 120% at 100% 0%, rgba(255, 214, 123, 0.23), rgba(32, 27, 21, 0) 58%);
+    color: #f2c769;
+  }
+
+  html[data-theme^="glass-"] .delete-record-button,
+  html[data-theme^="glass-"] .delete-record-button:focus:not(:focus-visible),
+  html[data-theme^="glass-"] .food-delete-button,
+  html[data-theme^="glass-"] .food-delete-button:focus:not(:focus-visible) {
+    border-color: transparent;
+    background: transparent;
+    color: #ff91a3;
+    box-shadow: none;
+  }
+
+  html[data-theme^="glass-"] .delete-record-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .delete-record-button:focus-visible,
+  html[data-theme^="glass-"] .delete-record-button:active:not(:disabled),
+  html[data-theme^="glass-"] .food-delete-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .food-delete-button:focus-visible,
+  html[data-theme^="glass-"] .food-delete-button:active:not(:disabled) {
+    background: rgba(255, 145, 163, 0.1);
+    color: #ff9cab;
+    box-shadow: none;
+  }
+
+  html[data-theme^="glass-"] .community-detail-cover,
+  html[data-theme^="glass-"] .history-thumb,
+  html[data-theme^="glass-"] .history-body-photo,
+  html[data-theme^="glass-"] .history-food-gallery,
+  html[data-theme^="glass-"] .history-food-gallery.is-empty,
+  html[data-theme^="glass-"] .history-food-track img {
+    background: rgba(117, 195, 213, 0.11);
+    color: #aeeaf5;
+  }
+
+  html[data-theme^="glass-"] .bottom-tabs {
+    border-top-color: rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(180deg, rgba(12, 20, 32, 0) 0%, rgba(12, 20, 32, 0.58) 34%, rgba(8, 15, 26, 0.86) 100%),
+      radial-gradient(110% 120% at 0% 0%, rgba(216, 134, 181, 0.12), rgba(8, 15, 26, 0) 58%),
+      radial-gradient(110% 120% at 100% 0%, rgba(111, 207, 226, 0.16), rgba(8, 15, 26, 0) 58%);
+  }
+}
+
+/* Dark cleanup for settings and AI advice surfaces. Keep wrappers invisible; only real controls get glass. */
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] .settings-content {
+    border-top-color: rgba(163, 219, 234, 0.16);
+    background: transparent;
+  }
+
+  html[data-theme^="glass-"] .settings-panel,
+  html[data-theme^="glass-"] .settings-detail-panel,
+  html[data-theme^="glass-"] .settings-panel > .settings-group,
+  html[data-theme^="glass-"] .settings-panel > .native-health-sync,
+  html[data-theme^="glass-"] .settings-panel > .settings-footer-actions {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  html[data-theme^="glass-"] .settings-panel > .settings-group {
+    border-bottom-color: rgba(163, 219, 234, 0.12);
+  }
+
+  html[data-theme^="glass-"] .settings-panel > .settings-options,
+  html[data-theme^="glass-"] .settings-panel > .native-health-sync {
+    border-bottom-color: transparent;
+  }
+
+  html[data-theme^="glass-"] .settings-group-heading,
+  html[data-theme^="glass-"] .account-info-row,
+  html[data-theme^="glass-"] .danger-zone {
+    color: var(--ink);
+  }
+
+  html[data-theme^="glass-"] .settings-option-button,
+  html[data-theme^="glass-"] .native-health-sync .settings-option-button {
+    border: 1px solid var(--dark-border);
+    background: var(--dark-panel-soft);
+    color: var(--ink);
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  html[data-theme^="glass-"] .settings-option-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .settings-option-button:focus-visible,
+  html[data-theme^="glass-"] .settings-option-button:active:not(:disabled) {
+    border-color: var(--dark-border-strong);
+    background: var(--dark-control-hover);
+    color: var(--ink);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  html[data-theme^="glass-"] .settings-option-button small,
+  html[data-theme^="glass-"] .settings-kicker {
+    color: #83d3e5;
+  }
+
+  html[data-theme^="glass-"] .settings-option-button em,
+  html[data-theme^="glass-"] .settings-option-arrow,
+  html[data-theme^="glass-"] .settings-account-text small,
+  html[data-theme^="glass-"] .settings-account-text em {
+    color: var(--dark-text-muted);
+  }
+
+  html[data-theme^="glass-"] .account-mode-badge,
+  html[data-theme^="glass-"] .privacy-status {
+    border-color: rgba(190, 239, 250, 0.24);
+    background:
+      linear-gradient(145deg, rgba(26, 41, 58, 0.78), rgba(10, 20, 34, 0.68)),
+      radial-gradient(120% 110% at 100% 0%, rgba(111, 207, 226, 0.1), rgba(10, 20, 34, 0) 58%);
+    color: rgba(224, 244, 249, 0.88);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 20px rgba(0, 0, 0, 0.16);
+  }
+
+  html[data-theme^="glass-"] .account-mode-badge[data-mode="full"],
+  html[data-theme^="glass-"] .privacy-status.is-signed {
+    border-color: rgba(190, 239, 250, 0.38);
+    background:
+      linear-gradient(145deg, rgba(39, 72, 90, 0.78), rgba(13, 27, 43, 0.68)),
+      radial-gradient(120% 110% at 100% 0%, rgba(131, 211, 229, 0.2), rgba(13, 27, 43, 0) 58%);
+    color: #bdefff;
+  }
+
+  html[data-theme^="glass-"] .privacy-status.is-warning,
+  html[data-theme^="glass-"] .privacy-status.is-pending {
+    border-color: rgba(217, 173, 101, 0.34);
+    background:
+      linear-gradient(145deg, rgba(72, 51, 28, 0.66), rgba(26, 23, 19, 0.54)),
+      radial-gradient(120% 110% at 100% 0%, rgba(255, 214, 123, 0.16), rgba(26, 23, 19, 0) 58%);
+    color: #eac77d;
+  }
+
+  html[data-theme^="glass-"] .ai-advice-button {
+    border-color: var(--dark-border);
+    background:
+      linear-gradient(145deg, rgba(20, 33, 49, 0.82), rgba(8, 16, 28, 0.68)),
+      radial-gradient(115% 110% at 0% 0%, rgba(216, 134, 181, 0.12), rgba(8, 16, 28, 0) 58%),
+      radial-gradient(115% 110% at 100% 0%, rgba(111, 207, 226, 0.18), rgba(8, 16, 28, 0) 58%);
+    color: var(--ink);
+    box-shadow: var(--dark-shadow);
+  }
+
+  html[data-theme^="glass-"] .ai-advice-button:hover:not(:disabled),
+  html[data-theme^="glass-"] .ai-advice-button:focus-visible,
+  html[data-theme^="glass-"] .ai-advice-button:active:not(:disabled) {
+    border-color: var(--dark-border-strong);
+    background:
+      linear-gradient(145deg, rgba(27, 43, 62, 0.88), rgba(10, 20, 34, 0.74)),
+      radial-gradient(115% 110% at 0% 0%, rgba(216, 134, 181, 0.15), rgba(10, 20, 34, 0) 58%),
+      radial-gradient(115% 110% at 100% 0%, rgba(111, 207, 226, 0.22), rgba(10, 20, 34, 0) 58%);
+    color: var(--ink);
+  }
+
+  html[data-theme^="glass-"] .ai-advice-button small {
+    color: #83d3e5;
+  }
+
+  html[data-theme^="glass-"] .ai-advice-button em {
+    color: var(--dark-text-muted);
+  }
+
+  html[data-theme^="glass-"] .ai-advice-action {
+    border-color: rgba(190, 239, 250, 0.28);
+    background:
+      linear-gradient(145deg, rgba(36, 72, 90, 0.62), rgba(13, 27, 43, 0.56)),
+      radial-gradient(120% 110% at 100% 0%, rgba(131, 211, 229, 0.18), rgba(13, 27, 43, 0) 58%);
+    color: #bdefff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Dark history chips: food calories stay warm, body weight stays cool. */
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] .history-food-summary:not(.history-weight-summary) strong {
+    border: 1px solid rgba(229, 184, 104, 0.2);
+    background:
+      linear-gradient(145deg, rgba(84, 58, 28, 0.5), rgba(39, 31, 22, 0.42)),
+      radial-gradient(120% 120% at 100% 0%, rgba(229, 184, 104, 0.18), rgba(39, 31, 22, 0) 58%);
+    color: #e2b463;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  html[data-theme^="glass-"] .history-weight-summary strong,
+  html[data-theme^="glass-"] .history-food-summary.history-weight-summary strong {
+    border: 1px solid rgba(148, 226, 255, 0.24);
+    background:
+      linear-gradient(145deg, rgba(31, 73, 96, 0.54), rgba(15, 36, 56, 0.46)),
+      radial-gradient(120% 120% at 100% 0%, rgba(111, 207, 226, 0.22), rgba(15, 36, 56, 0) 58%);
+    color: #a8ecff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Dark pull-to-refresh surface. */
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] .pull-refresh {
+    border-color: rgba(148, 226, 255, 0.24);
+    background:
+      linear-gradient(145deg, rgba(20, 33, 49, 0.86), rgba(8, 16, 28, 0.72)),
+      radial-gradient(120% 110% at 0% 0%, rgba(216, 134, 181, 0.1), rgba(8, 16, 28, 0) 58%),
+      radial-gradient(120% 110% at 100% 0%, rgba(111, 207, 226, 0.2), rgba(8, 16, 28, 0) 58%);
+    color: #a8ecff;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    -webkit-backdrop-filter: blur(18px) saturate(1.12);
+    backdrop-filter: blur(18px) saturate(1.12);
+  }
+
+  html[data-theme^="glass-"] .pull-refresh-icon {
+    color: #82dff1;
+    filter: drop-shadow(0 0 8px rgba(130, 223, 241, 0.16));
+  }
+
+  html[data-theme^="glass-"] body.is-pull-ready .pull-refresh,
+  html[data-theme^="glass-"] body.is-refreshing .pull-refresh {
+    border-color: rgba(190, 239, 250, 0.38);
+    background:
+      linear-gradient(145deg, rgba(28, 47, 66, 0.9), rgba(10, 20, 34, 0.78)),
+      radial-gradient(120% 110% at 0% 0%, rgba(216, 134, 181, 0.13), rgba(10, 20, 34, 0) 58%),
+      radial-gradient(120% 110% at 100% 0%, rgba(111, 207, 226, 0.25), rgba(10, 20, 34, 0) 58%);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* Community share controls and empty states. */
+html[data-theme^="glass-"] .community-empty {
+  border-color: rgba(123, 198, 220, 0.2);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.24)),
+    radial-gradient(110% 120% at 0% 0%, rgba(255, 218, 246, 0.2), rgba(255, 255, 255, 0) 56%),
+    radial-gradient(110% 120% at 100% 0%, rgba(183, 238, 255, 0.28), rgba(255, 255, 255, 0) 56%);
+  color: rgba(91, 113, 126, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58), 0 18px 46px rgba(80, 102, 119, 0.1);
+  -webkit-backdrop-filter: blur(22px) saturate(1.18);
+  backdrop-filter: blur(22px) saturate(1.18);
+}
+
+html[data-theme^="glass-"] .share-switch-track {
+  border: 1px solid rgba(123, 198, 220, 0.2);
+  background:
+    linear-gradient(145deg, rgba(226, 238, 243, 0.9), rgba(242, 247, 249, 0.68)),
+    radial-gradient(110% 100% at 0% 0%, rgba(255, 218, 246, 0.16), rgba(255, 255, 255, 0) 58%);
+  box-shadow: inset 0 1px 3px rgba(80, 102, 119, 0.16), 0 6px 16px rgba(80, 102, 119, 0.1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
+}
+
+html[data-theme^="glass-"] .share-switch-track span {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 3px 10px rgba(80, 102, 119, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+html[data-theme^="glass-"] .share-switch input:checked + .share-switch-track {
+  border-color: rgba(117, 195, 213, 0.42);
+  background:
+    linear-gradient(135deg, rgba(105, 198, 221, 0.92), rgba(216, 134, 181, 0.86)),
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 58%);
+  box-shadow: 0 10px 24px rgba(123, 198, 220, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+html[data-theme^="glass-"] .share-switch input:checked + .share-switch-track + .share-switch-text {
+  color: #3e8293;
+}
+
+html[data-theme^="glass-"] .share-switch input:focus-visible + .share-switch-track {
+  outline-color: rgba(117, 195, 213, 0.24);
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] .community-empty {
+    border-color: rgba(148, 226, 255, 0.2);
+    background:
+      linear-gradient(145deg, rgba(20, 33, 49, 0.72), rgba(8, 16, 28, 0.58)),
+      radial-gradient(110% 120% at 0% 0%, rgba(216, 134, 181, 0.06), rgba(8, 16, 28, 0) 58%),
+      radial-gradient(110% 120% at 100% 0%, rgba(111, 207, 226, 0.1), rgba(8, 16, 28, 0) 58%);
+    color: rgba(214, 229, 237, 0.62);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  html[data-theme^="glass-"] .share-switch-track {
+    border-color: rgba(190, 239, 250, 0.16);
+    background:
+      linear-gradient(145deg, rgba(42, 55, 66, 0.86), rgba(28, 39, 50, 0.78)),
+      radial-gradient(110% 100% at 100% 0%, rgba(148, 226, 255, 0.08), rgba(28, 39, 50, 0) 58%);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.22), 0 8px 20px rgba(0, 0, 0, 0.18);
+  }
+
+  html[data-theme^="glass-"] .share-switch-track span {
+    background: rgba(232, 242, 246, 0.94);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  }
+
+  html[data-theme^="glass-"] .share-switch input:checked + .share-switch-track {
+    border-color: rgba(190, 239, 250, 0.34);
+    background:
+      linear-gradient(135deg, rgba(76, 177, 203, 0.88), rgba(196, 114, 170, 0.82)),
+      radial-gradient(120% 120% at 100% 0%, rgba(190, 239, 250, 0.16), rgba(10, 20, 34, 0) 58%);
+    box-shadow: 0 10px 28px rgba(93, 198, 222, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+
+  html[data-theme^="glass-"] .share-switch input:checked + .share-switch-track + .share-switch-text {
+    color: #a8ecff;
+  }
+
+  html[data-theme^="glass-"] .share-switch input:disabled + .share-switch-track,
+  html[data-theme^="glass-"] .share-switch input:disabled ~ .share-switch-text {
+    opacity: 0.62;
   }
 }
