@@ -10,8 +10,8 @@
 - 英文名称：WellEcho
 - Bundle ID：`top.furby.wellecho`
 - Team ID：`A82X46N3WS`
-- 版本号：`1.0.0`
-- Build：`1`
+- 版本号：`1.0.1`
+- Build：`5`
 - 目标设备：iPhone、iPad
 - 最低系统：iOS 17.0
 - 登录方式：原生 Apple 登录、原生 Passkey 登录
