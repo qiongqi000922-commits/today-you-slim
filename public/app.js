@@ -255,6 +255,8 @@ const state = {
   weightPredictionQueue: null,
   weightPredictionLoading: false,
   weightPredictionPollTimer: null,
+  selectedChartDay: null,
+  selectedCommunityChartDays: new Map(),
   privacyPromptReason: "initial",
   privacyConsentStep: "full",
   replaySourceElement: null,
@@ -3443,6 +3445,10 @@ function communityDisplayName(entity) {
   return entity?.alias || entity?.nickname || "QQ用户";
 }
 
+function communityMemberChartKey(member) {
+  return String(member?.id || member?.userId || member?.accountId || member?.qqOpenId || communityDisplayName(member) || "");
+}
+
 function communityAvatarText(entity) {
   const [first = "Q"] = Array.from((entity?.avatarText || communityDisplayName(entity)).trim() || "Q");
   return first.toUpperCase();
@@ -3477,8 +3483,6 @@ function communityWeightTrendMarkup(member) {
 
   const sortedPoints = [...points].sort((left, right) => dayTime(left.day) - dayTime(right.day));
   const latestDay = dayTime(sortedPoints.at(-1).day);
-  const earliestDay = dayTime(sortedPoints[0].day);
-  const dataSpanDays = Math.max(1, Math.round((latestDay - earliestDay) / dayMs) + 1);
   const viewportWidth = Math.max(320, Math.floor(window.visualViewport?.width || window.innerWidth || 390));
   const gridColumns = viewportWidth > 1120 ? 3 : viewportWidth > 760 ? 2 : 1;
   const shellPadding = viewportWidth <= 760 ? 48 : viewportWidth <= 1120 ? 64 : 96;
@@ -3487,8 +3491,7 @@ function communityWeightTrendMarkup(member) {
   const coverWidth = viewportWidth <= 380 ? 78 : viewportWidth <= 760 ? 92 : 112;
   const chartWidthEstimate = Math.max(124, cardWidth - coverWidth - 34);
   const visibleDayCount = Math.max(7, Math.min(24, Math.round(chartWidthEstimate / 18)));
-  const shouldLeftAlign = dataSpanDays <= visibleDayCount && sortedPoints.length < visibleDayCount;
-  const startDay = shouldLeftAlign ? earliestDay : latestDay - (visibleDayCount - 1) * dayMs;
+  const startDay = latestDay - (visibleDayCount - 1) * dayMs;
   const pointsByDay = new Map(sortedPoints.map((point) => [point.day, point]));
   const visiblePoints = Array.from({ length: visibleDayCount }, (_, index) => {
     const day = dayKey(startDay + index * dayMs);
@@ -3657,6 +3660,12 @@ function communityDetailWeightTrendMarkup(member) {
   const chartBottom = height - padBottom;
   const chartHeight = chartBottom - padTop;
   const pointsByDay = new Map(sortedPoints.map((point) => [point.day, point]));
+  const chartKey = communityMemberChartKey(member);
+  const rememberedDay = chartKey ? Number(state.selectedCommunityChartDays.get(chartKey)) : NaN;
+  const rememberedDayKey = Number.isFinite(rememberedDay) ? dayKey(rememberedDay) : "";
+  const defaultChartDay = rememberedDayKey && pointsByDay.has(rememberedDayKey)
+    ? rememberedDay
+    : lastDay;
   const recordedPoints = sortedPoints.filter((point) => Number.isFinite(point.min) && Number.isFinite(point.max));
   const pointMinValue = (point) => {
     const weight = Number(point.minWeight);
@@ -3727,7 +3736,7 @@ function communityDetailWeightTrendMarkup(member) {
   }).join("");
 
   return `
-    <div class="community-detail-weight-chart weight-chart" data-default-chart-day="${lastDay}" aria-label="体重高低图">
+    <div class="community-detail-weight-chart weight-chart" data-chart-key="${escapeAttribute(chartKey)}" data-default-chart-day="${defaultChartDay}" aria-label="体重高低图">
       ${weightRangeChartMarkup({
         axisLabels,
         bars,
@@ -4156,8 +4165,15 @@ function renderCommunityDetail({ preserveScroll = false, showDefaultChartDetail 
     ${renderCommunityDetailRecordsSection(member, detailRecords)}
   `;
   const detailChart = els.communityDetailContent.querySelector(".community-detail-weight-chart");
+  const detailChartKey = detailChart?.dataset.chartKey || communityMemberChartKey(member);
   bindWeightRangeChartInteractions(detailChart, {
-    defaultDay: showDefaultChartDetail ? Number(detailChart?.dataset.defaultChartDay) || null : null
+    defaultDay: Number(detailChart?.dataset.defaultChartDay) || null,
+    showDefaultDetail: showDefaultChartDetail,
+    onSelectDay: (day) => {
+      if (detailChartKey) {
+        state.selectedCommunityChartDays.set(detailChartKey, day);
+      }
+    }
   });
   bindWeightCalendarInteractions(els.communityDetailContent.querySelector(".weight-calendar"));
   bindHistoryFoodGalleries();
@@ -5851,7 +5867,9 @@ function weightRangeChartMarkup({
 
 function bindWeightRangeChartInteractions(container, {
   dateFormatter = (day) => new Date(day).toLocaleDateString("zh-CN", { month: "long", day: "numeric" }),
-  defaultDay = null
+  defaultDay = null,
+  showDefaultDetail = true,
+  onSelectDay = null
 } = {}) {
   const svg = container?.querySelector("svg");
   const detail = container?.querySelector(".chart-detail");
@@ -5859,6 +5877,7 @@ function bindWeightRangeChartInteractions(container, {
   if (!svg || !detail) return null;
 
   let detailHideTimer = null;
+  let selectedDay = null;
   const syncBarSelection = (selectedDay = null) => {
     for (const bar of svg.querySelectorAll(".chart-weight-bar")) {
       const selected = selectedDay !== null && Number(bar.dataset.day) === selectedDay;
@@ -5888,7 +5907,7 @@ function bindWeightRangeChartInteractions(container, {
   };
   const hideDetail = () => {
     if (!detail.classList.contains("is-visible")) return;
-    syncBarSelection(null);
+    syncBarSelection(selectedDay);
     detail.classList.remove("is-visible");
     detail.classList.remove("is-prediction");
     detail.setAttribute("aria-hidden", "true");
@@ -5902,14 +5921,20 @@ function bindWeightRangeChartInteractions(container, {
       }, SOFT_OVERLAY_TRANSITION_MS);
     }
   };
-  const showDetail = (target) => {
+  const showDetail = (target, { notify = true } = {}) => {
     const day = Number(target.dataset.day);
     const min = Number(target.dataset.min);
     const max = Number(target.dataset.max);
     const isPrediction = target.dataset.kind === "prediction";
     const confidence = Number(target.dataset.confidence);
 
-    syncBarSelection(day);
+    if (Number.isFinite(day)) {
+      selectedDay = day;
+      syncBarSelection(selectedDay);
+      if (notify && typeof onSelectDay === "function") {
+        onSelectDay(day, target);
+      }
+    }
 
     const dateText = isPrediction
       ? `${APP_LOCALE_ENGLISH ? "Forecast" : "预测"} ${dateFormatter(day)}${Number.isFinite(confidence) ? ` · ${Math.round(confidence * 100)}%` : ""}`
@@ -5946,11 +5971,20 @@ function bindWeightRangeChartInteractions(container, {
   });
   scroller?.addEventListener("scroll", hideDetail, { passive: true });
 
-  const defaultTarget = defaultDay === null
-    ? null
-    : svg.querySelector(`.chart-hit-area[data-day="${cssEscape(String(defaultDay))}"]`);
+  const hitTargets = [...svg.querySelectorAll(".chart-hit-area[data-day]")];
+  const defaultDayNumber = Number(defaultDay);
+  const requestedDefaultTarget = Number.isFinite(defaultDayNumber)
+    ? svg.querySelector(`.chart-hit-area[data-day="${cssEscape(String(defaultDayNumber))}"]`)
+    : null;
+  const defaultTarget = requestedDefaultTarget || hitTargets.at(-1) || null;
   if (defaultTarget) {
-    window.setTimeout(() => showDetail(defaultTarget), 820);
+    selectedDay = Number(defaultTarget.dataset.day);
+    if (Number.isFinite(selectedDay)) {
+      syncBarSelection(selectedDay);
+    }
+    if (showDefaultDetail) {
+      window.setTimeout(() => showDetail(defaultTarget, { notify: false }), 820);
+    }
   }
 
   return { hideDetail };
@@ -6012,10 +6046,21 @@ function renderChart(highlightId = null) {
 
   const groups = [...groupedByDay.values()].sort((a, b) => a.day - b.day);
   const requestedGroup = highlightId ? groups.find((group) => group.recordIds.includes(highlightId)) : null;
+  if (requestedGroup) {
+    state.selectedChartDay = requestedGroup.day;
+  }
+  const rememberedDay = Number(state.selectedChartDay);
+  const rememberedGroup = Number.isFinite(rememberedDay)
+    ? groups.find((group) => group.day === rememberedDay)
+    : null;
+  const rememberedPrediction = Number.isFinite(rememberedDay) && prediction?.day === rememberedDay;
   const fallbackGroup = groups.at(-1) || null;
+  const activeGroup = requestedGroup || rememberedGroup || fallbackGroup;
+  const defaultChartDay = requestedGroup?.day
+    ?? (rememberedPrediction ? prediction.day : activeGroup?.day ?? null);
   const defaultHighlightId = requestedGroup
     ? highlightId
-    : fallbackGroup?.recordIds?.at(-1) || null;
+    : activeGroup?.recordIds?.at(-1) || null;
   const chartBottom = height - padBottom;
   const chartHeight = chartBottom - padTop;
   const axisRecords = prediction
@@ -6092,8 +6137,6 @@ function renderChart(highlightId = null) {
     : "";
   const bars = `${actualBars}${predictionBar}`;
 
-  const activeGroup = defaultHighlightId ? groups.find((group) => group.recordIds.includes(defaultHighlightId)) : fallbackGroup;
-
   els.weightChart.innerHTML = weightRangeChartMarkup({
     axisLabels,
     bars,
@@ -6104,14 +6147,23 @@ function renderChart(highlightId = null) {
     height,
     ariaLabel: "体重高低图，纵轴在最高和最低记录外各保留数据跨度的百分之十。"
   });
-  bindWeightRangeChartInteractions(els.weightChart, { defaultDay: activeGroup?.day ?? null });
+  bindWeightRangeChartInteractions(els.weightChart, {
+    defaultDay: defaultChartDay,
+    onSelectDay: (day) => {
+      state.selectedChartDay = day;
+    }
+  });
   const scroller = els.weightChart.querySelector(".chart-scroll");
 
   if (scroller) {
     const scrollToRelevantRange = () => {
       const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-      const targetScroll = activeGroup
-        ? (padLeft + (activeGroup.index + 0.5) * dayStep) - scroller.clientWidth / 2
+      const targetDay = Number(defaultChartDay);
+      const targetIndex = Number.isFinite(targetDay)
+        ? Math.round((targetDay - firstDay) / dayMs)
+        : null;
+      const targetScroll = targetIndex !== null
+        ? (padLeft + (targetIndex + 0.5) * dayStep) - scroller.clientWidth / 2
         : maxScroll;
       scroller.scrollLeft = Math.max(0, Math.min(maxScroll, targetScroll));
     };
