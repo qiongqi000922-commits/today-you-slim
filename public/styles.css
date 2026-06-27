@@ -9945,3 +9945,154 @@ html[data-theme^="glass-"] .share-switch input:focus-visible + .share-switch-tra
     opacity: 0.62;
   }
 }
+
+/* Community comments use their own surface tokens so modal, empty state and
+   sent/received bubbles stay readable across light and dark shells. */
+html[data-theme^="glass-"] {
+  --comment-content-bg:
+    linear-gradient(180deg, rgba(250, 254, 255, 0.42), rgba(247, 252, 255, 0.3)),
+    radial-gradient(95% 70% at 100% 0%, rgba(184, 238, 255, 0.18), rgba(255, 255, 255, 0) 62%);
+  --comment-bubble-bg:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(246, 252, 255, 0.42));
+  --comment-own-bubble-bg:
+    linear-gradient(145deg, rgba(229, 247, 251, 0.7), rgba(245, 252, 255, 0.48));
+  --comment-bubble-border: rgba(255, 255, 255, 0.6);
+  --comment-own-bubble-border: rgba(105, 183, 207, 0.22);
+  --comment-bubble-text: #172029;
+  --comment-meta-text: rgba(102, 116, 128, 0.78);
+  --comment-empty-bg:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.48), rgba(246, 252, 255, 0.28));
+  --comment-empty-border: rgba(123, 198, 220, 0.2);
+  --comment-empty-icon-bg: rgba(229, 247, 251, 0.72);
+  --comment-input-bg:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(244, 252, 255, 0.44));
+  --comment-input-border: rgba(255, 255, 255, 0.68);
+  --comment-input-text: #172029;
+  --comment-input-placeholder: rgba(102, 116, 128, 0.62);
+  --comment-send-bg:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(244, 252, 255, 0.48));
+  --comment-send-border: rgba(255, 255, 255, 0.64);
+  --comment-send-text: #172029;
+}
+
+html[data-theme^="glass-"] .community-comments-content {
+  background: var(--comment-content-bg);
+}
+
+html[data-theme^="glass-"] .community-comments-panel .community-comments,
+html[data-theme^="glass-"] .community-comments {
+  background: transparent;
+  color: var(--ink);
+}
+
+html[data-theme^="glass-"] .community-comment-bubble {
+  border-color: var(--comment-bubble-border);
+  background: var(--comment-bubble-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56), 0 8px 22px rgba(80, 102, 119, 0.08);
+}
+
+html[data-theme^="glass-"] .community-comment-item.is-own .community-comment-bubble {
+  border-color: var(--comment-own-bubble-border);
+  background: var(--comment-own-bubble-bg);
+}
+
+html[data-theme^="glass-"] .community-comment-meta strong,
+html[data-theme^="glass-"] .community-comment-bubble p,
+html[data-theme^="glass-"] .community-comment-empty strong {
+  color: var(--comment-bubble-text);
+}
+
+html[data-theme^="glass-"] .community-comment-meta time,
+html[data-theme^="glass-"] .community-comment-empty,
+html[data-theme^="glass-"] .community-comment-empty small {
+  color: var(--comment-meta-text);
+}
+
+html[data-theme^="glass-"] .community-comment-empty {
+  border-color: var(--comment-empty-border);
+  background: var(--comment-empty-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 14px 34px rgba(80, 102, 119, 0.08);
+}
+
+html[data-theme^="glass-"] .community-comment-empty-icon {
+  background: var(--comment-empty-icon-bg);
+  color: var(--primary-strong);
+}
+
+html[data-theme^="glass-"] .community-comment-form input {
+  border-color: var(--comment-input-border);
+  background: var(--comment-input-bg);
+  color: var(--comment-input-text);
+}
+
+html[data-theme^="glass-"] .community-comment-form input::placeholder {
+  color: var(--comment-input-placeholder);
+}
+
+html[data-theme^="glass-"] .community-comment-form button {
+  border-color: var(--comment-send-border);
+  background: var(--comment-send-bg);
+  color: var(--comment-send-text);
+}
+
+html[data-theme^="glass-"] .community-comment-form input:focus {
+  border-color: rgba(119, 189, 210, 0.5);
+  background: var(--comment-input-bg);
+  color: var(--comment-input-text);
+  box-shadow:
+    0 0 0 3px rgba(103, 174, 190, 0.12),
+    0 14px 34px rgba(78, 127, 150, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme^="glass-"] {
+    --comment-content-bg:
+      linear-gradient(180deg, rgba(10, 18, 30, 0.82), rgba(7, 13, 23, 0.72)),
+      radial-gradient(88% 74% at 0% 0%, rgba(216, 134, 181, 0.06), rgba(7, 13, 23, 0) 62%),
+      radial-gradient(92% 78% at 100% 0%, rgba(111, 207, 226, 0.08), rgba(7, 13, 23, 0) 64%);
+    --comment-bubble-bg:
+      linear-gradient(145deg, rgba(22, 35, 50, 0.78), rgba(10, 18, 31, 0.68));
+    --comment-own-bubble-bg:
+      linear-gradient(145deg, rgba(22, 59, 74, 0.74), rgba(12, 27, 42, 0.72));
+    --comment-bubble-border: rgba(189, 239, 255, 0.14);
+    --comment-own-bubble-border: rgba(139, 218, 236, 0.22);
+    --comment-bubble-text: rgba(244, 250, 253, 0.94);
+    --comment-meta-text: rgba(183, 198, 209, 0.62);
+    --comment-empty-bg:
+      linear-gradient(145deg, rgba(19, 31, 45, 0.7), rgba(8, 15, 26, 0.56));
+    --comment-empty-border: rgba(139, 218, 236, 0.16);
+    --comment-empty-icon-bg: rgba(111, 207, 226, 0.12);
+    --comment-input-bg:
+      linear-gradient(145deg, rgba(29, 43, 59, 0.86), rgba(12, 22, 36, 0.78));
+    --comment-input-border: rgba(189, 239, 255, 0.18);
+    --comment-input-text: rgba(244, 250, 253, 0.94);
+    --comment-input-placeholder: rgba(183, 198, 209, 0.5);
+    --comment-send-bg:
+      linear-gradient(145deg, rgba(35, 52, 68, 0.9), rgba(17, 29, 45, 0.84));
+    --comment-send-border: rgba(189, 239, 255, 0.18);
+    --comment-send-text: rgba(244, 250, 253, 0.96);
+  }
+
+  html[data-theme^="glass-"] .community-comments-content {
+    background: var(--comment-content-bg);
+  }
+
+  html[data-theme^="glass-"] .community-comments-panel .community-comments,
+  html[data-theme^="glass-"] .community-comments {
+    background: transparent;
+  }
+
+  html[data-theme^="glass-"] .community-comment-bubble,
+  html[data-theme^="glass-"] .community-comment-empty {
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  html[data-theme^="glass-"] .community-comment-form input:focus {
+    border-color: rgba(139, 218, 236, 0.34);
+    box-shadow:
+      0 0 0 3px rgba(111, 207, 226, 0.12),
+      0 12px 28px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
