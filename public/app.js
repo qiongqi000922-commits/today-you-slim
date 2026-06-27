@@ -4175,6 +4175,7 @@ function renderCommunityDetail({ preserveScroll = false, showDefaultChartDetail 
       }
     }
   });
+  scrollWeightRangeChartToDay(detailChart, Number(detailChart?.dataset.defaultChartDay) || null);
   bindWeightCalendarInteractions(els.communityDetailContent.querySelector(".weight-calendar"));
   bindHistoryFoodGalleries();
   if (preserveScroll) {
@@ -5988,6 +5989,44 @@ function bindWeightRangeChartInteractions(container, {
   }
 
   return { hideDetail };
+}
+
+function scrollWeightRangeChartToDay(container, day) {
+  const scroller = container?.querySelector(".chart-scroll");
+  const svg = container?.querySelector("svg");
+  if (!scroller || !svg) return;
+
+  const targetDay = Number(day);
+  const hitTargets = [...svg.querySelectorAll(".chart-hit-area[data-day]")];
+  const target = Number.isFinite(targetDay)
+    ? svg.querySelector(`.chart-hit-area[data-day="${cssEscape(String(targetDay))}"]`)
+    : null;
+  const fallback = hitTargets.at(-1) || null;
+  const selectedTarget = target || fallback;
+
+  const scrollToTarget = () => {
+    const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    if (!selectedTarget) {
+      scroller.scrollLeft = maxScroll;
+      return;
+    }
+
+    const x = Number(selectedTarget.getAttribute("x"));
+    const width = Number(selectedTarget.getAttribute("width"));
+    const centerX = Number.isFinite(x) && Number.isFinite(width)
+      ? x + width / 2
+      : scroller.scrollWidth;
+    const targetScroll = centerX - scroller.clientWidth / 2;
+    scroller.scrollLeft = Math.max(0, Math.min(maxScroll, targetScroll));
+  };
+
+  window.requestAnimationFrame(() => {
+    scrollToTarget();
+    window.requestAnimationFrame(scrollToTarget);
+    window.setTimeout(scrollToTarget, 80);
+    window.setTimeout(scrollToTarget, 360);
+    window.setTimeout(scrollToTarget, 720);
+  });
 }
 
 function renderWeightCalendar() {
