@@ -234,6 +234,7 @@ const state = {
   communityCommentsOpen: false,
   communityLikeBurstMemberId: null,
   communityLikeBurstTimer: null,
+  actionConfirmResolve: null,
   communityFoodCarouselTimer: null,
   communityComposerOpen: false,
   feedbackContext: null,
@@ -459,6 +460,73 @@ function hideSoftOverlay(overlay, onHidden) {
   } else {
     softOverlayTimers.set(overlay, window.setTimeout(finish, SOFT_OVERLAY_TRANSITION_MS));
   }
+}
+
+function ensureActionConfirmModal() {
+  let modal = document.querySelector("#actionConfirmModal");
+  if (modal) return modal;
+
+  modal = document.createElement("div");
+  modal.id = "actionConfirmModal";
+  modal.className = "consent-backdrop action-confirm-backdrop hidden";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "actionConfirmTitle");
+  modal.innerHTML = `
+    <section class="action-confirm-dialog">
+      <p class="eyebrow" id="actionConfirmEyebrow">确认操作</p>
+      <h2 id="actionConfirmTitle">确定继续吗？</h2>
+      <p id="actionConfirmMessage">此操作完成后会立即生效。</p>
+      <div class="action-confirm-actions">
+        <button class="secondary-button" type="button" data-action-confirm-cancel>取消</button>
+        <button class="danger-confirm-button" type="button" data-action-confirm-ok>删除</button>
+      </div>
+    </section>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (event.target === modal || target?.closest("[data-action-confirm-cancel]")) {
+      closeActionConfirm(false);
+    }
+    if (target?.closest("[data-action-confirm-ok]")) {
+      closeActionConfirm(true);
+    }
+  });
+  return modal;
+}
+
+function closeActionConfirm(result) {
+  const modal = document.querySelector("#actionConfirmModal");
+  const resolve = state.actionConfirmResolve;
+  state.actionConfirmResolve = null;
+  if (!modal) {
+    resolve?.(Boolean(result));
+    return;
+  }
+  hideSoftOverlay(modal, () => {
+    if (!state.actionConfirmResolve) {
+      document.body.classList.remove("confirmation-open");
+    }
+    resolve?.(Boolean(result));
+  });
+}
+
+function confirmAction({ title, message, eyebrow = "确认操作", confirmText = "确认" }) {
+  if (state.actionConfirmResolve) {
+    closeActionConfirm(false);
+  }
+  const modal = ensureActionConfirmModal();
+  modal.querySelector("#actionConfirmEyebrow").textContent = eyebrow;
+  modal.querySelector("#actionConfirmTitle").textContent = title;
+  modal.querySelector("#actionConfirmMessage").textContent = message;
+  modal.querySelector("[data-action-confirm-ok]").textContent = confirmText;
+  document.body.classList.add("confirmation-open");
+  showSoftOverlay(modal);
+  return new Promise((resolve) => {
+    state.actionConfirmResolve = resolve;
+    window.setTimeout(() => modal.querySelector("[data-action-confirm-cancel]")?.focus(), 0);
+  });
 }
 
 function isImageInteractionTarget(target) {
@@ -2598,6 +2666,12 @@ function showLogin() {
   els.deleteOwnAccountModal.classList.add("hidden");
   els.feedbackModal.classList.add("hidden");
   els.aiSummaryModal.classList.add("hidden");
+  const actionConfirmModal = document.querySelector("#actionConfirmModal");
+  actionConfirmModal?.classList.add("hidden");
+  if (state.actionConfirmResolve) {
+    state.actionConfirmResolve(false);
+    state.actionConfirmResolve = null;
+  }
   renderTestLoginButton();
   state.aiSummaryAbortController?.abort();
   state.aiSummaryAbortController = null;
@@ -2611,8 +2685,9 @@ function showLogin() {
     els.withdrawConsentModal,
     els.deleteOwnAccountModal,
     els.feedbackModal,
-    els.aiSummaryModal
-  ]) {
+    els.aiSummaryModal,
+    actionConfirmModal
+  ].filter(Boolean)) {
     const timer = softOverlayTimers.get(overlay);
     if (timer) {
       window.clearTimeout(timer);
@@ -4490,7 +4565,13 @@ async function deleteCommunityComment(commentId) {
   }
   const memberId = state.communityDetailMemberId;
   if (!memberId) return;
-  if (!window.confirm("确定删除这条留言吗？")) {
+  const confirmed = await confirmAction({
+    eyebrow: "社区留言",
+    title: "删除这条留言？",
+    message: "删除后，这条留言会从当前社区档案中移除。",
+    confirmText: "删除"
+  });
+  if (!confirmed) {
     return;
   }
   try {
@@ -8938,7 +9019,8 @@ els.communityCommentsModal?.addEventListener("click", (event) => {
   if (event.target === els.communityCommentsModal) closeCommunityComments();
 });
 els.communityCommentsContent?.addEventListener("click", (event) => {
-  const reportCommentButton = event.target.closest("[data-comment-report]");
+  const target = event.target instanceof Element ? event.target : null;
+  const reportCommentButton = target?.closest("[data-comment-report]");
   if (reportCommentButton) {
     reportCommentButton.blur();
     openFeedbackModal({
@@ -8950,8 +9032,10 @@ els.communityCommentsContent?.addEventListener("click", (event) => {
     });
     return;
   }
-  const deleteButton = event.target.closest("[data-comment-delete]");
+  const deleteButton = target?.closest("[data-comment-delete]");
   if (deleteButton) {
+    event.preventDefault();
+    event.stopPropagation();
     deleteButton.blur();
     deleteCommunityComment(deleteButton.dataset.commentDelete);
   }

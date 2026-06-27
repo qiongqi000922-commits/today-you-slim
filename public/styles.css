@@ -2466,6 +2466,10 @@ html[data-theme^="glass-"] .ranking-period.is-active:focus-visible {
   z-index: 1530;
 }
 
+#actionConfirmModal {
+  z-index: 1580;
+}
+
 .consent-dialog {
   width: min(460px, 100%);
   max-height: calc(100dvh - var(--modal-safe-top-gap) - var(--modal-safe-bottom-gap));
@@ -3682,27 +3686,39 @@ html[data-theme^="glass-"] .community-card-records {
   overflow: hidden;
 }
 
+html[data-theme^="glass-"] .community-comment-delete,
+.community-comment-delete {
+  border-color: transparent;
+  background: transparent;
+  color: #d95668;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .community-comment-report {
   color: #8a641d;
 }
 
-.community-comment-delete:hover:not(:disabled) {
-  background: rgba(186, 57, 43, 0.08);
-  color: #a72e23;
-  box-shadow: none;
-  transform: none;
-}
-
-.community-comment-delete:focus-visible {
+html[data-theme^="glass-"] .community-comment-delete:hover:not(:disabled),
+html[data-theme^="glass-"] .community-comment-delete:focus:not(:focus-visible),
+html[data-theme^="glass-"] .community-comment-delete:focus-visible,
+html[data-theme^="glass-"] .community-comment-delete:active:not(:disabled),
+.community-comment-delete:hover:not(:disabled),
+.community-comment-delete:focus:not(:focus-visible),
+.community-comment-delete:focus-visible,
+.community-comment-delete:active:not(:disabled) {
+  border-color: transparent;
   background: transparent;
-  color: #ba392b;
+  color: #d95668;
   box-shadow: none;
   outline: none;
   transform: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
-.community-comment-delete:active:not(:disabled) {
-  background: rgba(186, 57, 43, 0.12);
+.community-comment-delete:active:not(:disabled) .community-trash-icon {
   transform: scale(0.94);
 }
 
@@ -3730,6 +3746,8 @@ html[data-theme^="glass-"] .community-card-records {
   width: 14px;
   height: 14px;
   display: block;
+  color: inherit;
+  transition: transform 140ms ease;
 }
 
 .community-trash-icon svg {
@@ -7449,6 +7467,47 @@ html[data-locale="en"] .account-mode-badge {
   scrollbar-width: none;
 }
 
+.action-confirm-dialog {
+  width: min(380px, 100%);
+  border: 1px solid rgba(216, 86, 104, 0.2);
+  border-radius: 10px;
+  padding: 22px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(246, 253, 255, 0.82)),
+    radial-gradient(120% 120% at 100% 0%, rgba(111, 207, 226, 0.12), rgba(255, 255, 255, 0) 58%);
+  box-shadow:
+    0 26px 72px rgba(20, 36, 45, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  color: var(--ink);
+  opacity: 0.98;
+  transform: translate3d(0, 8px, 0) scale(0.985);
+  transition: opacity 190ms ease, transform 190ms cubic-bezier(0.22, 0.84, 0.2, 1);
+}
+
+.consent-backdrop.is-open .action-confirm-dialog {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.action-confirm-dialog h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.action-confirm-dialog > p:not(.eyebrow) {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.action-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 .feedback-dialog {
   width: min(520px, 100%);
   max-height: calc(100dvh - var(--modal-safe-top-gap) - var(--modal-safe-bottom-gap));
@@ -8913,6 +8972,7 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
   html[data-theme^="glass-"] .policy-panel,
   html[data-theme^="glass-"] .privacy-consent-dialog,
   html[data-theme^="glass-"] .confirmation-dialog,
+  html[data-theme^="glass-"] .action-confirm-dialog,
   html[data-theme^="glass-"] .feedback-dialog,
   html[data-theme^="glass-"] .replay-modal-panel,
   html[data-theme^="glass-"] .food-selection-dialog,
@@ -8921,6 +8981,10 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
     background: var(--dark-panel);
     color: var(--ink);
     box-shadow: var(--dark-shadow);
+  }
+
+  html[data-theme^="glass-"] .action-confirm-dialog > p:not(.eyebrow) {
+    color: var(--muted);
   }
 
   html[data-theme^="glass-"] .account-binding-icon,
