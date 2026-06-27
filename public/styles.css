@@ -9503,7 +9503,6 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
   html[data-theme^="glass-"] .community-detail-weight-chart,
   html[data-theme^="glass-"] .community-detail-trend,
   html[data-theme^="glass-"] .weight-calendar,
-  html[data-theme^="glass-"] .calendar-grid,
   html[data-theme^="glass-"] .community-weight-mini,
   html[data-theme^="glass-"] .history-item,
   html[data-theme^="glass-"] .food-history-card,
@@ -9523,6 +9522,12 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
     background: var(--dark-panel-soft);
     color: var(--ink);
     box-shadow: 0 16px 44px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  html[data-theme^="glass-"] .calendar-grid {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   html[data-theme^="glass-"] .calendar-detail,
