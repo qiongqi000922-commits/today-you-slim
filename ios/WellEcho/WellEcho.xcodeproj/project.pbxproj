@@ -271,7 +271,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WellEcho/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WellEcho;
+				INFOPLIST_KEY_CFBundleDisplayName = "今天你瘦了吗";
 				INFOPLIST_KEY_NSCameraUsageDescription = "用于在网页记录中拍摄体重照片和食物照片。";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "用于在你授权后读取近期心率、体重、步数、活动消耗和运动时间，并在应用中辅助展示健康变化。";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "当前版本不会写入健康数据，仅在你明确授权后读取数据。";
@@ -312,7 +312,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WellEcho/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WellEcho;
+				INFOPLIST_KEY_CFBundleDisplayName = "今天你瘦了吗";
 				INFOPLIST_KEY_NSCameraUsageDescription = "用于在网页记录中拍摄体重照片和食物照片。";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "用于在你授权后读取近期心率、体重、步数、活动消耗和运动时间，并在应用中辅助展示健康变化。";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "当前版本不会写入健康数据，仅在你明确授权后读取数据。";

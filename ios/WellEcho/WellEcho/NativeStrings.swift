@@ -11,7 +11,7 @@ enum NativeStrings {
     }
 
     static var brand: String {
-        text("今天你瘦了吗?", "WellEcho")
+        text("今天你瘦了吗", "WellEcho")
     }
 
     static var subtitle: String {

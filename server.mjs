@@ -2119,7 +2119,7 @@ function sendQqCallbackPage(req, res, status, headers = {}, extraParams = {}) {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>${title} · 今天你瘦了吗?</title>
+    <title>${title} · 今天你瘦了吗</title>
     <style>
       html,body{height:100%;margin:0;background:#f4f7f5;color:#17201c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       body{display:grid;place-items:center;padding:24px;box-sizing:border-box}
@@ -2133,7 +2133,7 @@ function sendQqCallbackPage(req, res, status, headers = {}, extraParams = {}) {
     <main>
       <h1>${title}</h1>
       <p>${description}</p>
-      <a href="${message.href}">返回今天你瘦了吗?</a>
+      <a href="${message.href}">返回今天你瘦了吗</a>
     </main>
     <script>
       (function () {
@@ -2190,7 +2190,7 @@ function sendAppleCallbackPage(req, res, status, headers = {}, extraParams = {})
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>${title} · 今天你瘦了吗?</title>
+    <title>${title} · 今天你瘦了吗</title>
     <style>
       html,body{height:100%;margin:0;background:#edf8fb;color:#17202a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       body{display:grid;place-items:center;padding:24px;box-sizing:border-box}
@@ -2204,7 +2204,7 @@ function sendAppleCallbackPage(req, res, status, headers = {}, extraParams = {})
     <main>
       <h1>${title}</h1>
       <p>${description}</p>
-      <a href="${message.href}">返回今天你瘦了吗?</a>
+      <a href="${message.href}">返回今天你瘦了吗</a>
     </main>
     <script>
       (function () {
@@ -2279,7 +2279,7 @@ function sendQqNativeCallbackPage(req, res, status, headers = {}, extraParams = 
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>${title} · 今天你瘦了吗?</title>
+    <title>${title} · 今天你瘦了吗</title>
     <style>
       html,body{height:100%;margin:0;background:#f4f7f5;color:#17201c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       body{display:grid;place-items:center;padding:24px;box-sizing:border-box}
@@ -4583,7 +4583,7 @@ function adminPasskeyCreationOptions(req, label) {
     challenge,
     rp: {
       id: webauthnRpId(req),
-      name: "今天你瘦了吗? 管理台"
+      name: "今天你瘦了吗 管理台"
     },
     user: {
       id: userId,
@@ -4824,7 +4824,7 @@ function userPasskeyCreationOptions(req, label) {
     challenge,
     rp: {
       id: webauthnRpId(req),
-      name: "今天你瘦了吗?"
+      name: "今天你瘦了吗"
     },
     user: {
       id: userId,
@@ -6064,7 +6064,7 @@ function buildAiSummaryMessages(code, environment = null) {
   const focusDailyMoodSummaries = dailyMoodSummaries.filter((entry) => focusDateSet.has(entry.date));
   const structuredData = {
     generatedAt: new Date().toISOString(),
-    site: "今天你瘦了吗?",
+    site: "今天你瘦了吗",
     environment: environmentSnapshot,
     user: {
       nickname: displayName || "当前用户"
@@ -6128,7 +6128,7 @@ function buildAiSummaryMessages(code, environment = null) {
       {
         role: "system",
         content: [
-          "你是「今天你瘦了吗?」的专业体重趋势与行为记录分析助手。",
+          "你是「今天你瘦了吗」的专业体重趋势与行为记录分析助手。",
           "网站简述：这是一个面向个人减重过程管理的网站，用户通过 3:4 对齐照片、体重、小段心情文字、食物照片识别和营养估算形成时间序列，可查看趋势图、照片回放，并可选择在社区共享变化、获得点赞评论。AI 建议只用于解释记录数据、辅助复盘和制定下一阶段行动。",
           `当前用户场景：用户昵称为「${displayName || "当前用户"}」，正在用连续照片、体重曲线、心情记录和饮食营养估算追踪减重过程。他需要的是可直接执行的阶段结论，不需要分析过程展开。`,
           "分析边界：只能基于提供的结构化数据分析；食物营养来自图片识别和用户重量估算，必须视为近似值；不得声称掌握未提供的照片内容、运动、疾病、药物或体脂数据；不得做医学诊断、处方、药物建议或极端减重建议。",
@@ -6148,7 +6148,7 @@ function buildAiSummaryMessages(code, environment = null) {
           "请基于以下减重记录生成一份简洁的 Markdown 结论。只输出结论和下一步，不要输出分析过程。",
           "",
           "网站与使用背景：",
-          "我在「今天你瘦了吗?」中记录体重、心情和照片，用趋势图观察体重变化，用回放观察身体视觉变化。现在我希望 AI 从数据中判断阶段状态，而不是给泛泛的减肥常识。",
+          "我在「今天你瘦了吗」中记录体重、心情和照片，用趋势图观察体重变化，用回放观察身体视觉变化。现在我希望 AI 从数据中判断阶段状态，而不是给泛泛的减肥常识。",
           "",
           "用户画像：",
           `昵称：${displayName || "当前用户"}`,
@@ -8131,7 +8131,7 @@ function qwenMoodPrompt(code, context = "body", environment = null, userInput = 
     ? "需要观察可见面部状态指标，例如眼袋、黑眼圈、面部浮肿、肤色暗沉、疲惫感、皱纹或法令纹明显程度、精神状态；只能做视觉状态描述和生活方式建议，不得做医学诊断。"
     : "当前是食物照片，重点观察餐食结构、份量和进食环境；不要编造面部状态。";
   return [
-    "你是「今天你瘦了吗?」里的专业状态观察助手。",
+    "你是「今天你瘦了吗」里的专业状态观察助手。",
     "任务：根据当前照片、用户资料、当前时间、定位授权状态和天气环境，生成一句适合填入“一句话心情”的中文短句。",
     "这句话要同时包含简短状态评价和一个轻量建议，克制、友好、专业，不要夸张，不要贬低外貌，不要做医疗诊断。",
     "只输出严格 JSON，不要 Markdown，不要解释，不要代码块。",
@@ -8856,7 +8856,7 @@ async function handleApi(req, res, pathname) {
       });
       return res.end();
     }
-    return sendJson(res, 200, { ok: true, name: "今天你瘦了吗?" });
+    return sendJson(res, 200, { ok: true, name: "今天你瘦了吗" });
   }
 
   if (["GET", "HEAD"].includes(req.method) && pathname === "/api/auth/qq/start") {
@@ -11012,7 +11012,7 @@ if (hasTls) {
     cert: fs.readFileSync(sslCertPath)
   };
   hardenServer(https.createServer(options, handleRequest)).listen(port, host, () => {
-    console.log(`今天你瘦了吗? HTTPS running on port ${port}`);
+    console.log(`今天你瘦了吗 HTTPS running on port ${port}`);
   });
 
   if (httpPort) {
@@ -11022,6 +11022,6 @@ if (hasTls) {
   }
 } else {
   hardenServer(http.createServer(SERVER_OPTIONS, handleRequest)).listen(port, host, () => {
-    console.log(`今天你瘦了吗? HTTP running on port ${port}`);
+    console.log(`今天你瘦了吗 HTTP running on port ${port}`);
   });
 }

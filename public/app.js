@@ -12,12 +12,12 @@ const APP_COPY = APP_LOCALE_ENGLISH
     adminDocumentTitle: "Console · WellEcho",
   }
   : {
-    brand: "今天你瘦了吗?",
+    brand: "今天你瘦了吗",
     subtitle: "每日记录",
     profileTitleSuffix: " 的减肥记录",
     profileTitle: (name) => `${name} 的减肥记录`,
-    documentTitle: "今天你瘦了吗?",
-    adminDocumentTitle: "管理台 · 今天你瘦了吗?",
+    documentTitle: "今天你瘦了吗",
+    adminDocumentTitle: "管理台 · 今天你瘦了吗",
   };
 
 function applyLocaleCopy() {

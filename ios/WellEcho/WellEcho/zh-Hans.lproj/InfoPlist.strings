@@ -1,4 +1,4 @@
-"CFBundleDisplayName" = "WellEcho";
+"CFBundleDisplayName" = "今天你瘦了吗";
 "NSCameraUsageDescription" = "用于拍摄你选择保存的体重记录照片和食物照片。";
 "NSPhotoLibraryUsageDescription" = "仅在你选择从相册上传记录照片时读取图片。";
 "NSLocationWhenInUseUsageDescription" = "经你允许后，用于为 AI 建议补充本地天气和环境上下文。";
