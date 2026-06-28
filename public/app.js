@@ -543,6 +543,206 @@ function appUrl(pathname) {
   return JF.appUrl(APP_BASE_PATH, pathname);
 }
 
+const PERFORMANCE_EVENT_LIMIT = 120;
+const PERFORMANCE_RESOURCE_LIMIT = 220;
+const PERFORMANCE_FLUSH_INTERVAL_MS = 15000;
+const PERFORMANCE_SESSION_ID = (() => {
+  try {
+    return window.crypto?.randomUUID?.() || `perf_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  } catch {
+    return `perf_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  }
+})();
+const performanceState = {
+  startedAt: performance.now(),
+  queue: [],
+  flushTimer: 0,
+  resourceCount: 0,
+  startupReported: false
+};
+
+function performanceElapsed() {
+  return Math.max(0, Math.round(performance.now() - performanceState.startedAt));
+}
+
+function performancePageName() {
+  if (!els.loginView?.classList.contains("hidden")) return "login";
+  if (!els.captureView?.classList.contains("hidden")) return state.captureMode === "food" ? "food-capture" : "photo-capture";
+  if (!els.communityView?.classList.contains("hidden")) return "community";
+  if (!els.settingsView?.classList.contains("hidden")) return "settings";
+  if (!els.dashboardView?.classList.contains("hidden")) return "dashboard";
+  return state.activeTab || "app";
+}
+
+function performanceConnectionText() {
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!connection) return "";
+  return [
+    connection.effectiveType || "",
+    connection.downlink ? `${connection.downlink}mbps` : "",
+    connection.saveData ? "save-data" : ""
+  ].filter(Boolean).join(" ");
+}
+
+function performanceViewportText() {
+  const ratio = Number.isFinite(window.devicePixelRatio) ? window.devicePixelRatio : 1;
+  return `${Math.round(window.innerWidth)}x${Math.round(window.innerHeight)}@${Math.round(ratio * 100) / 100}`;
+}
+
+function performancePath(value) {
+  if (!value) return "";
+  try {
+    const url = new URL(value, window.location.href);
+    return `${url.pathname}${url.search ? "?" + url.searchParams.toString().slice(0, 160) : ""}`;
+  } catch {
+    return String(value).slice(0, 180);
+  }
+}
+
+function queuePerformanceEvent(type, payload = {}) {
+  const details = payload.details && typeof payload.details === "object" ? payload.details : {};
+  performanceState.queue.push({
+    id: window.crypto?.randomUUID?.() || `perf_evt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`,
+    at: new Date().toISOString(),
+    type,
+    page: payload.page || performancePageName(),
+    source: window.WellEchoNative ? "ios-webview" : "web",
+    sessionId: PERFORMANCE_SESSION_ID,
+    clientLanguage: navigator.language || "",
+    viewport: performanceViewportText(),
+    connection: performanceConnectionText(),
+    online: navigator.onLine,
+    visibility: document.visibilityState,
+    durationMs: Number.isFinite(Number(payload.durationMs)) ? Math.max(0, Math.round(Number(payload.durationMs))) : null,
+    totalMs: Number.isFinite(Number(payload.totalMs)) ? Math.max(0, Math.round(Number(payload.totalMs))) : null,
+    count: Number.isFinite(Number(payload.count)) ? Math.max(0, Math.round(Number(payload.count))) : null,
+    transferBytes: Number.isFinite(Number(payload.transferBytes)) ? Math.max(0, Math.round(Number(payload.transferBytes))) : null,
+    decodedBytes: Number.isFinite(Number(payload.decodedBytes)) ? Math.max(0, Math.round(Number(payload.decodedBytes))) : null,
+    encodedBytes: Number.isFinite(Number(payload.encodedBytes)) ? Math.max(0, Math.round(Number(payload.encodedBytes))) : null,
+    status: Number.isFinite(Number(payload.status)) ? Math.max(0, Math.round(Number(payload.status))) : null,
+    ok: typeof payload.ok === "boolean" ? payload.ok : null,
+    details
+  });
+  if (performanceState.queue.length > PERFORMANCE_EVENT_LIMIT) {
+    performanceState.queue.splice(0, performanceState.queue.length - PERFORMANCE_EVENT_LIMIT);
+  }
+  schedulePerformanceFlush();
+}
+
+function flushPerformanceEvents({ sync = false } = {}) {
+  if (!performanceState.queue.length) return Promise.resolve();
+  const events = performanceState.queue.splice(0, performanceState.queue.length);
+  window.clearTimeout(performanceState.flushTimer);
+  performanceState.flushTimer = 0;
+  const body = JSON.stringify({ events });
+  const url = appUrl("/api/performance-events");
+  if (sync && navigator.sendBeacon) {
+    try {
+      const sent = navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+      if (sent) return Promise.resolve();
+    } catch {
+      // 性能上报不能影响用户流程。
+    }
+  }
+  return fetch(url, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: body.length < 64000
+  }).catch(() => {
+    const room = Math.max(0, PERFORMANCE_EVENT_LIMIT - performanceState.queue.length);
+    if (room) {
+      performanceState.queue.unshift(...events.slice(-room));
+    }
+  });
+}
+
+function schedulePerformanceFlush() {
+  if (performanceState.flushTimer) return;
+  performanceState.flushTimer = window.setTimeout(() => {
+    void flushPerformanceEvents();
+  }, PERFORMANCE_FLUSH_INTERVAL_MS);
+}
+
+function reportResourcePerformance(entry) {
+  if (performanceState.resourceCount >= PERFORMANCE_RESOURCE_LIMIT) return;
+  const path = performancePath(entry.name);
+  const initiator = entry.initiatorType || "";
+  const isModel = /\/assets\/models|\/models\/|face.*model|\.task\b|\.tflite\b|\.wasm\b/i.test(path);
+  const isImage = initiator === "img" || /\.(png|jpe?g|webp|gif|avif|svg|ico)(\?|$)/i.test(path);
+  if (!isModel && !isImage) return;
+  performanceState.resourceCount += 1;
+  queuePerformanceEvent(isModel ? "model" : "image", {
+    durationMs: entry.duration,
+    transferBytes: entry.transferSize,
+    encodedBytes: entry.encodedBodySize,
+    decodedBytes: entry.decodedBodySize,
+    ok: true,
+    details: {
+      path,
+      initiatorType: initiator,
+      cached: entry.transferSize === 0 && entry.decodedBodySize > 0
+    }
+  });
+}
+
+function initPerformanceObservers() {
+  try {
+    const resourceObserver = new PerformanceObserver((list) => {
+      list.getEntries().forEach(reportResourcePerformance);
+    });
+    resourceObserver.observe({ type: "resource", buffered: true });
+  } catch {
+    queuePerformanceEvent("runtime-warning", {
+      ok: false,
+      details: { warning: "resource_performance_observer_unavailable" }
+    });
+  }
+  window.addEventListener("load", () => {
+    window.setTimeout(() => {
+      if (performanceState.startupReported) return;
+      performanceState.startupReported = true;
+      const navigation = performance.getEntriesByType("navigation")?.[0] || null;
+      const paint = performance.getEntriesByType("paint") || [];
+      const fcp = paint.find((item) => item.name === "first-contentful-paint");
+      queuePerformanceEvent("startup", {
+        totalMs: performanceElapsed(),
+        durationMs: navigation?.duration || performance.now(),
+        ok: true,
+        details: {
+          appBasePath: APP_BASE_PATH || "/",
+          domCompleteMs: navigation?.domComplete ? Math.round(navigation.domComplete) : null,
+          loadEventMs: navigation?.loadEventEnd ? Math.round(navigation.loadEventEnd) : null,
+          responseStartMs: navigation?.responseStart ? Math.round(navigation.responseStart) : null,
+          firstContentfulPaintMs: fcp?.startTime ? Math.round(fcp.startTime) : null
+        }
+      });
+      void flushPerformanceEvents();
+    }, 600);
+  }, { once: true });
+  window.addEventListener("pagehide", () => {
+    void flushPerformanceEvents({ sync: true });
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      void flushPerformanceEvents({ sync: true });
+    }
+  });
+  document.addEventListener("error", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLImageElement)) return;
+    queuePerformanceEvent("image-error", {
+      ok: false,
+      details: {
+        path: performancePath(target.currentSrc || target.src),
+        naturalWidth: target.naturalWidth || 0,
+        naturalHeight: target.naturalHeight || 0
+      }
+    });
+  }, true);
+}
+
 function roundedCoordinate(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.round(number * 100000) / 100000 : null;
@@ -1608,6 +1808,8 @@ function requestSignalWithTimeout(controller, externalSignal) {
 }
 
 async function api(path, options = {}) {
+  const perfStart = performance.now();
+  const perfMethod = String(options.method || "GET").toUpperCase();
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   const externalSignal = options.signal || null;
@@ -1622,6 +1824,17 @@ async function api(path, options = {}) {
     },
     signal
   }).catch((error) => {
+    queuePerformanceEvent("api-error", {
+      durationMs: performance.now() - perfStart,
+      ok: false,
+      details: {
+        apiPath: path,
+        method: perfMethod,
+        errorName: error.name || "Error",
+        message: error.message || "network_error",
+        aborted: error.name === "AbortError"
+      }
+    });
     if (error.name === "AbortError") {
       const abortError = new Error(externalSignal?.aborted ? "请求已取消。" : "网络响应超时，请稍后再试。");
       abortError.name = "AbortError";
@@ -1634,6 +1847,16 @@ async function api(path, options = {}) {
   });
 
   const data = await response.json().catch(() => ({}));
+  queuePerformanceEvent(response.ok ? "api" : "api-error", {
+    durationMs: performance.now() - perfStart,
+    status: response.status,
+    ok: response.ok,
+    details: {
+      apiPath: path,
+      method: perfMethod,
+      status: response.status
+    }
+  });
   if (!response.ok) {
     const error = new Error(data.message || "请求失败。");
     error.status = response.status;
@@ -9458,8 +9681,14 @@ window.visualViewport?.addEventListener("scroll", () => {
 }, { passive: true });
 state.lastResponsiveViewportWidth = layoutViewportWidth();
 scheduleViewportMetricsRefresh();
+initPerformanceObservers();
 
 (async function init() {
+  queuePerformanceEvent("app-init-start", {
+    totalMs: 0,
+    ok: true,
+    details: { appBasePath: APP_BASE_PATH || "/", language: APP_PRIMARY_LANGUAGE || "" }
+  });
   const qqStatus = consumeQqLoginStatusFromUrl();
   const appleStatus = consumeAppleLoginStatusFromUrl();
   consumeStoredAuthResults();
@@ -9467,6 +9696,11 @@ scheduleViewportMetricsRefresh();
     const data = await api("/api/me");
     await routeAfterAuthentication(data.profile, false);
     queuePasskeyPromptIfNeeded(data.profile);
+    queuePerformanceEvent("app-ready", {
+      totalMs: performanceElapsed(),
+      ok: true,
+      details: { profileMode: data.profile?.privacy?.mode || "" }
+    });
     if (isQqSyncStatus(qqStatus) || isBindStatus(qqStatus)) {
       await handleQqLoginResult(qqStatus);
     }
@@ -9477,7 +9711,13 @@ scheduleViewportMetricsRefresh();
     showLogin();
     showQqLoginStatus(qqStatus);
     showAppleLoginStatus(appleStatus);
+    queuePerformanceEvent("login-ready", {
+      totalMs: performanceElapsed(),
+      ok: true,
+      details: { reason: "session_required" }
+    });
   } finally {
     hideInitialLoader();
+    void flushPerformanceEvents();
   }
 })();

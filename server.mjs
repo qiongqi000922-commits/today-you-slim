@@ -44,6 +44,7 @@ const AI_SUMMARY_CACHE_PATH = path.join(DATA_DIR, "ai-summary-cache.json");
 const APP_CONFIG_PATH = path.join(DATA_DIR, "app-config.json");
 const QWEN_USAGE_PATH = path.join(DATA_DIR, "qwen-usage.json");
 const RUNTIME_EVENTS_PATH = path.join(DATA_DIR, "runtime-events.json");
+const PERFORMANCE_EVENTS_PATH = path.join(DATA_DIR, "performance-events.json");
 const WEIGHT_PREDICTIONS_PATH = path.join(DATA_DIR, "weight-predictions.json");
 const NATIVE_HEALTH_SNAPSHOTS_PATH = path.join(DATA_DIR, "native-health-snapshots.json");
 const BASE_PATH = normalizeBasePath(process.env.BASE_PATH || "");
@@ -77,6 +78,7 @@ const MAX_MODERATION_QUEUE_ITEMS = positiveNumber(process.env.MAX_MODERATION_QUE
 const MAX_ACCOUNT_MODERATION_EVENTS = positiveNumber(process.env.MAX_ACCOUNT_MODERATION_EVENTS, 200);
 const MAX_QWEN_USAGE_EVENTS = positiveNumber(process.env.MAX_QWEN_USAGE_EVENTS, 200);
 const MAX_RUNTIME_EVENTS = positiveNumber(process.env.MAX_RUNTIME_EVENTS, 3000);
+const MAX_PERFORMANCE_EVENTS = positiveNumber(process.env.MAX_PERFORMANCE_EVENTS, 6000);
 const MAX_NATIVE_HEALTH_SYNC_DAYS = Math.min(60, Math.max(7, positiveNumber(process.env.MAX_NATIVE_HEALTH_SYNC_DAYS, 30)));
 const WEIGHT_PREDICTION_QUEUE_MAX = positiveNumber(process.env.WEIGHT_PREDICTION_QUEUE_MAX, 2000);
 const WEIGHT_PREDICTION_QUEUE_CONCURRENCY = Math.min(2, Math.max(1, positiveNumber(process.env.WEIGHT_PREDICTION_QUEUE_CONCURRENCY, 1)));
@@ -245,6 +247,7 @@ let aiSummaryCache = { users: {} };
 let appConfig = { foodRecognitionPriority: DEFAULT_FOOD_RECOGNITION_PRIORITY, updatedAt: null, updatedBy: "" };
 let qwenUsage = { totals: {}, daily: {}, recent: [] };
 let runtimeEvents = [];
+let performanceEvents = [];
 let weightPredictions = { users: {} };
 let nativeHealthSnapshots = { users: {} };
 let logmealQuotaCache = null;
@@ -292,6 +295,7 @@ async function initializeStorage() {
   appConfig = sanitizeAppConfig(await readJson(APP_CONFIG_PATH, {}));
   qwenUsage = sanitizeQwenUsage(await readJson(QWEN_USAGE_PATH, {}));
   runtimeEvents = sanitizeRuntimeEvents(await readJson(RUNTIME_EVENTS_PATH, []));
+  performanceEvents = sanitizePerformanceEvents(await readJson(PERFORMANCE_EVENTS_PATH, []));
   weightPredictions = sanitizeWeightPredictionStore(await readJson(WEIGHT_PREDICTIONS_PATH, {}));
   nativeHealthSnapshots = sanitizeNativeHealthStore(await readJson(NATIVE_HEALTH_SNAPSHOTS_PATH, {}));
   deletedAccessCodes = sanitizeAccessCodes(await readJson(DELETED_ACCESS_CODES_PATH, []));
@@ -333,6 +337,7 @@ async function initializeStorage() {
   await writeJson(APP_CONFIG_PATH, appConfig);
   await writeJson(QWEN_USAGE_PATH, qwenUsage);
   await writeJson(RUNTIME_EVENTS_PATH, runtimeEvents);
+  await writeJson(PERFORMANCE_EVENTS_PATH, performanceEvents);
   await writeJson(WEIGHT_PREDICTIONS_PATH, weightPredictions);
   await writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots);
 }
@@ -3188,6 +3193,294 @@ function runtimeEventsSummary() {
     hourly,
     byEvent,
     recent
+  };
+}
+
+function performanceNumber(value, max = 10 * 60 * 1000) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return 0;
+  return Math.min(max, Math.round(number));
+}
+
+function performanceNullableNumber(value, max = 10 * 60 * 1000) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return null;
+  return Math.min(max, Math.round(number));
+}
+
+function sanitizePerformanceType(value) {
+  const type = sanitizeLogText(value, 48).toLowerCase();
+  return type || "event";
+}
+
+function sanitizePerformancePage(value) {
+  const page = sanitizeLogText(value, 64).toLowerCase();
+  return page || "unknown";
+}
+
+function sanitizePerformancePath(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, "https://local.invalid");
+    return sanitizeLogText(`${url.pathname}${url.search ? "?…" : ""}`, 180);
+  } catch {
+    return sanitizeLogText(raw.replace(/[?#].*$/g, ""), 180);
+  }
+}
+
+function sanitizePerformanceDetails(value) {
+  const details = value && typeof value === "object" ? value : {};
+  const output = {};
+  const textKeys = [
+    "path",
+    "host",
+    "initiatorType",
+    "name",
+    "method",
+    "message",
+    "phase",
+    "apiPath",
+    "modelUrlKind",
+    "cacheStatus"
+  ];
+  const numberKeys = [
+    "status",
+    "imageCount",
+    "imageErrorCount",
+    "modelCount",
+    "cachedCount",
+    "domCompleteMs",
+    "loadEventMs",
+    "fcpMs",
+    "ttfbMs",
+    "encodedBytes",
+    "decodedBytes",
+    "transferBytes"
+  ];
+  for (const key of textKeys) {
+    if (details[key] !== undefined && details[key] !== null) {
+      output[key] = key === "path" || key === "apiPath"
+        ? sanitizePerformancePath(details[key])
+        : sanitizeLogText(details[key], 160);
+    }
+  }
+  for (const key of numberKeys) {
+    if (details[key] !== undefined && details[key] !== null) {
+      output[key] = performanceNullableNumber(details[key], key.endsWith("Bytes") ? 200 * 1024 * 1024 : 10 * 60 * 1000);
+    }
+  }
+  if (details.ok !== undefined) output.ok = Boolean(details.ok);
+  if (details.cached !== undefined) output.cached = Boolean(details.cached);
+  return output;
+}
+
+function sanitizePerformanceEvent(item, req = null, session = null) {
+  const value = item && typeof item === "object" ? item : {};
+  const device = req ? requestDeviceSummary(req) : {};
+  const at = Number.isFinite(Date.parse(value.at)) ? new Date(value.at).toISOString() : new Date().toISOString();
+  const type = sanitizePerformanceType(value.type || value.event);
+  const details = sanitizePerformanceDetails(value.details || {});
+  const durationMs = performanceNullableNumber(value.durationMs ?? value.elapsedMs, 10 * 60 * 1000);
+  const totalMs = performanceNullableNumber(value.totalMs ?? value.totalElapsedMs, 30 * 60 * 1000);
+  const transferBytes = performanceNullableNumber(value.transferBytes ?? details.transferBytes, 500 * 1024 * 1024);
+  const decodedBytes = performanceNullableNumber(value.decodedBytes ?? details.decodedBytes, 500 * 1024 * 1024);
+  const encodedBytes = performanceNullableNumber(value.encodedBytes ?? details.encodedBytes, 500 * 1024 * 1024);
+  const userCode = sanitizeLogText(session?.code || value.userCode || "", 80);
+  return {
+    id: RESOURCE_ID_PATTERN.test(String(value.id || "")) ? String(value.id) : crypto.randomUUID(),
+    at,
+    type,
+    page: sanitizePerformancePage(value.page),
+    source: sanitizeLogText(value.source || "web", 32) || "web",
+    sessionId: sanitizeLogText(value.sessionId, 80),
+    userCode,
+    accountDisplay: userCode ? sanitizeLogText(communityDisplayNameForCode(userCode), 80) : "",
+    ipDigest: sanitizeLogText(value.ipDigest || device.ipDigest, 96),
+    userAgentDigest: sanitizeLogText(value.userAgentDigest || device.userAgentDigest, 96),
+    clientLanguage: sanitizeLogText(value.clientLanguage, 48),
+    viewport: sanitizeLogText(value.viewport, 48),
+    connection: sanitizeLogText(value.connection, 48),
+    online: value.online === null || value.online === undefined ? null : Boolean(value.online),
+    visibility: sanitizeLogText(value.visibility, 32),
+    durationMs,
+    totalMs,
+    count: performanceNullableNumber(value.count, 10000),
+    transferBytes,
+    decodedBytes,
+    encodedBytes,
+    status: performanceNullableNumber(value.status ?? details.status, 999),
+    ok: value.ok === null || value.ok === undefined ? null : Boolean(value.ok),
+    details
+  };
+}
+
+function sanitizePerformanceEvents(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => sanitizePerformanceEvent(item))
+    .filter((item) => item.type)
+    .sort((left, right) => Date.parse(left.at) - Date.parse(right.at))
+    .slice(-MAX_PERFORMANCE_EVENTS);
+}
+
+async function recordPerformanceEvents(req, session, items) {
+  const list = (Array.isArray(items) ? items : [items]).slice(0, 80);
+  const events = list.map((item) => sanitizePerformanceEvent(item, req, session));
+  if (!events.length) return [];
+  performanceEvents.push(...events);
+  performanceEvents = sanitizePerformanceEvents(performanceEvents);
+  await writeJson(PERFORMANCE_EVENTS_PATH, performanceEvents);
+  return events;
+}
+
+function numericValues(items, key) {
+  return items
+    .map((item) => Number(item[key]))
+    .filter((value) => Number.isFinite(value) && value >= 0)
+    .sort((left, right) => left - right);
+}
+
+function averageValue(values) {
+  if (!values.length) return 0;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function percentileValue(values, percentile) {
+  if (!values.length) return 0;
+  const index = Math.min(values.length - 1, Math.max(0, Math.ceil(values.length * percentile) - 1));
+  return Math.round(values[index]);
+}
+
+function summarizePerformanceGroup(items) {
+  const durations = numericValues(items, "durationMs");
+  const totals = numericValues(items, "totalMs");
+  const transferBytes = items.reduce((sum, item) => sum + (Number(item.transferBytes) || Number(item.details?.transferBytes) || 0), 0);
+  const errorCount = items.filter((item) => item.ok === false || item.type.endsWith("-error") || (item.status && item.status >= 400)).length;
+  return {
+    count: items.length,
+    errorCount,
+    avgMs: averageValue(durations),
+    p75Ms: percentileValue(durations, 0.75),
+    p95Ms: percentileValue(durations, 0.95),
+    avgTotalMs: averageValue(totals),
+    p95TotalMs: percentileValue(totals, 0.95),
+    totalDurationMs: durations.reduce((sum, value) => sum + value, 0),
+    totalTransferBytes: Math.round(transferBytes)
+  };
+}
+
+function topPerformancePaths(items, limit = 12) {
+  return Object.values(items.reduce((map, event) => {
+    const pathValue = event.details?.path || event.details?.apiPath || "";
+    if (!pathValue) return map;
+    if (!map[pathValue]) {
+      map[pathValue] = { path: pathValue, count: 0, errorCount: 0, totalMs: 0, totalBytes: 0, maxMs: 0, latestAt: event.at };
+    }
+    const duration = Number(event.durationMs) || 0;
+    map[pathValue].count += 1;
+    map[pathValue].errorCount += event.ok === false || event.type.endsWith("-error") || (event.status && event.status >= 400) ? 1 : 0;
+    map[pathValue].totalMs += duration;
+    map[pathValue].totalBytes += Number(event.transferBytes) || Number(event.details?.transferBytes) || 0;
+    map[pathValue].maxMs = Math.max(map[pathValue].maxMs, duration);
+    if (Date.parse(event.at) > Date.parse(map[pathValue].latestAt)) map[pathValue].latestAt = event.at;
+    return map;
+  }, {})).map((item) => ({
+    ...item,
+    avgMs: item.count ? Math.round(item.totalMs / item.count) : 0,
+    totalMs: Math.round(item.totalMs),
+    totalBytes: Math.round(item.totalBytes)
+  })).sort((left, right) => right.errorCount - left.errorCount || right.totalMs - left.totalMs || right.count - left.count).slice(0, limit);
+}
+
+function performanceEventsSummary() {
+  performanceEvents = sanitizePerformanceEvents(performanceEvents);
+  const now = Date.now();
+  const dayAgo = now - 24 * 60 * 60 * 1000;
+  const last24h = performanceEvents.filter((event) => Date.parse(event.at) >= dayAgo);
+  const startupEvents = last24h.filter((event) => ["startup", "app-ready", "login-ready", "navigation"].includes(event.type));
+  const apiEvents = last24h.filter((event) => event.type === "api" || event.type === "api-error");
+  const imageEvents = last24h.filter((event) => event.type === "image" || event.type === "image-error");
+  const modelEvents = last24h.filter((event) => event.type === "model" || event.type === "model-error");
+  const resourceEvents = last24h.filter((event) => event.type === "resource");
+  const imageSummary = summarizePerformanceGroup(imageEvents);
+  const startupSummary = summarizePerformanceGroup(startupEvents);
+  const apiSummary = summarizePerformanceGroup(apiEvents);
+  const modelSummary = summarizePerformanceGroup(modelEvents);
+  const cachedCount = last24h.filter((event) => event.details?.cached || /cache|cached|命中/i.test(event.details?.cacheStatus || "")).length;
+  const warningEvents = [...last24h]
+    .filter((event) => (
+      event.ok === false
+      || event.type.endsWith("-error")
+      || (event.status && event.status >= 400)
+      || Number(event.durationMs) >= 5000
+      || Number(event.totalMs) >= 8000
+    ))
+    .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
+    .slice(0, 80);
+  const hourly = [];
+  for (let index = 23; index >= 0; index -= 1) {
+    const start = new Date(now - index * 60 * 60 * 1000);
+    start.setMinutes(0, 0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const items = performanceEvents.filter((event) => {
+      const time = Date.parse(event.at);
+      return time >= start.getTime() && time < end.getTime();
+    });
+    hourly.push({
+      at: start.toISOString(),
+      label: `${String(start.getHours()).padStart(2, "0")}:00`,
+      total: items.length,
+      startup: items.filter((event) => ["startup", "app-ready", "login-ready", "navigation"].includes(event.type)).length,
+      image: items.filter((event) => event.type === "image" || event.type === "image-error").length,
+      api: items.filter((event) => event.type === "api" || event.type === "api-error").length,
+      error: items.filter((event) => event.ok === false || event.type.endsWith("-error") || (event.status && event.status >= 400)).length
+    });
+  }
+  return {
+    ok: true,
+    at: new Date().toISOString(),
+    summary: {
+      total: performanceEvents.length,
+      last24h: last24h.length,
+      uniqueUsers: new Set(last24h.map((event) => event.userCode).filter(Boolean)).size,
+      cachedCount,
+      cacheHitRate: last24h.length ? cachedCount / last24h.length : 0,
+      startupCount: startupEvents.length,
+      startupP95Ms: startupSummary.p95TotalMs || startupSummary.p95Ms,
+      imageCount: imageSummary.count,
+      imageErrorCount: imageSummary.errorCount,
+      imageAvgMs: imageSummary.avgMs,
+      imageP95Ms: imageSummary.p95Ms,
+      imageTotalDurationMs: imageSummary.totalDurationMs,
+      imageTotalTransferBytes: imageSummary.totalTransferBytes,
+      apiCount: apiSummary.count,
+      apiErrorCount: apiSummary.errorCount,
+      apiP95Ms: apiSummary.p95Ms,
+      modelCount: modelSummary.count,
+      modelErrorCount: modelSummary.errorCount,
+      modelP95Ms: modelSummary.p95Ms
+    },
+    startup: startupSummary,
+    images: {
+      ...imageSummary,
+      byPath: topPerformancePaths(imageEvents)
+    },
+    api: {
+      ...apiSummary,
+      byPath: topPerformancePaths(apiEvents)
+    },
+    models: {
+      ...modelSummary,
+      byPath: topPerformancePaths(modelEvents)
+    },
+    resources: {
+      ...summarizePerformanceGroup(resourceEvents),
+      byPath: topPerformancePaths(resourceEvents)
+    },
+    hourly,
+    warnings: warningEvents,
+    recent: [...performanceEvents].reverse().slice(0, 120)
   };
 }
 
@@ -8776,6 +9069,21 @@ async function handleAdminApi(req, res, pathname) {
     return sendJson(res, 200, runtimeEventsSummary());
   }
 
+  if (req.method === "GET" && relativePath === "/api/performance-summary") {
+    try {
+      return sendJson(res, 200, performanceEventsSummary());
+    } catch (error) {
+      return sendError(res, error.statusCode || 500, error.message);
+    }
+  }
+
+  if (req.method === "POST" && relativePath === "/api/performance-events/clear") {
+    performanceEvents = [];
+    await writeJson(PERFORMANCE_EVENTS_PATH, performanceEvents);
+    await recordAdminAuthEvent(req, "performance_events_cleared", session.username, "all");
+    return sendJson(res, 200, performanceEventsSummary());
+  }
+
   if (req.method === "PATCH" && relativePath === "/api/server-registration") {
     const body = await readRequestJson(req);
     try {
@@ -9655,6 +9963,23 @@ async function handleApi(req, res, pathname) {
     }
   }
 	
+  if (req.method === "POST" && pathname === "/api/performance-events") {
+    try {
+      const body = await readRequestJson(req);
+      const session = currentSession(req);
+      const events = Array.isArray(body.events) ? body.events : [body];
+      await recordPerformanceEvents(req, session, events);
+    } catch (error) {
+      await recordRuntimeEvent("performance", "performance_event_rejected", {
+        level: "warning",
+        source: "server",
+        message: "性能事件上报解析失败。",
+        details: { message: error.message }
+      });
+    }
+    return sendJson(res, 202, { ok: true });
+  }
+
   if (req.method === "POST" && pathname === "/api/passkeys/client-log") {
     const body = await readRequestJson(req);
     const clientEventName = sanitizeLogText(body.event, 48) || "event";

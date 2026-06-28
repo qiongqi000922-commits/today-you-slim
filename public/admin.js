@@ -14,6 +14,7 @@ const state = {
   moderationQueue: null,
   serverStatus: null,
   runtimeEvents: null,
+  performanceSummary: null,
   logmealQuota: null,
   deepseekBalance: null,
   qwenUsage: null,
@@ -90,6 +91,20 @@ const els = {
   runtimeAreaList: document.querySelector("#runtimeAreaList"),
   runtimeEventList: document.querySelector("#runtimeEventList"),
   clearRuntimeEventsButton: document.querySelector("#clearRuntimeEventsButton"),
+  performanceUpdatedAt: document.querySelector("#performanceUpdatedAt"),
+  performanceOverviewMeta: document.querySelector("#performanceOverviewMeta"),
+  performanceStartupP95: document.querySelector("#performanceStartupP95"),
+  performanceImageCount: document.querySelector("#performanceImageCount"),
+  performanceImageP95: document.querySelector("#performanceImageP95"),
+  performanceImageErrorCount: document.querySelector("#performanceImageErrorCount"),
+  performanceApiErrorCount: document.querySelector("#performanceApiErrorCount"),
+  performanceModelP95: document.querySelector("#performanceModelP95"),
+  performanceHourlyChart: document.querySelector("#performanceHourlyChart"),
+  performanceTopEvents: document.querySelector("#performanceTopEvents"),
+  performanceSlowAssetMeta: document.querySelector("#performanceSlowAssetMeta"),
+  performanceSlowAssets: document.querySelector("#performanceSlowAssets"),
+  performanceRecentEvents: document.querySelector("#performanceRecentEvents"),
+  clearPerformanceEventsButton: document.querySelector("#clearPerformanceEventsButton"),
   apiQuotaUpdatedAt: document.querySelector("#apiQuotaUpdatedAt"),
   logmealQuotaUpdatedAt: document.querySelector("#logmealQuotaUpdatedAt"),
   logmealQuotaMeta: document.querySelector("#logmealQuotaMeta"),
@@ -401,6 +416,7 @@ function showLogin() {
   state.moderationQueue = null;
   state.serverStatus = null;
   state.runtimeEvents = null;
+  state.performanceSummary = null;
   state.logmealQuota = null;
   state.deepseekBalance = null;
   state.qwenUsage = null;
@@ -471,6 +487,7 @@ async function loginWithPasskey() {
     await loadModerationQueue();
     await loadServerStatus();
     await loadRuntimeEvents();
+    await loadPerformanceSummary();
     await loadApiQuota();
   } catch (error) {
     setMessage(error.name === "NotAllowedError" ? "Passkey 操作已取消。" : error.message, "error");
@@ -500,6 +517,14 @@ function formatBytes(bytes) {
   }
   const precision = unitIndex <= 1 ? 0 : 1;
   return `${size.toFixed(precision)} ${units[unitIndex]}`;
+}
+
+function formatMs(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return "-";
+  if (number >= 60000) return `${(number / 60000).toFixed(1)} 分钟`;
+  if (number >= 1000) return `${(number / 1000).toFixed(1)} 秒`;
+  return `${Math.round(number)} ms`;
 }
 
 function formatDuration(seconds) {
@@ -577,6 +602,7 @@ function renderOperationsDashboard() {
   const registration = capacity.registration || {};
   const disk = capacity.disk || {};
   const runtimeSummary = state.runtimeEvents?.summary || {};
+  const performanceSummary = state.performanceSummary?.summary || {};
   const moderation = state.moderationQueue || {};
   const loginSummary = state.loginSummary || {};
   const qwen = state.qwenUsage || {};
@@ -592,13 +618,16 @@ function renderOperationsDashboard() {
   const warningCount = runtimeSummary.last24hWarning || 0;
   const errorCount = runtimeSummary.last24hError || 0;
   const fallbackCount = runtimeSummary.fallback || 0;
+  const experienceErrorCount = (performanceSummary.imageErrorCount || 0)
+    + (performanceSummary.apiErrorCount || 0)
+    + (performanceSummary.modelErrorCount || 0);
   const pendingModeration = (moderation.pending || 0) + (moderation.reviewing || 0);
   const accountRisk = (summary.frozenCount || 0) + (summary.bannedCount || 0);
   const failedLogins = loginSummary.failure || 0;
   const hasServerStatus = Boolean(state.serverStatus);
   const hasQwenUsage = Boolean(state.qwenUsage);
   const healthTone = dashboardToneFromCounts({
-    errors: errorCount,
+    errors: errorCount + experienceErrorCount,
     warnings: warningCount + fallbackCount + accountRisk,
     pending: pendingModeration
   });
@@ -612,6 +641,7 @@ function renderOperationsDashboard() {
     const timestamps = [
       server.at,
       state.runtimeEvents?.at,
+      state.performanceSummary?.at,
       state.qwenUsage?.at,
       state.deepseekBalance?.at
     ].map((value) => new Date(value).getTime()).filter((value) => Number.isFinite(value));
@@ -622,8 +652,8 @@ function renderOperationsDashboard() {
   setOpsStatus(
     "Runtime",
     "运行",
-    `${errorCount} 错误 / ${warningCount} 警告`,
-    dashboardToneFromCounts({ errors: errorCount, warnings: warningCount + fallbackCount })
+    `${errorCount} 错误 / ${experienceErrorCount} 体验`,
+    dashboardToneFromCounts({ errors: errorCount + experienceErrorCount, warnings: warningCount + fallbackCount })
   );
   setOpsStatus(
     "Storage",
@@ -645,14 +675,18 @@ function renderOperationsDashboard() {
   els.dashboardHealthList.innerHTML = [
     dashboardRowMarkup("新用户注册", hasServerStatus ? (registration.open ? "开放" : "暂停") : "等待服务器", registration.thresholdReached ? "容量阈值触发" : "可在服务器状态中调整", !hasServerStatus ? "neutral" : registration.open ? "good" : "warning"),
     dashboardRowMarkup("账号规模", `${formatNumber(summary.accountCount || 0)} 个`, `有记录 ${formatNumber(summary.activeAccountCount || 0)} 个`, "neutral"),
-    dashboardRowMarkup("记录资产", `${formatNumber(summary.recordCount || 0)} 条`, `${formatNumber(summary.photoCount || 0)} 张照片`, "neutral")
+    dashboardRowMarkup("记录资产", `${formatNumber(summary.recordCount || 0)} 条`, `${formatNumber(summary.photoCount || 0)} 张照片`, "neutral"),
+    dashboardRowMarkup("体验采样", `${formatNumber(performanceSummary.last24h || 0)} 条`, `启动 P95 ${formatMs(performanceSummary.startupP95Ms)}`, experienceErrorCount ? "warning" : "neutral")
   ].join("");
 
-  els.dashboardRiskTitle.textContent = pendingModeration || errorCount ? `${pendingModeration + errorCount} 项待看` : "暂无阻塞";
-  els.dashboardRiskMeta.textContent = `失败登录 ${formatNumber(failedLogins)} · 冻结/封禁 ${formatNumber(accountRisk)}`;
+  els.dashboardRiskTitle.textContent = pendingModeration || errorCount || experienceErrorCount
+    ? `${pendingModeration + errorCount + experienceErrorCount} 项待看`
+    : "暂无阻塞";
+  els.dashboardRiskMeta.textContent = `失败登录 ${formatNumber(failedLogins)} · 体验错误 ${formatNumber(experienceErrorCount)} · 冻结/封禁 ${formatNumber(accountRisk)}`;
   els.dashboardRiskList.innerHTML = [
     dashboardRowMarkup("运行错误", `${formatNumber(errorCount)} 条`, "最近 24 小时", errorCount ? "danger" : "good"),
     dashboardRowMarkup("告警/兜底", `${formatNumber(warningCount + fallbackCount)} 条`, "最近 24 小时", warningCount + fallbackCount ? "warning" : "good"),
+    dashboardRowMarkup("体验错误", `${formatNumber(experienceErrorCount)} 条`, `图片 ${formatNumber(performanceSummary.imageErrorCount || 0)} / API ${formatNumber(performanceSummary.apiErrorCount || 0)} / 模型 ${formatNumber(performanceSummary.modelErrorCount || 0)}`, experienceErrorCount ? "danger" : "good"),
     dashboardRowMarkup("反馈举报", `${formatNumber(pendingModeration)} 条`, "待处理与处理中", pendingModeration ? "warning" : "good")
   ].join("");
 
@@ -751,7 +785,7 @@ function moderationCategoryLabel(category) {
 }
 
 function setAdminSection(section) {
-  const normalized = ["overview", "server", "runtime", "quota", "accounts", "moderation", "security"].includes(section) ? section : "overview";
+  const normalized = ["overview", "server", "runtime", "performance", "quota", "accounts", "moderation", "security"].includes(section) ? section : "overview";
   state.activeSection = normalized;
   if (els.shell) {
     els.shell.dataset.activeSection = normalized;
@@ -1477,6 +1511,188 @@ async function clearRuntimeEvents(button) {
   }
 }
 
+function performanceTypeLabel(type) {
+  return {
+    startup: "页面启动",
+    "app-ready": "首页就绪",
+    "login-ready": "登录页就绪",
+    api: "接口请求",
+    "api-error": "接口失败",
+    image: "图片下载",
+    "image-error": "图片失败",
+    model: "模型下载",
+    "model-error": "模型失败",
+    resource: "资源加载",
+    "runtime-warning": "客户端警告"
+  }[type] || type || "体验事件";
+}
+
+function performanceDetailText(details) {
+  if (!details) return "";
+  try {
+    return JSON.stringify(details, null, 2).slice(0, 900);
+  } catch {
+    return String(details).slice(0, 900);
+  }
+}
+
+function performancePathLabel(item) {
+  const path = item?.path || item?.apiPath || item?.key || "unknown";
+  return String(path).replace(/^https?:\/\/[^/]+/i, "").slice(0, 120);
+}
+
+function renderPerformanceSummary() {
+  const data = state.performanceSummary;
+  if (!els.performanceRecentEvents) return;
+  if (!data) {
+    els.performanceUpdatedAt.textContent = "等待刷新";
+    els.performanceOverviewMeta.textContent = "-";
+    els.performanceStartupP95.textContent = "-";
+    els.performanceImageCount.textContent = "0";
+    els.performanceImageP95.textContent = "-";
+    els.performanceImageErrorCount.textContent = "0";
+    els.performanceApiErrorCount.textContent = "0";
+    els.performanceModelP95.textContent = "-";
+    els.performanceHourlyChart.innerHTML = '<div class="empty-list">暂无体验数据</div>';
+    els.performanceTopEvents.innerHTML = "";
+    els.performanceSlowAssetMeta.textContent = "暂无数据";
+    els.performanceSlowAssets.innerHTML = '<div class="empty-list">暂无慢资源</div>';
+    els.performanceRecentEvents.innerHTML = '<div class="empty-list">暂无体验事件</div>';
+    renderOperationsDashboard();
+    return;
+  }
+
+  const summary = data.summary || {};
+  els.performanceUpdatedAt.textContent = `更新于 ${formatDateTime(data.at)}`;
+  els.performanceOverviewMeta.textContent = `最近 24 小时 ${formatNumber(summary.last24h || 0)} 条 · ${formatNumber(summary.uniqueUsers || 0)} 个账户`;
+  els.performanceStartupP95.textContent = formatMs(summary.startupP95Ms);
+  els.performanceImageCount.textContent = formatNumber(summary.imageCount || 0);
+  els.performanceImageP95.textContent = formatMs(summary.imageP95Ms);
+  els.performanceImageErrorCount.textContent = formatNumber(summary.imageErrorCount || 0);
+  els.performanceApiErrorCount.textContent = formatNumber(summary.apiErrorCount || 0);
+  els.performanceModelP95.textContent = formatMs(summary.modelP95Ms);
+
+  const hourly = Array.isArray(data.hourly) ? data.hourly : [];
+  const maxCount = Math.max(1, ...hourly.map((item) => item.total || 0));
+  els.performanceHourlyChart.innerHTML = hourly.length
+    ? hourly.map((item) => {
+      const height = Math.max(8, Math.round(((item.total || 0) / maxCount) * 84));
+      const levelClass = item.error ? "is-error" : item.image ? "is-warning" : "";
+      return `
+        <div class="runtime-chart-column" title="${escapeHtml(item.label)} · ${item.total || 0} 条">
+          <span class="runtime-chart-bar ${levelClass}" style="height:${height}%"></span>
+          <small>${escapeHtml(item.label.slice(0, 2))}</small>
+        </div>
+      `;
+    }).join("")
+    : '<div class="empty-list">暂无趋势数据</div>';
+
+  const topEvents = [
+    ["启动", summary.startupCount || 0, ""],
+    ["图片失败", summary.imageErrorCount || 0, summary.imageErrorCount ? "is-error" : ""],
+    ["API失败", summary.apiErrorCount || 0, summary.apiErrorCount ? "is-error" : ""],
+    ["缓存命中", `${Math.round((summary.cacheHitRate || 0) * 100)}%`, ""],
+    ["图片总耗时", formatMs(summary.imageTotalDurationMs || 0), ""],
+    ["传输", formatBytes(summary.imageTotalTransferBytes || 0), ""]
+  ];
+  els.performanceTopEvents.innerHTML = topEvents.map(([label, value, className]) => `
+    <span class="runtime-event-chip ${className}">
+      ${escapeHtml(label)} <strong>${escapeHtml(String(value))}</strong>
+    </span>
+  `).join("");
+
+  const slowPaths = [
+    ...(data.images?.byPath || []).map((item) => ({ ...item, type: "图片" })),
+    ...(data.models?.byPath || []).map((item) => ({ ...item, type: "模型" })),
+    ...(data.api?.byPath || []).map((item) => ({ ...item, type: "接口" }))
+  ].sort((left, right) => (right.errorCount || 0) - (left.errorCount || 0) || (right.avgMs || 0) - (left.avgMs || 0)).slice(0, 16);
+  els.performanceSlowAssetMeta.textContent = slowPaths.length ? `${slowPaths.length} 条重点路径` : "暂无数据";
+  els.performanceSlowAssets.innerHTML = slowPaths.length
+    ? slowPaths.map((item) => `
+      <article class="runtime-area-item ${item.errorCount ? "is-error" : item.avgMs >= 3000 ? "is-warning" : ""}">
+        <div>
+          <strong>${escapeHtml(item.type)} · ${escapeHtml(performancePathLabel(item))}</strong>
+          <span>${formatNumber(item.count || 0)} 次 · 平均 ${formatMs(item.avgMs)} · 传输 ${formatBytes(item.totalBytes || 0)}</span>
+        </div>
+        <div>
+          <span>${item.errorCount || 0} 失败</span>
+          <strong>总耗时 ${formatMs(item.totalMs || 0)}</strong>
+        </div>
+      </article>
+    `).join("")
+    : '<div class="empty-list">暂无慢资源</div>';
+
+  const recent = Array.isArray(data.warnings) && data.warnings.length ? data.warnings : (Array.isArray(data.recent) ? data.recent : []);
+  els.performanceRecentEvents.innerHTML = recent.length
+    ? recent.slice(0, 80).map((event) => {
+      const details = performanceDetailText(event.details);
+      const isError = event.ok === false || String(event.type || "").endsWith("-error") || Number(event.status) >= 400;
+      return `
+        <article class="runtime-event-item ${isError ? "is-error" : Number(event.durationMs || event.totalMs) >= 5000 ? "is-warning" : ""}">
+          <div class="runtime-event-topline">
+            <span class="runtime-level-badge">${escapeHtml(performanceTypeLabel(event.type))}</span>
+            <strong>${escapeHtml(event.accountDisplay || event.userCode || "匿名")}</strong>
+            <time>${formatDateTime(event.at)}</time>
+          </div>
+          <div class="runtime-event-title">
+            <strong>${escapeHtml(event.page || "app")}</strong>
+            <span>${escapeHtml(event.source || "web")} · ${formatMs(event.durationMs ?? event.totalMs)}${event.status ? ` · ${event.status}` : ""}</span>
+          </div>
+          ${details ? `<pre>${escapeHtml(details)}</pre>` : ""}
+        </article>
+      `;
+    }).join("")
+    : '<div class="empty-list">暂无体验事件</div>';
+  renderOperationsDashboard();
+}
+
+async function loadPerformanceSummary() {
+  try {
+    const data = await api("/performance-summary");
+    state.performanceSummary = data;
+    renderPerformanceSummary();
+  } catch (error) {
+    if (error.status === 401) {
+      showLogin();
+      return;
+    }
+    state.performanceSummary = null;
+    if (els.performanceRecentEvents) {
+      els.performanceUpdatedAt.textContent = "查询失败";
+      els.performanceOverviewMeta.textContent = "-";
+      els.performanceHourlyChart.innerHTML = `<div class="empty-list">${escapeHtml(error.message)}</div>`;
+      els.performanceSlowAssets.innerHTML = "";
+      els.performanceRecentEvents.innerHTML = "";
+    }
+    renderOperationsDashboard();
+  }
+}
+
+async function clearPerformanceEvents(button) {
+  if (!window.confirm("确定清空体验监控数据吗？这只会清空性能事件，不影响用户数据。")) return;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "正在清空";
+  try {
+    const data = await api("/performance-events/clear", {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    state.performanceSummary = data;
+    renderPerformanceSummary();
+    await loadSecurity();
+  } catch (error) {
+    renderPerformanceSummary();
+    if (els.performanceRecentEvents) {
+      els.performanceRecentEvents.insertAdjacentHTML("afterbegin", `<div class="empty-list">${escapeHtml(error.message)}</div>`);
+    }
+  } finally {
+    button.textContent = originalText;
+    button.disabled = false;
+    button.blur();
+  }
+}
+
 async function updateRegistrationGate(action, button) {
   const originalText = button.textContent;
   button.disabled = true;
@@ -1725,7 +1941,7 @@ function adminPageIsAtTop() {
 }
 
 function adminPullTargetIsBlocked(target) {
-  return target instanceof Element && Boolean(target.closest("dialog, .account-list, .record-list, .auth-event-list, .user-audit-list, .runtime-event-list"));
+  return target instanceof Element && Boolean(target.closest("dialog, .account-list, .record-list, .auth-event-list, .user-audit-list, .runtime-event-list, .runtime-area-list"));
 }
 
 function setAdminPullRefreshDistance(distance) {
@@ -1764,6 +1980,7 @@ async function refreshAdminData({ fromPull = false } = {}) {
     await loadModerationQueue();
     await loadServerStatus();
     await loadRuntimeEvents();
+    await loadPerformanceSummary();
     await loadApiQuota();
     if (fromPull && els.pullRefreshText) els.pullRefreshText.textContent = "刷新完成";
   } catch (error) {
@@ -2083,6 +2300,7 @@ els.loginForm.addEventListener("submit", async (event) => {
     await loadModerationQueue();
     await loadServerStatus();
     await loadRuntimeEvents();
+    await loadPerformanceSummary();
     await loadApiQuota();
   } catch (error) {
     setMessage(error.message, "error");
@@ -2163,6 +2381,9 @@ els.refreshDeepseekBalanceButton?.addEventListener("click", async () => {
 });
 els.clearRuntimeEventsButton?.addEventListener("click", () => {
   clearRuntimeEvents(els.clearRuntimeEventsButton);
+});
+els.clearPerformanceEventsButton?.addEventListener("click", () => {
+  clearPerformanceEvents(els.clearPerformanceEventsButton);
 });
 els.sectionTabs.forEach((button) => {
   button.addEventListener("click", () => {
@@ -2292,6 +2513,7 @@ document.addEventListener("touchcancel", resetAdminPullRefresh, { passive: true 
 	    await loadModerationQueue();
 	    await loadServerStatus();
 	    await loadRuntimeEvents();
+	    await loadPerformanceSummary();
 	    await loadApiQuota();
 	  } catch {
     showLogin();

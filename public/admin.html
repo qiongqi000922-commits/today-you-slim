@@ -81,6 +81,7 @@
             <span>指挥中心</span>
             <button class="admin-section-tab is-active" type="button" data-admin-section="overview" data-icon="总">运营概览</button>
             <button class="admin-section-tab" type="button" data-admin-section="runtime" data-icon="告">运行日志</button>
+            <button class="admin-section-tab" type="button" data-admin-section="performance" data-icon="验">体验监控</button>
           </div>
           <div class="admin-nav-group">
             <span>基础设施</span>
@@ -255,6 +256,48 @@
                 <button class="secondary-button" id="clearRuntimeEventsButton" type="button">清空日志</button>
               </div>
               <div class="runtime-event-list" id="runtimeEventList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-section-panel="performance" aria-labelledby="performanceTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>Experience</span>
+              <h2 id="performanceTitle">体验监控</h2>
+            </div>
+            <span class="panel-meta" id="performanceUpdatedAt">等待刷新</span>
+          </div>
+          <div class="runtime-layout performance-layout">
+            <section class="runtime-card runtime-overview-card" aria-labelledby="performanceOverviewTitle">
+              <div class="records-header">
+                <h3 id="performanceOverviewTitle">核心体验</h3>
+                <span id="performanceOverviewMeta">-</span>
+              </div>
+              <div class="runtime-summary-strip" aria-label="体验指标概览">
+                <div><span>启动 P95</span><strong id="performanceStartupP95">-</strong></div>
+                <div><span>图片请求</span><strong id="performanceImageCount">0</strong></div>
+                <div><span>图片 P95</span><strong id="performanceImageP95">-</strong></div>
+                <div><span>图片失败</span><strong id="performanceImageErrorCount">0</strong></div>
+                <div><span>API 失败</span><strong id="performanceApiErrorCount">0</strong></div>
+                <div><span>模型 P95</span><strong id="performanceModelP95">-</strong></div>
+              </div>
+              <div class="runtime-chart" id="performanceHourlyChart" aria-label="最近24小时体验事件"></div>
+              <div class="runtime-top-events" id="performanceTopEvents"></div>
+            </section>
+            <section class="runtime-card" aria-labelledby="performanceSlowAssetTitle">
+              <div class="records-header">
+                <h3 id="performanceSlowAssetTitle">慢资源与慢接口</h3>
+                <span id="performanceSlowAssetMeta">暂无数据</span>
+              </div>
+              <div class="runtime-area-list" id="performanceSlowAssets"></div>
+            </section>
+            <section class="runtime-card runtime-event-card" aria-labelledby="performanceRecentTitle">
+              <div class="records-header">
+                <h3 id="performanceRecentTitle">最近体验事件</h3>
+                <button class="secondary-button" id="clearPerformanceEventsButton" type="button">清空体验数据</button>
+              </div>
+              <div class="runtime-event-list" id="performanceRecentEvents"></div>
             </section>
           </div>
         </section>
