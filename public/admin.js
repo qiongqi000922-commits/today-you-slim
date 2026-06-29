@@ -13,6 +13,7 @@ const state = {
   loginSummary: null,
   moderationQueue: null,
   serverStatus: null,
+  reliability: null,
   runtimeEvents: null,
   performanceSummary: null,
   logmealQuota: null,
@@ -79,6 +80,17 @@ const els = {
   foodRecognitionPriorityList: document.querySelector("#foodRecognitionPriorityList"),
   foodRecognitionConfigMessage: document.querySelector("#foodRecognitionConfigMessage"),
   saveFoodRecognitionPriorityButton: document.querySelector("#saveFoodRecognitionPriorityButton"),
+  reliabilityUpdatedAt: document.querySelector("#reliabilityUpdatedAt"),
+  databaseStatusMeta: document.querySelector("#databaseStatusMeta"),
+  databaseMetricGrid: document.querySelector("#databaseMetricGrid"),
+  databaseActionMessage: document.querySelector("#databaseActionMessage"),
+  forceDatabaseMirrorButton: document.querySelector("#forceDatabaseMirrorButton"),
+  forceDatabaseBackupButton: document.querySelector("#forceDatabaseBackupButton"),
+  databaseBackupMeta: document.querySelector("#databaseBackupMeta"),
+  databaseBackupList: document.querySelector("#databaseBackupList"),
+  governanceHealthMeta: document.querySelector("#governanceHealthMeta"),
+  governanceHealthList: document.querySelector("#governanceHealthList"),
+  reliabilityPlanList: document.querySelector("#reliabilityPlanList"),
   runtimeUpdatedAt: document.querySelector("#runtimeUpdatedAt"),
   runtimeOverviewMeta: document.querySelector("#runtimeOverviewMeta"),
   runtimeWarningCount: document.querySelector("#runtimeWarningCount"),
@@ -486,6 +498,7 @@ async function loginWithPasskey() {
     await loadAccounts({ preserveSelection: false });
     await loadModerationQueue();
     await loadServerStatus();
+    await loadReliabilitySummary();
     await loadRuntimeEvents();
     await loadPerformanceSummary();
     await loadApiQuota();
@@ -598,6 +611,8 @@ function renderOperationsDashboard() {
 
   const summary = state.summary || {};
   const server = state.serverStatus || {};
+  const reliability = state.reliability || {};
+  const database = reliability.database || server.database || {};
   const capacity = server.capacity || {};
   const registration = capacity.registration || {};
   const disk = capacity.disk || {};
@@ -626,8 +641,9 @@ function renderOperationsDashboard() {
   const failedLogins = loginSummary.failure || 0;
   const hasServerStatus = Boolean(state.serverStatus);
   const hasQwenUsage = Boolean(state.qwenUsage);
+  const databaseNeedsAttention = database.enabled !== false && database.ok === false;
   const healthTone = dashboardToneFromCounts({
-    errors: errorCount + experienceErrorCount,
+    errors: errorCount + experienceErrorCount + (databaseNeedsAttention ? 1 : 0),
     warnings: warningCount + fallbackCount + accountRisk,
     pending: pendingModeration
   });
@@ -642,6 +658,9 @@ function renderOperationsDashboard() {
       server.at,
       state.runtimeEvents?.at,
       state.performanceSummary?.at,
+      state.reliability?.at,
+      database.lastMirrorAt,
+      database.lastBackupAt,
       state.qwenUsage?.at,
       state.deepseekBalance?.at
     ].map((value) => new Date(value).getTime()).filter((value) => Number.isFinite(value));
@@ -674,6 +693,7 @@ function renderOperationsDashboard() {
     : "管理台会按日志、容量、治理队列综合判断。";
   els.dashboardHealthList.innerHTML = [
     dashboardRowMarkup("新用户注册", hasServerStatus ? (registration.open ? "开放" : "暂停") : "等待服务器", registration.thresholdReached ? "容量阈值触发" : "可在服务器状态中调整", !hasServerStatus ? "neutral" : registration.open ? "good" : "warning"),
+    dashboardRowMarkup("本地数据库", database.enabled === false ? "未启用" : database.ok ? "正常" : "异常", database.lastMirrorAt ? `镜像 ${formatDateTime(database.lastMirrorAt)}` : database.message || "等待镜像", database.enabled === false ? "neutral" : database.ok ? "good" : "warning"),
     dashboardRowMarkup("账号规模", `${formatNumber(summary.accountCount || 0)} 个`, `有记录 ${formatNumber(summary.activeAccountCount || 0)} 个`, "neutral"),
     dashboardRowMarkup("记录资产", `${formatNumber(summary.recordCount || 0)} 条`, `${formatNumber(summary.photoCount || 0)} 张照片`, "neutral"),
     dashboardRowMarkup("体验采样", `${formatNumber(performanceSummary.last24h || 0)} 条`, `启动 P95 ${formatMs(performanceSummary.startupP95Ms)}`, experienceErrorCount ? "warning" : "neutral")
@@ -729,7 +749,9 @@ function authEventLabel(action) {
     password_disabled: "密码已停用",
     account_moderation_updated: "账号治理",
     moderation_item_updated: "工单处理",
-    registration_gate_updated: "注册闸门"
+    registration_gate_updated: "注册闸门",
+    local_db_mirror: "数据库镜像",
+    local_db_backup: "数据库备份"
   }[action] || action;
 }
 
@@ -785,7 +807,7 @@ function moderationCategoryLabel(category) {
 }
 
 function setAdminSection(section) {
-  const normalized = ["overview", "server", "runtime", "performance", "quota", "accounts", "moderation", "security"].includes(section) ? section : "overview";
+  const normalized = ["overview", "server", "reliability", "runtime", "performance", "quota", "accounts", "moderation", "security"].includes(section) ? section : "overview";
   state.activeSection = normalized;
   if (els.shell) {
     els.shell.dataset.activeSection = normalized;
@@ -1341,6 +1363,116 @@ async function loadServerStatus() {
   }
 }
 
+function renderReliabilitySummary() {
+  if (!els.databaseMetricGrid) return;
+
+  const data = state.reliability;
+  if (!data) {
+    if (els.reliabilityUpdatedAt) els.reliabilityUpdatedAt.textContent = "等待刷新";
+    if (els.databaseStatusMeta) els.databaseStatusMeta.textContent = "-";
+    els.databaseMetricGrid.innerHTML = '<div class="empty-list">暂无数据库状态</div>';
+    if (els.databaseActionMessage) els.databaseActionMessage.textContent = "";
+    if (els.databaseBackupMeta) els.databaseBackupMeta.textContent = "-";
+    if (els.databaseBackupList) els.databaseBackupList.innerHTML = '<div class="empty-list">暂无备份</div>';
+    if (els.governanceHealthMeta) els.governanceHealthMeta.textContent = "-";
+    if (els.governanceHealthList) els.governanceHealthList.innerHTML = '<div class="empty-list">暂无治理概览</div>';
+    if (els.reliabilityPlanList) els.reliabilityPlanList.innerHTML = '<div class="empty-list">暂无技术方案</div>';
+    renderOperationsDashboard();
+    return;
+  }
+
+  const db = data.database || {};
+  const tables = db.tables || {};
+  const stateInfo = db.state || {};
+  const governance = data.governance || {};
+  const runtime = governance.runtime || {};
+  const performance = governance.performance || {};
+  const moderation = governance.moderation || {};
+  const accounts = governance.accounts || {};
+  const experienceErrors = (performance.imageErrorCount || 0)
+    + (performance.apiErrorCount || 0)
+    + (performance.modelErrorCount || 0);
+
+  els.reliabilityUpdatedAt.textContent = `更新于 ${formatDateTime(data.at)}`;
+  els.databaseStatusMeta.textContent = db.enabled === false ? "未启用" : db.ok ? "正常" : "异常";
+  els.databaseMetricGrid.innerHTML = [
+    metricMarkup("SQLite", db.available ? "可用" : "不可用", db.sqlitePath || ""),
+    metricMarkup("数据库", formatBytes(db.sizeBytes), db.dbPath || ""),
+    metricMarkup("账户镜像", formatNumber(tables.accounts ?? db.meta?.accountCount ?? 0)),
+    metricMarkup("记录镜像", formatNumber(tables.records ?? db.meta?.recordCount ?? 0)),
+    metricMarkup("最近镜像", db.lastMirrorAt ? formatDateTime(db.lastMirrorAt) : "-"),
+    metricMarkup("最近备份", db.lastBackupAt ? formatDateTime(db.lastBackupAt) : "-")
+  ].join("");
+  els.databaseActionMessage.textContent = stateInfo.lastError
+    ? `最近异常：${stateInfo.lastError}`
+    : db.message || "JSON 主存储会自动镜像到服务器本地 SQLite，用于审计、备份和恢复。";
+
+  const backups = Array.isArray(db.backups) ? db.backups : [];
+  els.databaseBackupMeta.textContent = `${formatNumber(db.backupCount || backups.length)} 个备份`;
+  els.databaseBackupList.innerHTML = backups.length
+    ? backups.slice(0, 8).map((item) => dashboardRowMarkup(
+      item.name,
+      formatBytes(item.sizeBytes),
+      formatDateTime(item.modifiedAt),
+      "neutral"
+    )).join("")
+    : '<div class="empty-list">暂无备份</div>';
+
+  els.governanceHealthMeta.textContent = `运行 ${formatNumber(runtime.last24h || 0)} · 体验 ${formatNumber(performance.last24h || 0)}`;
+  els.governanceHealthList.innerHTML = [
+    dashboardRowMarkup("运行告警", `${formatNumber((runtime.last24hWarning || 0) + (runtime.last24hError || 0))} 条`, "最近 24 小时", (runtime.last24hError || 0) ? "danger" : (runtime.last24hWarning || 0) ? "warning" : "good"),
+    dashboardRowMarkup("体验错误", `${formatNumber(experienceErrors)} 条`, "图片 / API / 模型", experienceErrors ? "warning" : "good"),
+    dashboardRowMarkup("治理队列", `${formatNumber((moderation.pending || 0) + (moderation.reviewing || 0))} 条`, `反馈 ${formatNumber(moderation.feedback || 0)} · 举报 ${formatNumber(moderation.reports || 0)}`, (moderation.pending || moderation.reviewing) ? "warning" : "good"),
+    dashboardRowMarkup("账号治理", `${formatNumber(accounts.frozen || 0)} 冻结 / ${formatNumber(accounts.banned || 0)} 封禁`, `总账户 ${formatNumber(accounts.total || 0)}`, (accounts.frozen || accounts.banned) ? "warning" : "good")
+  ].join("");
+
+  els.reliabilityPlanList.innerHTML = (data.plan || []).map((item) => dashboardRowMarkup(
+    item.title,
+    item.status === "done" ? "已落地" : item.status === "active" ? "运行中" : "关注",
+    item.detail,
+    item.status === "warning" ? "warning" : "good"
+  )).join("") || '<div class="empty-list">暂无技术方案</div>';
+
+  renderOperationsDashboard();
+}
+
+async function loadReliabilitySummary() {
+  try {
+    const data = await api("/reliability");
+    state.reliability = data;
+    renderReliabilitySummary();
+  } catch (error) {
+    if (error.status === 401) {
+      showLogin();
+      return;
+    }
+    state.reliability = null;
+    if (els.databaseMetricGrid) {
+      els.databaseMetricGrid.innerHTML = `<div class="empty-list">${escapeHtml(error.message)}</div>`;
+    }
+    renderOperationsDashboard();
+  }
+}
+
+async function forceReliabilityDatabaseAction(button, path, busyText) {
+  if (!button) return;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = busyText;
+  try {
+    const data = await api(path, { method: "POST", body: "{}" });
+    state.reliability = data;
+    renderReliabilitySummary();
+    await loadServerStatus();
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    button.textContent = originalText;
+    button.disabled = false;
+    button.blur();
+  }
+}
+
 function runtimeLevelLabel(level) {
   return {
     info: "信息",
@@ -1353,6 +1485,7 @@ function runtimeAreaLabel(area) {
   return {
     ai: "AI",
     client: "客户端",
+    database: "本地数据库",
     "face-model": "人脸模型",
     passkey: "Passkey",
     safety: "内容安全",
@@ -1979,6 +2112,7 @@ async function refreshAdminData({ fromPull = false } = {}) {
     await loadAccounts();
     await loadModerationQueue();
     await loadServerStatus();
+    await loadReliabilitySummary();
     await loadRuntimeEvents();
     await loadPerformanceSummary();
     await loadApiQuota();
@@ -2299,6 +2433,7 @@ els.loginForm.addEventListener("submit", async (event) => {
     await loadAccounts({ preserveSelection: false });
     await loadModerationQueue();
     await loadServerStatus();
+    await loadReliabilitySummary();
     await loadRuntimeEvents();
     await loadPerformanceSummary();
     await loadApiQuota();
@@ -2384,6 +2519,12 @@ els.clearRuntimeEventsButton?.addEventListener("click", () => {
 });
 els.clearPerformanceEventsButton?.addEventListener("click", () => {
   clearPerformanceEvents(els.clearPerformanceEventsButton);
+});
+els.forceDatabaseMirrorButton?.addEventListener("click", () => {
+  forceReliabilityDatabaseAction(els.forceDatabaseMirrorButton, "/reliability/database/mirror", "正在镜像");
+});
+els.forceDatabaseBackupButton?.addEventListener("click", () => {
+  forceReliabilityDatabaseAction(els.forceDatabaseBackupButton, "/reliability/database/backup", "正在备份");
 });
 els.sectionTabs.forEach((button) => {
   button.addEventListener("click", () => {
@@ -2512,6 +2653,7 @@ document.addEventListener("touchcancel", resetAdminPullRefresh, { passive: true 
 	    await loadAccounts({ preserveSelection: false });
 	    await loadModerationQueue();
 	    await loadServerStatus();
+	    await loadReliabilitySummary();
 	    await loadRuntimeEvents();
 	    await loadPerformanceSummary();
 	    await loadApiQuota();

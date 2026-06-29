@@ -86,6 +86,7 @@
           <div class="admin-nav-group">
             <span>基础设施</span>
             <button class="admin-section-tab" type="button" data-admin-section="server" data-icon="服">服务器状态</button>
+            <button class="admin-section-tab" type="button" data-admin-section="reliability" data-icon="稳">可靠性治理</button>
             <button class="admin-section-tab" type="button" data-admin-section="quota" data-icon="额">接口额度</button>
             <button class="admin-section-tab" type="button" data-admin-section="security" data-icon="审">安全审计</button>
           </div>
@@ -216,6 +217,51 @@
               <div class="server-action-row">
                 <button class="secondary-button" id="saveFoodRecognitionPriorityButton" type="button">保存优先级</button>
               </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-section-panel="reliability" aria-labelledby="reliabilityTitle">
+          <div class="admin-panel-heading">
+            <div>
+              <span>Reliability</span>
+              <h2 id="reliabilityTitle">可靠性治理</h2>
+            </div>
+            <span class="panel-meta" id="reliabilityUpdatedAt">等待刷新</span>
+          </div>
+          <div class="runtime-layout">
+            <section class="runtime-card runtime-overview-card" aria-labelledby="databaseStatusTitle">
+              <div class="records-header">
+                <h3 id="databaseStatusTitle">本地数据库</h3>
+                <span id="databaseStatusMeta">-</span>
+              </div>
+              <div class="server-metric-grid" id="databaseMetricGrid"></div>
+              <p class="server-capacity-message" id="databaseActionMessage"></p>
+              <div class="server-action-row">
+                <button class="secondary-button" id="forceDatabaseMirrorButton" type="button">立即镜像</button>
+                <button class="secondary-button" id="forceDatabaseBackupButton" type="button">立即备份</button>
+              </div>
+            </section>
+            <section class="runtime-card" aria-labelledby="databaseBackupTitle">
+              <div class="records-header">
+                <h3 id="databaseBackupTitle">备份状态</h3>
+                <span id="databaseBackupMeta">-</span>
+              </div>
+              <div class="database-backup-list dashboard-list" id="databaseBackupList"></div>
+            </section>
+            <section class="runtime-card" aria-labelledby="governanceHealthTitle">
+              <div class="records-header">
+                <h3 id="governanceHealthTitle">治理闭环</h3>
+                <span id="governanceHealthMeta">-</span>
+              </div>
+              <div class="dashboard-list" id="governanceHealthList"></div>
+            </section>
+            <section class="runtime-card" aria-labelledby="reliabilityPlanTitle">
+              <div class="records-header">
+                <h3 id="reliabilityPlanTitle">五项技术方案</h3>
+                <span>落地状态</span>
+              </div>
+              <div class="dashboard-list" id="reliabilityPlanList"></div>
             </section>
           </div>
         </section>

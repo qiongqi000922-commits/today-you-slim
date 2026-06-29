@@ -8,6 +8,12 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { createCosMediaStorage, mediaStorageConfigFromEnv } from "./lib/cos-media.mjs";
 import {
+  backupLocalDatabase,
+  localDatabaseStatus,
+  mirrorApplicationSnapshot,
+  sqliteAvailable
+} from "./lib/local-db.mjs";
+import {
   WEIGHT_PREDICTION_MODEL_VERSION,
   buildWeightPredictionInput,
   compactNativeHealthSnapshot,
@@ -47,6 +53,12 @@ const RUNTIME_EVENTS_PATH = path.join(DATA_DIR, "runtime-events.json");
 const PERFORMANCE_EVENTS_PATH = path.join(DATA_DIR, "performance-events.json");
 const WEIGHT_PREDICTIONS_PATH = path.join(DATA_DIR, "weight-predictions.json");
 const NATIVE_HEALTH_SNAPSHOTS_PATH = path.join(DATA_DIR, "native-health-snapshots.json");
+const LOCAL_DB_ENABLED = String(process.env.LOCAL_DB_ENABLED || "1").trim() !== "0";
+const LOCAL_DB_PATH = String(process.env.LOCAL_DB_PATH || path.join(DATA_DIR, "wellecho.sqlite3")).trim();
+const LOCAL_DB_BACKUP_DIR = String(process.env.LOCAL_DB_BACKUP_DIR || path.join(DATA_DIR, "backups")).trim();
+const SQLITE_BIN = String(process.env.SQLITE_BIN || "sqlite3").trim();
+const LOCAL_DB_MIRROR_DEBOUNCE_MS = positiveNumber(process.env.LOCAL_DB_MIRROR_DEBOUNCE_MS, 2500);
+const LOCAL_DB_BACKUP_INTERVAL_MS = positiveNumber(process.env.LOCAL_DB_BACKUP_INTERVAL_MS, 6 * 60 * 60 * 1000);
 const BASE_PATH = normalizeBasePath(process.env.BASE_PATH || "");
 const ADMIN_PATH = normalizeAdminPath(process.env.ADMIN_PATH || "/admin");
 const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || "admin").trim();
@@ -138,8 +150,8 @@ const MAX_FEEDBACK_IMAGE_BYTES = positiveNumber(process.env.MAX_FEEDBACK_IMAGE_B
 const MAX_FEEDBACK_BODY_BYTES = positiveNumber(process.env.MAX_FEEDBACK_BODY_BYTES, Math.floor(13.5 * 1024 * 1024));
 const CODE_PATTERN = /^[A-Za-z0-9_-]{6,32}$/;
 const RESOURCE_ID_PATTERN = /^[A-Za-z0-9_-]{6,80}$/;
-const AGREEMENT_VERSION = "2026-06-25";
-const PRIVACY_POLICY_VERSION = "2026-06-25";
+const AGREEMENT_VERSION = "2026-06-29";
+const PRIVACY_POLICY_VERSION = "2026-06-29";
 const PRIVACY_AUDIT_SALT = String(process.env.PRIVACY_AUDIT_SALT || ADMIN_PASSWORD || "privacy-audit-development-salt");
 const QQ_APP_ID = String(process.env.QQ_APP_ID || process.env.QQ_CLIENT_ID || "").trim();
 const QQ_APP_KEY = String(process.env.QQ_APP_KEY || process.env.QQ_CLIENT_SECRET || "").trim();
@@ -265,10 +277,30 @@ const rateLimitPenalties = new Map();
 const weightPredictionQueue = [];
 const weightPredictionQueuedCodes = new Set();
 let weightPredictionActiveWorkers = 0;
+let storageInitialized = false;
+let localDatabaseState = {
+  enabled: LOCAL_DB_ENABLED,
+  available: false,
+  lastMirrorAt: null,
+  lastBackupAt: null,
+  lastError: null,
+  lastErrorAt: null,
+  pending: false,
+  timer: null
+};
+let localDatabaseBackupTimer = null;
+let localDatabaseInternalWrite = false;
 let baiduDishTokenCache = { token: "", expiresAt: 0 };
 let appleJwksCache = { keys: [], expiresAt: 0 };
 
 await initializeStorage();
+if (LOCAL_DB_ENABLED) {
+  const localDatabaseStartupTimer = setTimeout(() => {
+    void refreshLocalDatabaseMirror("startup");
+    scheduleLocalDatabaseBackup();
+  }, 0);
+  localDatabaseStartupTimer.unref?.();
+}
 
 async function initializeStorage() {
   await fsp.mkdir(DATA_DIR, { recursive: true });
@@ -340,6 +372,7 @@ async function initializeStorage() {
   await writeJson(PERFORMANCE_EVENTS_PATH, performanceEvents);
   await writeJson(WEIGHT_PREDICTIONS_PATH, weightPredictions);
   await writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots);
+  storageInitialized = true;
 }
 
 async function readJson(filePath, fallback) {
@@ -367,7 +400,354 @@ async function writeJson(filePath, value) {
     if (jsonWriteQueues.get(filePath) === next) {
       jsonWriteQueues.delete(filePath);
     }
+    if (storageInitialized && LOCAL_DB_ENABLED && !localDatabaseInternalWrite && isLocalDatabaseMirroredPath(filePath)) {
+      scheduleLocalDatabaseMirror(path.basename(filePath));
+    }
   }
+}
+
+const LOCAL_DB_MIRRORED_PATHS = new Set([
+  RECORDS_PATH,
+  ACCESS_CODES_PATH,
+  DELETED_ACCESS_CODES_PATH,
+  COMMUNITY_PATH,
+  COMMUNITY_INTERACTIONS_PATH,
+  PRIVACY_CONSENTS_PATH,
+  QQ_ACCOUNTS_PATH,
+  APPLE_ACCOUNTS_PATH,
+  LOGIN_AUDIT_PATH,
+  ADMIN_AUTH_EVENTS_PATH,
+  ADMIN_PASSKEYS_PATH,
+  USER_PASSKEYS_PATH,
+  TEXT_RISK_PATH,
+  ACCOUNT_GOVERNANCE_PATH,
+  MODERATION_QUEUE_PATH,
+  CAPACITY_CONTROL_PATH,
+  FOOD_NUTRITION_LIBRARY_PATH,
+  AI_SUMMARY_CACHE_PATH,
+  APP_CONFIG_PATH,
+  QWEN_USAGE_PATH,
+  RUNTIME_EVENTS_PATH,
+  PERFORMANCE_EVENTS_PATH,
+  WEIGHT_PREDICTIONS_PATH,
+  NATIVE_HEALTH_SNAPSHOTS_PATH
+].map((filePath) => path.resolve(filePath)));
+
+function isLocalDatabaseMirroredPath(filePath) {
+  return LOCAL_DB_MIRRORED_PATHS.has(path.resolve(filePath));
+}
+
+function localDatabaseDatasets() {
+  return [
+    { key: "records", category: "core", filePath: RECORDS_PATH, value: records },
+    { key: "accessCodes", category: "security", filePath: ACCESS_CODES_PATH, value: customAccessCodes },
+    { key: "deletedAccessCodes", category: "security", filePath: DELETED_ACCESS_CODES_PATH, value: deletedAccessCodes },
+    { key: "communityPreferences", category: "community", filePath: COMMUNITY_PATH, value: communityPreferences },
+    { key: "communityInteractions", category: "community", filePath: COMMUNITY_INTERACTIONS_PATH, value: communityInteractions },
+    { key: "privacyConsents", category: "compliance", filePath: PRIVACY_CONSENTS_PATH, value: privacyConsents },
+    { key: "qqAccounts", category: "identity", filePath: QQ_ACCOUNTS_PATH, value: qqAccounts },
+    { key: "appleAccounts", category: "identity", filePath: APPLE_ACCOUNTS_PATH, value: appleAccounts },
+    { key: "loginAuditEvents", category: "security", filePath: LOGIN_AUDIT_PATH, value: loginAuditEvents },
+    { key: "adminAuthEvents", category: "security", filePath: ADMIN_AUTH_EVENTS_PATH, value: adminAuthEvents },
+    { key: "adminPasskeys", category: "security", filePath: ADMIN_PASSKEYS_PATH, value: adminPasskeys },
+    { key: "userPasskeys", category: "security", filePath: USER_PASSKEYS_PATH, value: userPasskeys },
+    { key: "textRiskState", category: "safety", filePath: TEXT_RISK_PATH, value: textRiskState },
+    { key: "accountGovernance", category: "governance", filePath: ACCOUNT_GOVERNANCE_PATH, value: accountGovernance },
+    { key: "moderationQueue", category: "governance", filePath: MODERATION_QUEUE_PATH, value: moderationQueue },
+    { key: "capacityControl", category: "operations", filePath: CAPACITY_CONTROL_PATH, value: capacityControl },
+    { key: "foodNutritionLibrary", category: "nutrition", filePath: FOOD_NUTRITION_LIBRARY_PATH, value: foodNutritionLibrary },
+    { key: "aiSummaryCache", category: "ai", filePath: AI_SUMMARY_CACHE_PATH, value: aiSummaryCache },
+    { key: "appConfig", category: "config", filePath: APP_CONFIG_PATH, value: appConfig },
+    { key: "qwenUsage", category: "ai", filePath: QWEN_USAGE_PATH, value: qwenUsage },
+    { key: "runtimeEvents", category: "observability", filePath: RUNTIME_EVENTS_PATH, value: runtimeEvents },
+    { key: "performanceEvents", category: "observability", filePath: PERFORMANCE_EVENTS_PATH, value: performanceEvents },
+    { key: "weightPredictions", category: "prediction", filePath: WEIGHT_PREDICTIONS_PATH, value: weightPredictions },
+    { key: "nativeHealthSnapshots", category: "health", filePath: NATIVE_HEALTH_SNAPSHOTS_PATH, value: nativeHealthSnapshots }
+  ];
+}
+
+function localDatabaseAccountRows() {
+  return allAccountCodes().map((code) => {
+    const summary = adminAccountSummary(code);
+    return {
+      code,
+      displayName: summary.qqNickname || summary.appleNickname || summary.displayCode || code,
+      provider: summary.source,
+      recordCount: summary.recordCount || 0,
+      photoCount: summary.photoCount || 0,
+      latestRecordAt: summary.latestRecordAt || null,
+      latestWeight: summary.latestWeight,
+      privacyMode: summary.privacy?.mode || "",
+      moderationStatus: summary.moderation?.status || "active",
+      payload: summary
+    };
+  });
+}
+
+function localDatabaseRecordRows() {
+  const rows = [];
+  for (const [code, list] of Object.entries(records || {})) {
+    (Array.isArray(list) ? list : []).forEach((record, index) => {
+      const type = recordType(record);
+      const foodItems = type === "food"
+        ? normalizeFoodItems(record.foods, { requireCalorie: false, requirePositivePortion: false })
+        : [];
+      const nutrition = type === "food" ? sumFoodNutrition(foodItems, "nutrition") : {};
+      const calorie = type === "food"
+        ? foodItems.reduce((sum, item) => Number.isFinite(item.calorie) ? sum + item.calorie : sum, 0)
+        : null;
+      const recordId = String(record.id || crypto
+        .createHash("sha1")
+        .update(`${code}:${index}:${record.timestamp || ""}`)
+        .digest("hex")).slice(0, 80);
+      rows.push({
+        code,
+        recordId,
+        type,
+        timestamp: record.timestamp || null,
+        weight: Number.isFinite(record.weight) ? record.weight : null,
+        mood: record.mood ? String(record.mood).replace(/[\r\n\t]+/g, " ").slice(0, 160) : "",
+        photoCount: recordPhotoCount(record),
+        calorie: Number.isFinite(calorie) ? Math.round(calorie * 10) / 10 : null,
+        protein: Number.isFinite(nutrition.protein) ? nutrition.protein : null,
+        carbs: Number.isFinite(nutrition.carbs) ? nutrition.carbs : null,
+        fat: Number.isFinite(nutrition.fat) ? nutrition.fat : null,
+        payload: record
+      });
+    });
+  }
+  return rows;
+}
+
+async function recordLocalDatabaseRuntimeEvent(options) {
+  localDatabaseInternalWrite = true;
+  try {
+    await recordRuntimeEvent(null, options);
+  } catch {
+    // Database observability must never block the main application path.
+  } finally {
+    localDatabaseInternalWrite = false;
+  }
+}
+
+async function refreshLocalDatabaseMirror(reason = "manual") {
+  if (!LOCAL_DB_ENABLED) {
+    return { ok: true, enabled: false, message: "本地数据库镜像未启用。" };
+  }
+  localDatabaseState.pending = true;
+  try {
+    if (!sqliteAvailable(SQLITE_BIN)) {
+      const message = "sqlite3 command is not available.";
+      localDatabaseState = {
+        ...localDatabaseState,
+        available: false,
+        lastError: message,
+        lastErrorAt: new Date().toISOString(),
+        pending: false
+      };
+      await recordLocalDatabaseRuntimeEvent({
+        level: "warning",
+        area: "database",
+        event: "local_db_unavailable",
+        message: "本地 sqlite3 不可用，数据库镜像已跳过。",
+        details: { sqlitePath: SQLITE_BIN, reason }
+      });
+      return { ok: false, enabled: true, available: false, message };
+    }
+
+    const result = await mirrorApplicationSnapshot({
+      dbPath: LOCAL_DB_PATH,
+      sqlitePath: SQLITE_BIN,
+      backupDir: LOCAL_DB_BACKUP_DIR,
+      datasets: localDatabaseDatasets(),
+      accounts: localDatabaseAccountRows(),
+      records: localDatabaseRecordRows(),
+      meta: {
+        reason,
+        nodeVersion: process.version,
+        agreementVersion: AGREEMENT_VERSION,
+        privacyPolicyVersion: PRIVACY_POLICY_VERSION
+      }
+    });
+    localDatabaseState = {
+      ...localDatabaseState,
+      available: true,
+      lastMirrorAt: result.at,
+      lastError: null,
+      lastErrorAt: null,
+      pending: false
+    };
+    return result;
+  } catch (error) {
+    localDatabaseState = {
+      ...localDatabaseState,
+      available: false,
+      lastError: error.message,
+      lastErrorAt: new Date().toISOString(),
+      pending: false
+    };
+    await recordLocalDatabaseRuntimeEvent({
+      level: "error",
+      area: "database",
+      event: "local_db_mirror_failed",
+      message: "本地数据库镜像失败。",
+      details: { reason, error: error.message }
+    });
+    return { ok: false, enabled: true, available: false, message: error.message };
+  }
+}
+
+function scheduleLocalDatabaseMirror(reason = "json-write") {
+  if (!LOCAL_DB_ENABLED || !storageInitialized) return;
+  localDatabaseState.pending = true;
+  if (localDatabaseState.timer) {
+    clearTimeout(localDatabaseState.timer);
+  }
+  localDatabaseState.timer = setTimeout(() => {
+    localDatabaseState.timer = null;
+    void refreshLocalDatabaseMirror(reason);
+  }, LOCAL_DB_MIRROR_DEBOUNCE_MS);
+  localDatabaseState.timer.unref?.();
+}
+
+function scheduleLocalDatabaseBackup() {
+  if (!LOCAL_DB_ENABLED || localDatabaseBackupTimer) return;
+  localDatabaseBackupTimer = setInterval(() => {
+    void createLocalDatabaseBackup("scheduled");
+  }, LOCAL_DB_BACKUP_INTERVAL_MS);
+  localDatabaseBackupTimer.unref?.();
+}
+
+async function createLocalDatabaseBackup(reason = "manual") {
+  if (!LOCAL_DB_ENABLED) {
+    return { ok: true, enabled: false, message: "本地数据库镜像未启用。" };
+  }
+  try {
+    const result = await backupLocalDatabase({
+      dbPath: LOCAL_DB_PATH,
+      backupDir: LOCAL_DB_BACKUP_DIR,
+      sqlitePath: SQLITE_BIN,
+      label: reason
+    });
+    localDatabaseState = {
+      ...localDatabaseState,
+      available: true,
+      lastBackupAt: result.at,
+      lastError: null,
+      lastErrorAt: null
+    };
+    return result;
+  } catch (error) {
+    localDatabaseState = {
+      ...localDatabaseState,
+      lastError: error.message,
+      lastErrorAt: new Date().toISOString()
+    };
+    await recordLocalDatabaseRuntimeEvent({
+      level: "error",
+      area: "database",
+      event: "local_db_backup_failed",
+      message: "本地数据库备份失败。",
+      details: { reason, error: error.message }
+    });
+    return { ok: false, enabled: true, message: error.message };
+  }
+}
+
+async function localDatabaseAdminSummary() {
+  if (!LOCAL_DB_ENABLED) {
+    return { ok: true, enabled: false, message: "本地数据库镜像未启用。" };
+  }
+  try {
+    const status = await localDatabaseStatus({
+      dbPath: LOCAL_DB_PATH,
+      backupDir: LOCAL_DB_BACKUP_DIR,
+      sqlitePath: SQLITE_BIN
+    });
+    return {
+      ...status,
+      state: {
+        pending: localDatabaseState.pending,
+        lastError: localDatabaseState.lastError,
+        lastErrorAt: localDatabaseState.lastErrorAt
+      },
+      mirrorDebounceMs: LOCAL_DB_MIRROR_DEBOUNCE_MS,
+      backupIntervalMs: LOCAL_DB_BACKUP_INTERVAL_MS
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      enabled: true,
+      available: false,
+      dbPath: LOCAL_DB_PATH,
+      backupDir: LOCAL_DB_BACKUP_DIR,
+      sqlitePath: SQLITE_BIN,
+      message: error.message,
+      state: {
+        pending: localDatabaseState.pending,
+        lastError: localDatabaseState.lastError || error.message,
+        lastErrorAt: localDatabaseState.lastErrorAt || new Date().toISOString()
+      }
+    };
+  }
+}
+
+async function reliabilityGovernanceSummary() {
+  const database = await localDatabaseAdminSummary();
+  const runtime = runtimeEventsSummary();
+  const performance = performanceEventsSummary();
+  const moderation = moderationQueueSummary();
+  const frozen = Object.values(accountGovernance.accounts || {}).filter((item) => item.status === "frozen").length;
+  const banned = Object.values(accountGovernance.accounts || {}).filter((item) => item.status === "banned").length;
+  return {
+    ok: true,
+    at: new Date().toISOString(),
+    database,
+    governance: {
+      runtime: runtime.summary,
+      performance: performance.summary,
+      moderation,
+      accounts: {
+        total: allAccountCodes().length,
+        frozen,
+        banned
+      }
+    },
+    plan: [
+      {
+        key: "database",
+        title: "本地数据库化与备份",
+        status: database.ok ? "active" : "warning",
+        detail: database.ok
+          ? "JSON 主存储已异步镜像到服务器本地 SQLite，并按周期保留备份。"
+          : database.message || "等待本地 SQLite 恢复。"
+      },
+      {
+        key: "compliance",
+        title: "合规与数据生命周期",
+        status: "active",
+        detail: `协议版本 ${AGREEMENT_VERSION}，保留签署、登录、安全审计和注销证据链。`
+      },
+      {
+        key: "observability",
+        title: "性能与运行观测",
+        status: "active",
+        detail: `近 24 小时运行事件 ${runtime.summary.last24h || 0} 条，体验事件 ${performance.summary.last24h || 0} 条。`
+      },
+      {
+        key: "architecture",
+        title: "模块化与降级策略",
+        status: "active",
+        detail: "数据库、AI、媒体、预测和管理台监控均以独立模块接入，非核心异常会告警并降级。"
+      },
+      {
+        key: "governance",
+        title: "社区治理与风控",
+        status: moderation.pending || moderation.reviewing ? "warning" : "active",
+        detail: `待处理 ${moderation.pending || 0}，处理中 ${moderation.reviewing || 0}，冻结 ${frozen}，封禁 ${banned}。`
+      }
+    ]
+  };
 }
 
 function baseSecurityHeaders(req, { admin = false, html = false } = {}) {
@@ -7089,6 +7469,7 @@ async function assertRegistrationOpen(req) {
 
 async function serverStatusSummary() {
   const capacity = await capacityStatus();
+  const database = await localDatabaseAdminSummary();
   const memory = {
     total: os.totalmem(),
     free: os.freemem(),
@@ -7112,6 +7493,7 @@ async function serverStatusSummary() {
     },
     memory,
     capacity,
+    database,
     appConfig: publicAppConfig()
   };
 }
@@ -9026,6 +9408,35 @@ async function handleAdminApi(req, res, pathname) {
   if (req.method === "GET" && relativePath === "/api/server-status") {
     try {
       return sendJson(res, 200, await serverStatusSummary());
+    } catch (error) {
+      return sendError(res, error.statusCode || 500, error.message);
+    }
+  }
+
+  if (req.method === "GET" && relativePath === "/api/reliability") {
+    try {
+      return sendJson(res, 200, await reliabilityGovernanceSummary());
+    } catch (error) {
+      return sendError(res, error.statusCode || 500, error.message);
+    }
+  }
+
+  if (req.method === "POST" && relativePath === "/api/reliability/database/mirror") {
+    try {
+      await recordAdminAuthEvent(req, "local_db_mirror", session.username, "manual");
+      await refreshLocalDatabaseMirror("admin");
+      return sendJson(res, 200, await reliabilityGovernanceSummary());
+    } catch (error) {
+      return sendError(res, error.statusCode || 500, error.message);
+    }
+  }
+
+  if (req.method === "POST" && relativePath === "/api/reliability/database/backup") {
+    try {
+      await recordAdminAuthEvent(req, "local_db_backup", session.username, "manual");
+      await refreshLocalDatabaseMirror("pre-backup");
+      await createLocalDatabaseBackup("admin");
+      return sendJson(res, 200, await reliabilityGovernanceSummary());
     } catch (error) {
       return sendError(res, error.statusCode || 500, error.message);
     }
