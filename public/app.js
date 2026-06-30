@@ -277,7 +277,7 @@ const state = {
   accountBindingLoading: "",
   profileSaving: false,
   profileEditing: false,
-  profileDraft: { gender: "", birthday: "", year: null, month: null, day: null },
+  profileDraft: { displayName: "", avatarDataUrl: "", avatarPreviewUrl: "", removeAvatar: false, gender: "", birthday: "", year: null, month: null, day: null },
   birthdayPickerOpen: false,
   moodAiContext: null,
   environmentContext: null,
@@ -318,10 +318,30 @@ const REPLAY_BUILD_VERSION = "20260626-cdnreplay1";
 const SOFT_OVERLAY_TRANSITION_MS = 190;
 const API_TIMEOUT_MS = 70000;
 const MAX_CLIENT_PHOTO_BYTES = 10 * 1024 * 1024;
+const PROFILE_DISPLAY_NAME_MAX_LENGTH = 16;
+const PROFILE_AVATAR_MAX_BYTES = Math.floor(1.7 * 1024 * 1024);
+const PROFILE_AVATAR_MAX_DIMENSION = 720;
+const PROFILE_AVATAR_QUALITY = 0.84;
 const FEEDBACK_IMAGE_LIMIT = 6;
 const FEEDBACK_IMAGE_MAX_BYTES = Math.floor(1.6 * 1024 * 1024);
 const FEEDBACK_IMAGE_MAX_DIMENSION = 1280;
 const FEEDBACK_IMAGE_QUALITY = 0.82;
+const PROFILE_DISPLAY_NAME_RESERVED_TERMS = [
+  "admin",
+  "administrator",
+  "root",
+  "system",
+  "official",
+  "support",
+  "service",
+  "wellecho",
+  "well echo",
+  "今天你瘦了吗",
+  "官方",
+  "管理员",
+  "客服",
+  "系统"
+];
 const MAX_FOOD_PHOTOS_PER_RECORD = 6;
 const MAX_FOOD_ITEMS_PER_RECORD = 12;
 const AI_ENVIRONMENT_CACHE_MS = 10 * 60 * 1000;
@@ -993,6 +1013,13 @@ const els = {
   bindQqAccountButton: document.querySelector("#bindQqAccountButton"),
   accountProfileReadonly: document.querySelector("#accountProfileReadonly"),
   accountProfileForm: document.querySelector("#accountProfileForm"),
+  profileDisplayNameText: document.querySelector("#profileDisplayNameText"),
+  profileDisplayNameInput: document.querySelector("#profileDisplayNameInput"),
+  accountProfileAvatarPreview: document.querySelector("#accountProfileAvatarPreview"),
+  profileAvatarHint: document.querySelector("#profileAvatarHint"),
+  changeProfileAvatarButton: document.querySelector("#changeProfileAvatarButton"),
+  removeProfileAvatarButton: document.querySelector("#removeProfileAvatarButton"),
+  profileAvatarInput: document.querySelector("#profileAvatarInput"),
   profileGenderText: document.querySelector("#profileGenderText"),
   profileBirthdayText: document.querySelector("#profileBirthdayText"),
   profileGenderButtons: [...document.querySelectorAll("[data-profile-gender]")],
@@ -2598,9 +2625,61 @@ function profileBirthdayFromParts(parts = state.profileDraft) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function sanitizeProfileDisplayNameDraft(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function profileDisplayNamePolicyKey(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/[\s_.·-]+/g, "")
+    .toLowerCase();
+}
+
+function validateProfileDisplayNameDraft(value) {
+  const displayName = sanitizeProfileDisplayNameDraft(value);
+  const length = Array.from(displayName).length;
+  if (!displayName) return { displayName: "", error: "请输入昵称。" };
+  if (length < 2 || length > PROFILE_DISPLAY_NAME_MAX_LENGTH) {
+    return { displayName: "", error: "昵称需为 2-16 个字符。" };
+  }
+  if (/https?:\/\//i.test(displayName) || /www\./i.test(displayName)) {
+    return { displayName: "", error: "昵称不能包含网址。" };
+  }
+  if (/[<>()[\]{}'"`~^=+\\|/:;，。！？、]/u.test(displayName)) {
+    return { displayName: "", error: "昵称不能包含特殊符号。" };
+  }
+  if (!/^[\p{Script=Han}\p{L}\p{N}_·.\- ]+$/u.test(displayName)) {
+    return { displayName: "", error: "昵称仅支持中英文、数字、空格和少量连接符。" };
+  }
+  const policyKey = profileDisplayNamePolicyKey(displayName);
+  if (PROFILE_DISPLAY_NAME_RESERVED_TERMS.some((term) => policyKey.includes(profileDisplayNamePolicyKey(term)))) {
+    return { displayName: "", error: "昵称不能使用官方、系统或客服相关保留词。" };
+  }
+  return { displayName, error: "" };
+}
+
+function inheritedProfileAvatarUrl(profile = state.profile) {
+  return profile?.qq?.avatarUrl || "";
+}
+
+function profileDraftAvatarUrl(profile = state.profile) {
+  if (state.profileDraft.avatarPreviewUrl) return state.profileDraft.avatarPreviewUrl;
+  if (state.profileDraft.removeAvatar) return inheritedProfileAvatarUrl(profile);
+  return safeAvatarUrl(profile);
+}
+
 function profileDraftFromProfile() {
   const parsedBirthday = parseProfileBirthday(state.profile?.demographics?.birthday || "");
   return {
+    displayName: state.profile?.customProfile?.displayName || profileDisplayName(state.profile),
+    avatarDataUrl: "",
+    avatarPreviewUrl: "",
+    removeAvatar: false,
     gender: state.profile?.demographics?.gender || "",
     birthday: parsedBirthday.birthday,
     year: parsedBirthday.year,
@@ -2613,8 +2692,8 @@ function profileSummaryText(profile = state.profile) {
   const demographics = profile?.demographics || {};
   const gender = genderLabel(demographics.gender);
   const birthday = birthdayLabel(demographics.birthday);
-  if (gender === "未设置" && birthday === "未设置") return "尚未填写性别和生日。";
-  return `性别 ${gender} · 生日 ${birthday}`;
+  const hasCustomAvatar = Boolean(profile?.customProfile?.hasAvatar);
+  return `${profileDisplayName(profile)} · ${hasCustomAvatar ? "自定义头像" : "默认头像"} · 性别 ${gender} · 生日 ${birthday}`;
 }
 
 function birthdayPickerButton(value, label, type, selected) {
@@ -2686,9 +2765,11 @@ function renderAccountProfilePanel() {
   const demographics = state.profile.demographics || {};
   const editing = Boolean(state.profileEditing);
   const hasIdentity = Boolean(state.profile.qq || state.profile.apple);
+  const customProfile = state.profile.customProfile || {};
   renderAvatar(els.accountProfileAvatar, state.profile);
   els.accountProfileName.textContent = profileDisplayName(state.profile);
   els.accountProfileBinding.textContent = qqBindingLabel(state.profile);
+  els.profileDisplayNameText.textContent = profileDisplayName(state.profile);
   els.profileGenderText.textContent = genderLabel(demographics.gender);
   els.profileBirthdayText.textContent = birthdayLabel(demographics.birthday);
   els.accountProfileSummary.textContent = profileSummaryText(state.profile);
@@ -2702,6 +2783,32 @@ function renderAccountProfilePanel() {
   els.editProfileButton.disabled = !hasIdentity || state.profileSaving;
   els.cancelProfileEditButton.disabled = state.profileSaving;
   els.saveProfileButton.disabled = state.profileSaving || !hasIdentity;
+
+  if (els.profileDisplayNameInput) {
+    els.profileDisplayNameInput.value = state.profileDraft.displayName || "";
+    els.profileDisplayNameInput.disabled = !editing || state.profileSaving;
+  }
+  if (els.accountProfileAvatarPreview) {
+    renderAvatarElement(els.accountProfileAvatarPreview, profileDraftAvatarUrl(state.profile), profileInitial({
+      ...state.profile,
+      displayName: state.profileDraft.displayName || profileDisplayName(state.profile)
+    }));
+  }
+  if (els.profileAvatarHint) {
+    els.profileAvatarHint.textContent = state.profileDraft.avatarDataUrl
+      ? "已选择新头像，保存后生效。"
+      : state.profileDraft.removeAvatar
+        ? "保存后会移除自定义头像，并回到绑定头像或默认头像。"
+        : customProfile.hasAvatar
+          ? "当前使用自定义头像，可更换或移除。"
+          : "点击更换头像，支持 JPG、PNG、WebP。";
+  }
+  if (els.changeProfileAvatarButton) {
+    els.changeProfileAvatarButton.disabled = !editing || state.profileSaving;
+  }
+  if (els.removeProfileAvatarButton) {
+    els.removeProfileAvatarButton.disabled = !editing || state.profileSaving || (!customProfile.hasAvatar && !state.profileDraft.avatarDataUrl);
+  }
 
   for (const button of els.profileGenderButtons) {
     const active = button.dataset.profileGender === (state.profileDraft.gender || "");
@@ -2751,6 +2858,7 @@ function startProfileEdit() {
   state.profileEditing = true;
   state.profileDraft = profileDraftFromProfile();
   state.birthdayPickerOpen = false;
+  if (els.profileAvatarInput) els.profileAvatarInput.value = "";
   setProfileSettingsMessage("", "");
   renderSettings();
 }
@@ -2759,8 +2867,36 @@ function cancelProfileEdit() {
   state.profileEditing = false;
   state.profileDraft = profileDraftFromProfile();
   state.birthdayPickerOpen = false;
+  if (els.profileAvatarInput) els.profileAvatarInput.value = "";
   setProfileSettingsMessage("", "");
   renderSettings();
+}
+
+async function handleProfileAvatarSelection(file) {
+  if (!state.profileEditing || state.profileSaving) return;
+  setProfileSettingsMessage("正在处理头像...", "");
+  try {
+    const dataUrl = await normalizeProfileAvatarFile(file);
+    state.profileDraft.avatarDataUrl = dataUrl;
+    state.profileDraft.avatarPreviewUrl = dataUrl;
+    state.profileDraft.removeAvatar = false;
+    setProfileSettingsMessage("头像已准备好，保存后生效。", "success");
+  } catch (error) {
+    setProfileSettingsMessage(error.message || "头像处理失败。", "error");
+  } finally {
+    if (els.profileAvatarInput) els.profileAvatarInput.value = "";
+    renderAccountProfilePanel();
+  }
+}
+
+function removeProfileAvatarDraft() {
+  if (!state.profileEditing || state.profileSaving) return;
+  state.profileDraft.avatarDataUrl = "";
+  state.profileDraft.avatarPreviewUrl = "";
+  state.profileDraft.removeAvatar = true;
+  if (els.profileAvatarInput) els.profileAvatarInput.value = "";
+  setProfileSettingsMessage("保存后会移除当前自定义头像。", "");
+  renderAccountProfilePanel();
 }
 
 function renderPrivacyHighlights(items) {
@@ -2936,7 +3072,7 @@ function showLogin() {
   state.accountBindingLoading = "";
   state.profileSaving = false;
   state.profileEditing = false;
-  state.profileDraft = { gender: "", birthday: "", year: null, month: null, day: null };
+  state.profileDraft = { displayName: "", avatarDataUrl: "", avatarPreviewUrl: "", removeAvatar: false, gender: "", birthday: "", year: null, month: null, day: null };
   state.birthdayPickerOpen = false;
   state.privacyConsentStep = "full";
 }
@@ -3528,6 +3664,12 @@ function renderSettings() {
 
 async function saveProfileSettings() {
   if ((!state.profile?.qq && !state.profile?.apple) || state.profileSaving) return;
+  const nameResult = validateProfileDisplayNameDraft(state.profileDraft.displayName);
+  if (nameResult.error) {
+    setProfileSettingsMessage(nameResult.error, "error");
+    els.profileDisplayNameInput?.focus();
+    return;
+  }
   const gender = state.profileDraft.gender || "";
   const birthday = state.profileDraft.birthday || "";
   state.profileSaving = true;
@@ -3537,6 +3679,9 @@ async function saveProfileSettings() {
     const data = await api("/api/profile", {
       method: "PATCH",
       body: JSON.stringify({
+        displayName: nameResult.displayName,
+        avatarDataUrl: state.profileDraft.avatarDataUrl || "",
+        removeAvatar: Boolean(state.profileDraft.removeAvatar),
         gender,
         birthday
       })
@@ -3545,6 +3690,12 @@ async function saveProfileSettings() {
     state.profileEditing = false;
     state.birthdayPickerOpen = false;
     state.profileDraft = profileDraftFromProfile();
+    if (els.profileAvatarInput) els.profileAvatarInput.value = "";
+    renderProfileIdentity(state.profile);
+    if (state.community) {
+      state.community = await api("/api/community").catch(() => state.community);
+      renderCommunity();
+    }
     setProfileSettingsMessage("个人资料已保存。", "success");
   } catch (error) {
     setProfileSettingsMessage(error.message || "个人资料保存失败。", "error");
@@ -4953,6 +5104,51 @@ async function compressFeedbackImage(dataUrl) {
     }
   }
   return dataUrl;
+}
+
+function compressProfileAvatarCanvasToDataUrl(canvas) {
+  let quality = PROFILE_AVATAR_QUALITY;
+  let dataUrl = canvas.toDataURL("image/jpeg", quality);
+  while (dataUrlByteLength(dataUrl) > PROFILE_AVATAR_MAX_BYTES && quality > 0.5) {
+    quality = Math.max(0.5, quality - 0.08);
+    dataUrl = canvas.toDataURL("image/jpeg", quality);
+  }
+  return dataUrl;
+}
+
+async function normalizeProfileAvatarFile(file) {
+  if (!file || !["image/jpeg", "image/png", "image/webp"].includes(String(file.type || "").toLowerCase())) {
+    throw new Error("请选择 JPG、PNG 或 WebP 图片。");
+  }
+  if (file.size > MAX_CLIENT_PHOTO_BYTES) {
+    throw new Error("头像图片太大，请换一张小于 10MB 的图片。");
+  }
+  const rawDataUrl = await readFileAsDataUrl(file);
+  const image = await loadDataUrlImage(rawDataUrl);
+  let width = image.naturalWidth || image.width;
+  let height = image.naturalHeight || image.height;
+  if (!width || !height) throw new Error("头像尺寸不正确。");
+  const scale = Math.min(1, PROFILE_AVATAR_MAX_DIMENSION / Math.max(width, height));
+  width = Math.max(1, Math.round(width * scale));
+  height = Math.max(1, Math.round(height * scale));
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * (0.88 ** attempt)));
+    canvas.height = Math.max(1, Math.round(height * (0.88 ** attempt)));
+    const context = canvas.getContext("2d", { alpha: false });
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const dataUrl = compressProfileAvatarCanvasToDataUrl(canvas);
+    if (dataUrlByteLength(dataUrl) <= PROFILE_AVATAR_MAX_BYTES || attempt === 3) {
+      if (dataUrlByteLength(dataUrl) > PROFILE_AVATAR_MAX_BYTES) {
+        throw new Error("头像压缩后仍然过大，请换一张更小的图片。");
+      }
+      return dataUrl;
+    }
+  }
+  throw new Error("头像处理失败，请重新选择。");
 }
 
 async function normalizeFeedbackImageFile(file) {
@@ -9087,6 +9283,25 @@ els.syncQqProfileButton?.addEventListener("click", startQqProfileSync);
 els.editProfileButton?.addEventListener("click", startProfileEdit);
 els.cancelProfileEditButton?.addEventListener("click", cancelProfileEdit);
 els.saveProfileButton?.addEventListener("click", saveProfileSettings);
+els.profileDisplayNameInput?.addEventListener("input", () => {
+  if (!state.profileEditing || state.profileSaving) return;
+  state.profileDraft.displayName = sanitizeProfileDisplayNameDraft(els.profileDisplayNameInput.value);
+  if (els.accountProfileAvatarPreview) {
+    renderAvatarElement(els.accountProfileAvatarPreview, profileDraftAvatarUrl(state.profile), profileInitial({
+      ...state.profile,
+      displayName: state.profileDraft.displayName || profileDisplayName(state.profile)
+    }));
+  }
+});
+els.changeProfileAvatarButton?.addEventListener("click", () => {
+  if (!state.profileEditing || state.profileSaving) return;
+  els.profileAvatarInput?.click();
+});
+els.profileAvatarInput?.addEventListener("change", () => {
+  const [file] = els.profileAvatarInput.files || [];
+  if (file) handleProfileAvatarSelection(file);
+});
+els.removeProfileAvatarButton?.addEventListener("click", removeProfileAvatarDraft);
 for (const button of els.profileGenderButtons) {
   button.addEventListener("click", () => {
     if (!state.profileEditing || state.profileSaving) return;

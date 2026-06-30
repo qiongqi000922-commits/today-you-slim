@@ -325,6 +325,10 @@
 
               <div class="account-profile-readonly" id="accountProfileReadonly">
                 <span>
+                  <small>公开昵称</small>
+                  <strong id="profileDisplayNameText">未设置</strong>
+                </span>
+                <span>
                   <small>性别</small>
                   <strong id="profileGenderText">未设置</strong>
                 </span>
@@ -335,6 +339,25 @@
               </div>
 
               <div class="account-profile-form hidden" id="accountProfileForm">
+                <div class="account-profile-avatar-editor">
+                  <span class="settings-account-avatar profile-avatar-preview" id="accountProfileAvatarPreview" aria-hidden="true"></span>
+                  <div class="profile-avatar-controls">
+                    <strong>头像</strong>
+                    <small id="profileAvatarHint">点击更换头像，支持 JPG、PNG、WebP。</small>
+                    <div class="profile-avatar-actions">
+                      <button class="secondary-button" id="changeProfileAvatarButton" type="button">更换头像</button>
+                      <button class="secondary-button danger-subtle" id="removeProfileAvatarButton" type="button">移除</button>
+                    </div>
+                    <input class="visually-hidden" id="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp">
+                  </div>
+                </div>
+
+                <label class="account-profile-field profile-name-field" for="profileDisplayNameInput">
+                  <span>昵称</span>
+                  <input id="profileDisplayNameInput" type="text" maxlength="16" autocomplete="nickname" placeholder="2-16 个字符">
+                  <small>用于我的页面、社区、评论和管理台展示。</small>
+                </label>
+
                 <div class="account-profile-field">
                   <span>性别</span>
                   <div class="profile-gender-options" role="radiogroup" aria-label="性别">

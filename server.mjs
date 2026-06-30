@@ -1264,8 +1264,11 @@ function sanitizeProfileDisplayName(value) {
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  if (!text) return "";
-  return Array.from(text).slice(0, 16).join("");
+  return text || "";
+}
+
+function truncateProfileDisplayName(value) {
+  return Array.from(sanitizeProfileDisplayName(value)).slice(0, 16).join("");
 }
 
 function profileDisplayNamePolicyKey(value) {
@@ -1303,7 +1306,7 @@ function sanitizeUserProfiles(value) {
     : {};
   for (const [code, profile] of Object.entries(source)) {
     if (!CODE_PATTERN.test(code) || !profile || typeof profile !== "object") continue;
-    const displayName = sanitizeProfileDisplayName(profile.displayName);
+    const displayName = truncateProfileDisplayName(profile.displayName);
     const avatarFile = sanitizeProfileAvatarFile(profile.avatarFile);
     users[code] = {
       displayName,
@@ -6763,6 +6766,10 @@ function adminAccountSummary(code) {
   return {
     code,
     displayCode: qqAccount ? qqDisplayCode(qqAccount) : appleAccount ? appleDisplayCode(appleAccount) : code,
+    displayName: identityDisplayNameForCode(code),
+    avatarUrl: identityAvatarUrlForCode(code),
+    customDisplayName: userProfileForCode(code).displayName || "",
+    customAvatarUrl: profileAvatarUrlForCode(code),
     uniqueId: qqAccount?.openidDigest || appleAccount?.subjectDigest || code,
     qqUnionIdDigest: qqAccount?.unionIdDigest || "",
     source: qqAccount ? "qq" : appleAccount ? "apple" : DEFAULT_ACCESS_CODES.includes(code) ? "preset" : "custom",
