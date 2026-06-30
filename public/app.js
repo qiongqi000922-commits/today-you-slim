@@ -966,6 +966,8 @@ const els = {
   feedbackOption: document.querySelector("#feedbackOption"),
   passkeySettingsPanel: document.querySelector("#passkeySettingsPanel"),
   settingsBackButtons: [...document.querySelectorAll("[data-settings-panel]")],
+  accountProfileEditRows: [...document.querySelectorAll("[data-profile-edit-target]")],
+  accountManagementPanelRows: [...document.querySelectorAll("[data-account-management-panel]")],
   bottomTabs: document.querySelector("#bottomTabs"),
   personalTabButton: document.querySelector("#personalTabButton"),
   communityTabButton: document.querySelector("#communityTabButton"),
@@ -1005,6 +1007,9 @@ const els = {
   accountProfileBadge: document.querySelector("#accountProfileBadge"),
   accountBindingsSummary: document.querySelector("#accountBindingsSummary"),
   accountBindingsBadge: document.querySelector("#accountBindingsBadge"),
+  accountManagementBindingsText: document.querySelector("#accountManagementBindingsText"),
+  accountManagementPrivacyText: document.querySelector("#accountManagementPrivacyText"),
+  accountManagementDeletionText: document.querySelector("#accountManagementDeletionText"),
   appleBindingState: document.querySelector("#appleBindingState"),
   appleBindingHint: document.querySelector("#appleBindingHint"),
   bindAppleAccountButton: document.querySelector("#bindAppleAccountButton"),
@@ -1013,6 +1018,7 @@ const els = {
   bindQqAccountButton: document.querySelector("#bindQqAccountButton"),
   accountProfileReadonly: document.querySelector("#accountProfileReadonly"),
   accountProfileForm: document.querySelector("#accountProfileForm"),
+  profileAvatarRowPreview: document.querySelector("#profileAvatarRowPreview"),
   profileDisplayNameText: document.querySelector("#profileDisplayNameText"),
   profileDisplayNameInput: document.querySelector("#profileDisplayNameInput"),
   accountProfileAvatarPreview: document.querySelector("#accountProfileAvatarPreview"),
@@ -2696,6 +2702,18 @@ function profileSummaryText(profile = state.profile) {
   return `${profileDisplayName(profile)} · ${hasCustomAvatar ? "自定义头像" : "默认头像"} · 性别 ${gender} · 生日 ${birthday}`;
 }
 
+function accountBindingSummaryText(profile = state.profile) {
+  const linked = [];
+  if (profile?.apple) linked.push("Apple ID");
+  if (profile?.qq) linked.push("QQ");
+  return linked.length ? `已绑定 ${linked.join("、")}` : "未绑定正式登录方式";
+}
+
+function accountPrivacySummaryText(privacy = privacyStatus()) {
+  if (!privacy.agreementAccepted) return "尚未签署";
+  return `${privacyModeLabel()} · ${formatConsentTime(privacy.acceptedAt)}`;
+}
+
 function birthdayPickerButton(value, label, type, selected) {
   return `<button type="button" data-birthday-part="${type}" data-birthday-value="${value}" class="${selected ? "is-selected" : ""}">${escapeAttribute(label)}</button>`;
 }
@@ -2767,14 +2785,24 @@ function renderAccountProfilePanel() {
   const hasIdentity = Boolean(state.profile.qq || state.profile.apple);
   const customProfile = state.profile.customProfile || {};
   renderAvatar(els.accountProfileAvatar, state.profile);
+  renderAvatar(els.profileAvatarRowPreview, state.profile);
   els.accountProfileName.textContent = profileDisplayName(state.profile);
-  els.accountProfileBinding.textContent = qqBindingLabel(state.profile);
+  els.accountProfileBinding.textContent = accountBindingSummaryText(state.profile);
   els.profileDisplayNameText.textContent = profileDisplayName(state.profile);
   els.profileGenderText.textContent = genderLabel(demographics.gender);
   els.profileBirthdayText.textContent = birthdayLabel(demographics.birthday);
-  els.accountProfileSummary.textContent = profileSummaryText(state.profile);
-  els.accountProfileBadge.textContent = editing ? "编辑中" : "只读";
-  els.accountProfileBadge.dataset.mode = editing ? "full" : "basic";
+  if (els.accountManagementBindingsText) {
+    els.accountManagementBindingsText.textContent = accountBindingSummaryText(state.profile);
+  }
+  if (els.accountManagementPrivacyText) {
+    els.accountManagementPrivacyText.textContent = accountPrivacySummaryText();
+  }
+  if (els.accountManagementDeletionText) {
+    els.accountManagementDeletionText.textContent = "进入后确认影响范围";
+  }
+  els.accountProfileSummary.textContent = `${profileSummaryText(state.profile)} · ${accountBindingSummaryText(state.profile)}`;
+  els.accountProfileBadge.textContent = editing ? "编辑中" : "账户";
+  els.accountProfileBadge.dataset.mode = editing ? "full" : hasIdentity ? "full" : "basic";
   els.accountProfileReadonly.classList.toggle("hidden", editing);
   els.accountProfileForm.classList.toggle("hidden", !editing);
   els.editProfileButton.classList.toggle("hidden", editing);
@@ -2870,6 +2898,42 @@ function cancelProfileEdit() {
   if (els.profileAvatarInput) els.profileAvatarInput.value = "";
   setProfileSettingsMessage("", "");
   renderSettings();
+}
+
+function openProfileEditSection(target) {
+  if (state.profileSaving) return;
+  startProfileEdit();
+  if (!state.profileEditing) return;
+  const section = target || "name";
+  const scrollToForm = () => {
+    els.accountProfileForm?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
+  if (section === "avatar") {
+    scrollToForm();
+    els.profileAvatarInput?.click();
+    return;
+  }
+  if (section === "birthday") {
+    state.birthdayPickerOpen = true;
+    renderAccountProfilePanel();
+    window.requestAnimationFrame(() => {
+      scrollToForm();
+      els.profileBirthdayToggle?.focus({ preventScroll: true });
+    });
+    return;
+  }
+  window.requestAnimationFrame(() => {
+    scrollToForm();
+    if (section === "name") {
+      els.profileDisplayNameInput?.focus({ preventScroll: true });
+      els.profileDisplayNameInput?.select();
+      return;
+    }
+    if (section === "gender") {
+      const activeGender = els.profileGenderButtons.find((button) => button.classList.contains("is-active"));
+      activeGender?.focus({ preventScroll: true });
+    }
+  });
 }
 
 async function handleProfileAvatarSelection(file) {
@@ -9361,6 +9425,18 @@ els.accountBindingsOption?.addEventListener("click", () => showSettingsPanel("bi
 els.privacySettingsOption.addEventListener("click", () => showSettingsPanel("privacy"));
 els.passkeySettingsOption.addEventListener("click", () => showSettingsPanel("passkey"));
 els.accountDeletionOption.addEventListener("click", () => showSettingsPanel("account"));
+for (const row of els.accountProfileEditRows) {
+  row.addEventListener("click", (event) => {
+    event.currentTarget.blur();
+    openProfileEditSection(row.dataset.profileEditTarget);
+  });
+}
+for (const row of els.accountManagementPanelRows) {
+  row.addEventListener("click", (event) => {
+    event.currentTarget.blur();
+    showSettingsPanel(row.dataset.accountManagementPanel || "overview");
+  });
+}
 els.feedbackOption.addEventListener("click", () => openFeedbackModal({ type: "feedback", targetType: "system" }));
 els.nativeHealthSyncOption?.addEventListener("click", () => {
   const days = Math.max(state.nativeHealthLoadedDays || 0, NATIVE_HEALTH_INITIAL_DAYS);

@@ -708,9 +708,10 @@ html[data-theme^="glass-"] .privacy-status.is-signed {
 
 html[data-theme^="glass-"] .account-profile-card,
 html[data-theme^="glass-"] .account-profile-avatar-editor,
+html[data-theme^="glass-"] .account-management-list,
 html[data-theme^="glass-"] .account-binding-card,
 html[data-theme^="glass-"] .account-binding-icon,
-html[data-theme^="glass-"] .account-profile-readonly span,
+html[data-theme^="glass-"] .account-profile-readonly > span,
 html[data-theme^="glass-"] .passkey-card,
 html[data-theme^="glass-"] .native-health-card,
 html[data-theme^="glass-"] .native-health-json {
@@ -6473,7 +6474,7 @@ html[data-theme^="glass-"] .history-weight-summary strong {
   margin-top: 14px;
 }
 
-.account-profile-readonly span {
+.account-profile-readonly > span {
   min-width: 0;
   display: grid;
   gap: 6px;
@@ -6493,6 +6494,88 @@ html[data-theme^="glass-"] .history-weight-summary strong {
 .account-profile-readonly strong {
   color: var(--ink);
   font-size: 15px;
+}
+
+.account-profile-readonly.account-management-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.account-management-row {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 0;
+  border-radius: 0;
+  padding: 16px 18px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.account-management-row + .account-management-row {
+  border-top: 1px solid var(--line);
+}
+
+.account-management-row:hover,
+.account-management-row:focus-visible {
+  background: rgba(255, 255, 255, 0.52);
+  transform: none;
+}
+
+html[data-theme^="glass-"] .account-management-row:hover,
+html[data-theme^="glass-"] .account-management-row:focus-visible {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.account-management-label {
+  flex: 0 0 auto;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 780;
+}
+
+.account-management-value {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.account-management-value strong {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-management-avatar {
+  width: 46px;
+  height: 46px;
+  font-size: 18px;
+}
+
+.account-management-row.is-danger .account-management-label {
+  color: var(--danger);
 }
 
 .account-profile-form {
@@ -7813,7 +7896,8 @@ html[data-theme^="glass-"] .settings-back-button::before {
 html[data-theme^="glass-"] .account-profile-card,
 html[data-theme^="glass-"] .account-binding-card,
 html[data-theme^="glass-"] .account-binding-icon,
-html[data-theme^="glass-"] .account-profile-readonly span,
+html[data-theme^="glass-"] .account-management-list,
+html[data-theme^="glass-"] .account-profile-readonly > span,
 html[data-theme^="glass-"] .birthday-picker,
 html[data-theme^="glass-"] .birthday-picker-column,
 html[data-theme^="glass-"] .privacy-audit-summary,
@@ -9072,7 +9156,8 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
   }
 
   html[data-theme^="glass-"] .account-binding-icon,
-  html[data-theme^="glass-"] .account-profile-readonly span,
+  html[data-theme^="glass-"] .account-management-list,
+  html[data-theme^="glass-"] .account-profile-readonly > span,
   html[data-theme^="glass-"] .birthday-picker,
   html[data-theme^="glass-"] .birthday-picker-column,
   html[data-theme^="glass-"] .privacy-audit-summary,
@@ -9132,7 +9217,8 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
   html[data-theme^="glass-"] .feedback-dialog label,
   html[data-theme^="glass-"] .confirmation-dialog > p:not(.danger-kicker):not(.confirmation-message),
   html[data-theme^="glass-"] .feedback-dialog > p:not(.eyebrow):not(.feedback-message),
-  html[data-theme^="glass-"] .account-profile-readonly span,
+  html[data-theme^="glass-"] .account-profile-readonly > span,
+  html[data-theme^="glass-"] .account-management-value,
   html[data-theme^="glass-"] .native-health-json {
     color: var(--muted);
   }
