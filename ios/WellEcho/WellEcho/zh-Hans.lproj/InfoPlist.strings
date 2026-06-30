@@ -2,5 +2,5 @@
 "NSCameraUsageDescription" = "用于拍摄你选择保存的体重记录照片和食物照片。";
 "NSPhotoLibraryUsageDescription" = "仅在你选择从相册上传记录照片时读取图片。";
 "NSLocationWhenInUseUsageDescription" = "经你允许后，用于为 AI 建议补充本地天气和环境上下文。";
-"NSHealthShareUsageDescription" = "经你允许后，读取近期体重、心率、步数、活动消耗和运动时间，用于趋势和总结。";
+"NSHealthShareUsageDescription" = "经你允许后，读取近期体重、心率、步数、活动消耗、运动时间、健身记录和睡眠记录，用于趋势、记录同步和总结。";
 "NSHealthUpdateUsageDescription" = "当前版本不会写入健康数据。";

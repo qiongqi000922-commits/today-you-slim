@@ -3447,6 +3447,19 @@ function nativeHealthHeartRateFromDay(day) {
   };
 }
 
+function nativeHealthWorkoutCount(snapshot) {
+  const days = Array.isArray(snapshot?.recent) ? snapshot.recent : [];
+  return days.reduce((sum, day) => sum + (Array.isArray(day?.workouts) ? day.workouts.length : 0), 0);
+}
+
+function nativeHealthSleepCount(snapshot) {
+  const days = Array.isArray(snapshot?.recent) ? snapshot.recent : [];
+  return days.reduce((sum, day) => {
+    const items = Array.isArray(day?.sleep) ? day.sleep : Array.isArray(day?.sleeps) ? day.sleeps : [];
+    return sum + items.length;
+  }, 0);
+}
+
 function applyNativeHealthSnapshot(snapshot) {
   const days = Array.isArray(snapshot?.recent) ? snapshot.recent : [];
   state.nativeHealthWeightRecords = days
@@ -3565,6 +3578,10 @@ async function syncNativeHealthSnapshotToCloud(snapshot) {
     });
     applyWeightPredictionResponse(data);
     if (shouldPollWeightPrediction(data)) scheduleWeightPredictionPoll();
+    if (data?.health?.records?.total) {
+      state.recordsLoaded = false;
+      await loadRecords({ force: true });
+    }
     return data;
   } catch (error) {
     console.warn("Native health cloud sync failed:", error);
@@ -3575,13 +3592,13 @@ async function syncNativeHealthSnapshotToCloud(snapshot) {
 function nativeHealthDescriptionText(bridge) {
   if (!bridge) {
     return APP_LOCALE_ENGLISH
-      ? "Open in the iOS app to sync weight and heart rate."
-      : "当前不是 iOS App 环境，真机 App 内会自动同步体重和心率。";
+      ? "Open in the iOS app to sync weight, heart rate, workouts, and sleep."
+      : "当前不是 iOS App 环境，真机 App 内会自动同步体重、心率、健身和睡眠。";
   }
   if (state.nativeHealthLoading) {
     return APP_LOCALE_ENGLISH
-      ? `Syncing recent ${clampNativeHealthDays(state.nativeHealthLoadedDays || NATIVE_HEALTH_INITIAL_DAYS)} days...`
-      : `正在同步近 ${clampNativeHealthDays(state.nativeHealthLoadedDays || NATIVE_HEALTH_INITIAL_DAYS)} 天体重和心率...`;
+      ? `Syncing recent ${clampNativeHealthDays(state.nativeHealthLoadedDays || NATIVE_HEALTH_INITIAL_DAYS)} days of health data...`
+      : `正在同步近 ${clampNativeHealthDays(state.nativeHealthLoadedDays || NATIVE_HEALTH_INITIAL_DAYS)} 天体重、心率、健身和睡眠...`;
   }
   if (state.nativeHealthError) {
     return APP_LOCALE_ENGLISH
@@ -3592,9 +3609,11 @@ function nativeHealthDescriptionText(bridge) {
     const range = nativeHealthRecordDateLabel(state.nativeHealthSnapshot);
     const weightCount = state.nativeHealthWeightRecords.length;
     const heartCount = state.nativeHealthHeartRateRecords.length;
+    const workoutCount = nativeHealthWorkoutCount(state.nativeHealthSnapshot);
+    const sleepCount = nativeHealthSleepCount(state.nativeHealthSnapshot);
     return APP_LOCALE_ENGLISH
-      ? `Synced ${range || `recent ${state.nativeHealthLoadedDays} days`}. Weight ${weightCount}, heart rate ${heartCount}.`
-      : `已同步 ${range || `近 ${state.nativeHealthLoadedDays} 天`}，体重 ${weightCount} 条，心率 ${heartCount} 天。`;
+      ? `Synced ${range || `recent ${state.nativeHealthLoadedDays} days`}. Weight ${weightCount}, heart rate ${heartCount}, workouts ${workoutCount}, sleep ${sleepCount}.`
+      : `已同步 ${range || `近 ${state.nativeHealthLoadedDays} 天`}，体重 ${weightCount} 条，心率 ${heartCount} 天，健身 ${workoutCount} 条，睡眠 ${sleepCount} 条。`;
   }
   return APP_LOCALE_ENGLISH
     ? "Tap to request Health permission and sync."
@@ -4566,11 +4585,7 @@ function renderCommunityDetailRecordsSection(member, records) {
     ? `最近更新 ${dateTimeFormat.format(new Date(visibleRecords[0].timestamp))}`
     : "按时间自动保存";
   const listMarkup = visibleRecords.length
-    ? visibleRecords.map((record) => (
-      record.type === "food"
-        ? renderFoodHistoryItem(record, { readonly: true })
-        : renderBodyHistoryItem(record, { readonly: true })
-    )).join("")
+    ? visibleRecords.map((record) => renderHistoryRecord(record, { readonly: true })).join("")
     : '<div class="chart-empty">暂无公开记录。</div>';
 
   return `
@@ -6850,6 +6865,131 @@ function renderBodyHistoryItem(record, { readonly = false } = {}) {
   `;
 }
 
+function recordNativeLabel(record) {
+  if (record?.nativeLabel || record?.source === "ios_health") {
+    return APP_LOCALE_ENGLISH ? "iOS Sync" : "iOS 同步";
+  }
+  return "";
+}
+
+function formatNativeMetric(value, digits = 1) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  return number.toFixed(digits).replace(/\.0$/, "");
+}
+
+function formatNativeMinutes(value) {
+  const minutes = Number(value);
+  if (!Number.isFinite(minutes) || minutes <= 0) return "";
+  const rounded = Math.round(minutes);
+  const hours = Math.floor(rounded / 60);
+  const rest = rounded % 60;
+  if (!hours) return APP_LOCALE_ENGLISH ? `${rest} min` : `${rest} 分钟`;
+  if (!rest) return APP_LOCALE_ENGLISH ? `${hours} hr` : `${hours} 小时`;
+  return APP_LOCALE_ENGLISH ? `${hours} hr ${rest} min` : `${hours} 小时 ${rest} 分钟`;
+}
+
+function formatNativeTimeRange(startAt, endAt) {
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return "";
+  const options = { hour: "2-digit", minute: "2-digit", hour12: false };
+  return `${start.toLocaleTimeString("zh-CN", options)} - ${end.toLocaleTimeString("zh-CN", options)}`;
+}
+
+function nativeHistoryIconMarkup(type) {
+  const isSleep = type === "sleep";
+  const label = isSleep ? (APP_LOCALE_ENGLISH ? "Sleep" : "睡眠") : (APP_LOCALE_ENGLISH ? "Workout" : "健身");
+  const icon = isSleep
+    ? '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M22.5 23.5A10.5 10.5 0 0 1 12 13c0-3.1 1.35-5.9 3.5-7.82A10.51 10.51 0 1 0 26.82 16.5 10.46 10.46 0 0 1 22.5 23.5Z"/><path d="M21.5 8.5h5l-5 6h5"/></svg>'
+    : '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 21.5 21.5 8"/><path d="M5.5 18.5 13.5 26.5"/><path d="M18.5 5.5 26.5 13.5"/><path d="m12 17 3 3"/></svg>';
+  return `<div class="history-body-photo history-native-photo is-${type}">${icon}<span>${label}</span></div>`;
+}
+
+function renderWorkoutHistoryItem(record) {
+  const workout = record.workout || {};
+  const activityName = workout.activityName || (APP_LOCALE_ENGLISH ? "Workout" : "健身");
+  const label = recordNativeLabel(record);
+  const duration = formatNativeMinutes(workout.durationMinutes);
+  const energy = formatNativeMetric(workout.activeEnergyKcal, 0);
+  const distance = formatNativeMetric(workout.distanceKm, 2);
+  const summary = [
+    duration,
+    energy ? `${energy} kcal` : "",
+    distance ? `${distance} km` : ""
+  ].filter(Boolean);
+  const sourceText = [
+    formatNativeTimeRange(workout.startAt, workout.endAt),
+    workout.sourceName || ""
+  ].filter(Boolean).join(" · ") || (APP_LOCALE_ENGLISH ? "Synced from Apple Health" : "来自 iOS 健康同步");
+  return `
+    <article class="history-item is-workout">
+      ${nativeHistoryIconMarkup("workout")}
+      <div class="history-main">
+        <div class="history-head">
+          <p class="history-time">${dateTimeFormat.format(new Date(record.timestamp))}</p>
+          ${label ? `<span class="history-sync-badge">${escapeAttribute(label)}</span>` : ""}
+        </div>
+        <p class="history-note">${APP_LOCALE_ENGLISH ? "Workout record" : "健身记录"}</p>
+        <div class="history-food-summary history-workout-summary">
+          <strong>${escapeAttribute(activityName)}</strong>
+          ${summary.map((item) => `<span>${escapeAttribute(item)}</span>`).join("")}
+        </div>
+        <div class="history-food-list">
+          <div class="history-food-entry">
+            <strong>${escapeAttribute(activityName)}</strong>
+            <span>${escapeAttribute(sourceText)}</span>
+          </div>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderSleepHistoryItem(record) {
+  const sleep = record.sleep || {};
+  const label = recordNativeLabel(record);
+  const asleep = formatNativeMinutes(sleep.asleepMinutes);
+  const inBed = formatNativeMinutes(sleep.inBedMinutes);
+  const summary = [
+    asleep ? `${APP_LOCALE_ENGLISH ? "Sleep" : "睡眠"} ${asleep}` : "",
+    inBed ? `${APP_LOCALE_ENGLISH ? "In bed" : "在床"} ${inBed}` : ""
+  ].filter(Boolean);
+  const sourceText = [
+    formatNativeTimeRange(sleep.startAt, sleep.endAt),
+    sleep.sourceName || ""
+  ].filter(Boolean).join(" · ") || (APP_LOCALE_ENGLISH ? "Synced from Apple Health" : "来自 iOS 健康同步");
+  return `
+    <article class="history-item is-sleep">
+      ${nativeHistoryIconMarkup("sleep")}
+      <div class="history-main">
+        <div class="history-head">
+          <p class="history-time">${dateTimeFormat.format(new Date(record.timestamp))}</p>
+          ${label ? `<span class="history-sync-badge">${escapeAttribute(label)}</span>` : ""}
+        </div>
+        <p class="history-note">${APP_LOCALE_ENGLISH ? "Sleep record" : "睡眠记录"}</p>
+        <div class="history-food-summary history-sleep-summary">
+          <strong>${APP_LOCALE_ENGLISH ? "Sleep" : "睡眠"}</strong>
+          ${summary.map((item) => `<span>${escapeAttribute(item)}</span>`).join("")}
+        </div>
+        <div class="history-food-list">
+          <div class="history-food-entry">
+            <strong>${APP_LOCALE_ENGLISH ? "Sleep" : "睡眠"}</strong>
+            <span>${escapeAttribute(sourceText)}</span>
+          </div>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderHistoryRecord(record, options = {}) {
+  if (record.type === "food") return renderFoodHistoryItem(record, options);
+  if (record.type === "workout") return renderWorkoutHistoryItem(record, options);
+  if (record.type === "sleep") return renderSleepHistoryItem(record, options);
+  return renderBodyHistoryItem(record, options);
+}
+
 function renderHistory() {
   if (!state.historyExpanded) {
     renderHistoryCollapsed();
@@ -6866,9 +7006,7 @@ function renderHistory() {
     return;
   }
 
-  els.historyList.innerHTML = state.historyRecords.map((record) => (
-    record.type === "food" ? renderFoodHistoryItem(record) : renderBodyHistoryItem(record)
-  )).join("");
+  els.historyList.innerHTML = state.historyRecords.map((record) => renderHistoryRecord(record)).join("");
   bindHistoryFoodGalleries();
   els.historyList.querySelectorAll("[data-history-food-gallery] img").forEach((image) => {
     if (image.complete) return;

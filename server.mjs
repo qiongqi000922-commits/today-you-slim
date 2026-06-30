@@ -6223,8 +6223,13 @@ function adminPrivacySummary(code) {
   };
 }
 
+const RECORD_TYPES = new Set(["body", "food", "workout", "sleep"]);
+const IOS_HEALTH_RECORD_SOURCE = "ios_health";
+const IOS_HEALTH_RECORD_TYPES = new Set(["workout", "sleep"]);
+
 function recordType(record) {
-  return record?.type === "food" ? "food" : "body";
+  const type = String(record?.type || "body").trim().toLowerCase();
+  return RECORD_TYPES.has(type) ? type : "body";
 }
 
 function parseNumberLike(value) {
@@ -6234,6 +6239,121 @@ function parseNumberLike(value) {
   if (!match) return null;
   const parsed = Number(match[0]);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function nativeHealthText(value, max = 80) {
+  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+function nativeHealthNumber(value, min = -Infinity, max = Infinity) {
+  const number = parseNumberLike(value);
+  return Number.isFinite(number) && number >= min && number <= max ? number : null;
+}
+
+function nativeHealthIso(value) {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
+function isNativeHealthSyncRecord(record) {
+  return record?.source === IOS_HEALTH_RECORD_SOURCE && IOS_HEALTH_RECORD_TYPES.has(recordType(record));
+}
+
+function publicWorkoutPayload(workout) {
+  if (!workout || typeof workout !== "object") return null;
+  return {
+    id: nativeHealthText(workout.id, 96),
+    activityType: nativeHealthNumber(workout.activityType, 0, 100000),
+    activityName: nativeHealthText(workout.activityName || "健身", 40) || "健身",
+    startAt: nativeHealthIso(workout.startAt),
+    endAt: nativeHealthIso(workout.endAt),
+    durationMinutes: nativeHealthNumber(workout.durationMinutes, 0, 1440),
+    activeEnergyKcal: nativeHealthNumber(workout.activeEnergyKcal, 0, 10000),
+    distanceKm: nativeHealthNumber(workout.distanceKm, 0, 500),
+    sourceName: nativeHealthText(workout.sourceName, 60)
+  };
+}
+
+function publicSleepPayload(sleep) {
+  if (!sleep || typeof sleep !== "object") return null;
+  return {
+    id: nativeHealthText(sleep.id, 96),
+    startAt: nativeHealthIso(sleep.startAt),
+    endAt: nativeHealthIso(sleep.endAt),
+    asleepMinutes: nativeHealthNumber(sleep.asleepMinutes, 0, 1440),
+    inBedMinutes: nativeHealthNumber(sleep.inBedMinutes, 0, 1440),
+    sourceName: nativeHealthText(sleep.sourceName, 60)
+  };
+}
+
+function nativeHealthRecordId(kind, item) {
+  return `${kind}_${crypto.createHash("sha256").update(JSON.stringify([
+    item?.id,
+    item?.startAt,
+    item?.endAt,
+    item?.activityType,
+    item?.sourceName
+  ])).digest("hex").slice(0, 24)}`;
+}
+
+function normalizeNativeWorkoutRecord(item) {
+  const workout = publicWorkoutPayload(item);
+  if (!workout?.startAt || !workout?.endAt) return null;
+  return {
+    id: nativeHealthRecordId("workout", workout),
+    type: "workout",
+    source: IOS_HEALTH_RECORD_SOURCE,
+    locked: true,
+    nativeLabel: "iOS 同步",
+    timestamp: workout.startAt,
+    workout
+  };
+}
+
+function normalizeNativeSleepRecord(item) {
+  const sleep = publicSleepPayload(item);
+  if (!sleep?.startAt || !sleep?.endAt) return null;
+  return {
+    id: nativeHealthRecordId("sleep", sleep),
+    type: "sleep",
+    source: IOS_HEALTH_RECORD_SOURCE,
+    locked: true,
+    nativeLabel: "iOS 同步",
+    timestamp: sleep.endAt || sleep.startAt,
+    sleep
+  };
+}
+
+function nativeHealthGeneratedRecords(snapshot) {
+  const days = Array.isArray(snapshot?.days) ? snapshot.days : [];
+  const generated = [];
+  const seen = new Set();
+  for (const day of days) {
+    const workouts = Array.isArray(day?.workouts) ? day.workouts : [];
+    const sleepItems = Array.isArray(day?.sleep) ? day.sleep : [];
+    for (const record of [
+      ...workouts.map(normalizeNativeWorkoutRecord),
+      ...sleepItems.map(normalizeNativeSleepRecord)
+    ].filter(Boolean)) {
+      if (seen.has(record.id)) continue;
+      seen.add(record.id);
+      generated.push(record);
+    }
+  }
+  return generated.sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
+}
+
+function replaceNativeHealthGeneratedRecords(code, snapshot) {
+  const generated = nativeHealthGeneratedRecords(snapshot);
+  const existing = Array.isArray(records[code]) ? records[code] : [];
+  const kept = existing.filter((record) => !isNativeHealthSyncRecord(record));
+  records[code] = [...kept, ...generated]
+    .sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
+  return {
+    total: generated.length,
+    workoutCount: generated.filter((record) => recordType(record) === "workout").length,
+    sleepCount: generated.filter((record) => recordType(record) === "sleep").length
+  };
 }
 
 function parseBooleanLike(value) {
@@ -6553,6 +6673,8 @@ function publicRecord(record) {
   const type = recordType(record);
   const foodItems = type === "food" ? normalizeFoodItems(record.foods) : [];
   const foodPhotos = type === "food" ? publicFoodPhotos(record) : [];
+  const workout = type === "workout" ? publicWorkoutPayload(record.workout) : null;
+  const sleep = type === "sleep" ? publicSleepPayload(record.sleep) : null;
   const totalCalories = foodItems.reduce((sum, item) => (
     Number.isFinite(item.calorie) ? sum + item.calorie : sum
   ), 0);
@@ -6560,13 +6682,18 @@ function publicRecord(record) {
     id: record.id,
     type,
     timestamp: record.timestamp,
-    weight: record.weight,
+    source: nativeHealthText(record.source, 40) || null,
+    locked: Boolean(record.locked),
+    nativeLabel: nativeHealthText(record.nativeLabel, 24),
+    weight: type === "body" ? record.weight : null,
     mood: typeof record.mood === "string" ? record.mood : "",
-    photoUrl: record.photoFile ? withBasePath(`/api/photos/${encodeURIComponent(record.id)}`) : null,
-    thumbnailUrl: record.thumbnailFile ? withBasePath(`/api/thumbnails/${encodeURIComponent(record.id)}`) : null,
+    photoUrl: type === "body" && record.photoFile ? withBasePath(`/api/photos/${encodeURIComponent(record.id)}`) : null,
+    thumbnailUrl: type === "body" && record.thumbnailFile ? withBasePath(`/api/thumbnails/${encodeURIComponent(record.id)}`) : null,
     foods: foodItems,
     foodPhotos,
-    foodCalories: Math.round(totalCalories * 10) / 10
+    foodCalories: Math.round(totalCalories * 10) / 10,
+    workout,
+    sleep
   };
 }
 
@@ -6574,6 +6701,8 @@ function communityPublicRecord(memberId, record) {
   const type = recordType(record);
   const foodItems = type === "food" ? normalizeFoodItems(record.foods) : [];
   const foodPhotos = type === "food" ? communityPublicFoodPhotos(memberId, record) : [];
+  const workout = type === "workout" ? publicWorkoutPayload(record.workout) : null;
+  const sleep = type === "sleep" ? publicSleepPayload(record.sleep) : null;
   const totalCalories = foodItems.reduce((sum, item) => (
     Number.isFinite(item.calorie) ? sum + item.calorie : sum
   ), 0);
@@ -6581,17 +6710,22 @@ function communityPublicRecord(memberId, record) {
     id: record.id,
     type,
     timestamp: record.timestamp,
-    weight: type === "food" ? null : record.weight,
+    source: nativeHealthText(record.source, 40) || null,
+    locked: Boolean(record.locked),
+    nativeLabel: nativeHealthText(record.nativeLabel, 24),
+    weight: type === "body" ? record.weight : null,
     mood: typeof record.mood === "string" ? record.mood : "",
-    photoUrl: type !== "food" && record.photoFile
+    photoUrl: type === "body" && record.photoFile
       ? withBasePath(`/api/community/photos/${encodeURIComponent(memberId)}/${encodeURIComponent(record.id)}`)
       : null,
-    thumbnailUrl: type !== "food" && record.thumbnailFile
+    thumbnailUrl: type === "body" && record.thumbnailFile
       ? withBasePath(`/api/community/thumbnails/${encodeURIComponent(memberId)}/${encodeURIComponent(record.id)}`)
       : null,
     foods: foodItems,
     foodPhotos,
-    foodCalories: Math.round(totalCalories * 10) / 10
+    foodCalories: Math.round(totalCalories * 10) / 10,
+    workout,
+    sleep
   };
 }
 
@@ -6693,7 +6827,7 @@ function communityMemberSummary(code, viewerCode, { fullTrend = false } = {}) {
   const allUserRecords = [...(records[code] || [])]
     .sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
   const userRecords = allUserRecords
-    .filter((record) => recordType(record) !== "food");
+    .filter((record) => recordType(record) === "body");
   const foodRecords = allUserRecords.filter((record) => recordType(record) === "food");
   const photoRecords = userRecords.filter((record) => record.photoFile);
   const weightRecords = userRecords.filter((record) => Number.isFinite(record.weight));
@@ -6730,6 +6864,8 @@ function adminPublicRecord(code, record) {
   const type = recordType(record);
   const foodItems = type === "food" ? normalizeFoodItems(record.foods) : [];
   const foodPhotos = type === "food" ? adminPublicFoodPhotos(code, record) : [];
+  const workout = type === "workout" ? publicWorkoutPayload(record.workout) : null;
+  const sleep = type === "sleep" ? publicSleepPayload(record.sleep) : null;
   const totalCalories = foodItems.reduce((sum, item) => (
     Number.isFinite(item.calorie) ? sum + item.calorie : sum
   ), 0);
@@ -6737,17 +6873,22 @@ function adminPublicRecord(code, record) {
     id: record.id,
     type,
     timestamp: record.timestamp,
-    weight: type === "food" ? null : record.weight,
+    source: nativeHealthText(record.source, 40) || null,
+    locked: Boolean(record.locked),
+    nativeLabel: nativeHealthText(record.nativeLabel, 24),
+    weight: type === "body" ? record.weight : null,
     mood: typeof record.mood === "string" ? record.mood : "",
     hasPhoto: recordPhotoCount(record) > 0,
     photoCount: recordPhotoCount(record),
-    photoUrl: record.photoFile
+    photoUrl: type === "body" && record.photoFile
       ? `${BASE_PATH}${ADMIN_PATH}/api/photos/${encodeURIComponent(code)}/${encodeURIComponent(record.id)}`
       : null,
     foods: foodItems,
     foodPhotos,
     foodCalories: Math.round(totalCalories * 10) / 10,
-    foodNutrition: type === "food" ? sumFoodNutrition(foodItems, "nutrition") : {}
+    foodNutrition: type === "food" ? sumFoodNutrition(foodItems, "nutrition") : {},
+    workout,
+    sleep
   };
 }
 
@@ -11688,14 +11829,19 @@ async function handleApi(req, res, pathname) {
       const compact = compactNativeHealthSnapshot(body.snapshot || body, {
         maxDays: MAX_NATIVE_HEALTH_SYNC_DAYS
       });
+      const generatedRecords = replaceNativeHealthGeneratedRecords(session.code, compact);
       nativeHealthSnapshots.users[session.code] = compact;
-      await writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots);
+      await Promise.all([
+        writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots),
+        writeJson(RECORDS_PATH, records)
+      ]);
       enqueueWeightPrediction(session.code, "native_health_sync");
       return sendJson(res, 200, {
         ok: true,
         health: {
           updatedAt: compact.updatedAt,
-          range: compact.range
+          range: compact.range,
+          records: generatedRecords
         },
         prediction: publicWeightPrediction(weightPredictions.users[session.code] || null),
         queue: weightPredictionQueueStatus(session.code)
@@ -12092,6 +12238,10 @@ async function handleApi(req, res, pathname) {
 
     if (index === -1) {
       return sendError(res, 404, "没有找到这条记录。");
+    }
+
+    if (isNativeHealthSyncRecord(userRecords[index])) {
+      return sendError(res, 409, "iOS 同步记录需要在 Apple 健康中删除后重新同步。");
     }
 
     const [deletedRecord] = userRecords.splice(index, 1);

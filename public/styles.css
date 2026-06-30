@@ -2817,11 +2817,16 @@ html[data-theme^="glass-"] .ranking-period.is-active:focus-visible {
   max-height: none;
 }
 
-.community-detail-history-section .history-item:not(.is-food) {
+.community-detail-history-section .history-item.is-body-record {
   grid-template-columns: 72px minmax(0, 1fr) auto;
 }
 
 .community-detail-history-section .history-item.is-food {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.community-detail-history-section .history-item.is-workout,
+.community-detail-history-section .history-item.is-sleep {
   grid-template-columns: 72px minmax(0, 1fr);
 }
 
@@ -6001,6 +6006,12 @@ html[data-theme^="glass-"] .chart-y-axis {
   align-items: start;
 }
 
+.history-item.is-workout,
+.history-item.is-sleep {
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: start;
+}
+
 .history-item.is-food .history-food-gallery {
   grid-column: 1;
   grid-row: 1;
@@ -6009,6 +6020,13 @@ html[data-theme^="glass-"] .chart-y-axis {
 .history-item.is-body-record .history-body-photo {
   grid-column: 1;
   grid-row: 1;
+}
+
+.history-item.is-workout .history-body-photo,
+.history-item.is-sleep .history-body-photo {
+  grid-column: 1;
+  grid-row: 1;
+  aspect-ratio: 1 / 1;
 }
 
 .history-food-gallery {
@@ -6075,6 +6093,39 @@ html[data-theme^="glass-"] .chart-y-axis {
   min-width: 0;
 }
 
+.history-item.is-workout .history-main,
+.history-item.is-sleep .history-main {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.history-native-photo {
+  position: relative;
+  overflow: hidden;
+  gap: 4px;
+  border: 1px solid rgba(75, 159, 178, 0.14);
+  background:
+    linear-gradient(145deg, rgba(239, 250, 253, 0.92), rgba(235, 242, 255, 0.78)),
+    radial-gradient(120% 120% at 100% 0%, rgba(128, 194, 221, 0.22), transparent 60%);
+  color: #397c9f;
+}
+
+.history-native-photo svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.history-native-photo span {
+  font-size: 10px;
+  font-weight: 820;
+  letter-spacing: 0;
+}
+
 .history-time {
   margin: 0;
   font-weight: 780;
@@ -6091,6 +6142,20 @@ html[data-theme^="glass-"] .chart-y-axis {
 .history-head .history-time {
   min-width: 0;
   padding-top: 3px;
+}
+
+.history-sync-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid rgba(75, 159, 178, 0.16);
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: rgba(239, 250, 253, 0.72);
+  color: #397c9f;
+  font-size: 11px;
+  font-weight: 820;
+  white-space: nowrap;
 }
 
 .history-note {
@@ -6185,6 +6250,16 @@ html[data-theme^="glass-"] .chart-y-axis {
 .history-weight-summary strong {
   background: rgba(74, 147, 190, 0.13);
   color: #397c9f;
+}
+
+.history-workout-summary strong {
+  background: rgba(93, 118, 205, 0.13);
+  color: #4d64b8;
+}
+
+.history-sleep-summary strong {
+  background: rgba(137, 103, 205, 0.13);
+  color: #6b56b8;
 }
 
 .history-food-summary span {
@@ -6284,6 +6359,34 @@ html[data-theme^="glass-"] .history-food-summary strong {
 html[data-theme^="glass-"] .history-weight-summary strong {
   background: rgba(83, 158, 202, 0.16);
   color: #327894;
+}
+
+html[data-theme^="glass-"] .history-native-photo {
+  border-color: rgba(112, 190, 210, 0.22);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.64), rgba(225, 246, 252, 0.38)),
+    radial-gradient(120% 120% at 100% 0%, rgba(113, 190, 210, 0.18), transparent 58%);
+  color: #357f9a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    0 10px 24px rgba(78, 142, 159, 0.08);
+}
+
+html[data-theme^="glass-"] .history-sync-badge {
+  border-color: rgba(112, 190, 210, 0.2);
+  background: rgba(245, 254, 255, 0.6);
+  color: #357f9a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+html[data-theme^="glass-"] .history-workout-summary strong {
+  background: rgba(97, 122, 210, 0.14);
+  color: #5067bd;
+}
+
+html[data-theme^="glass-"] .history-sleep-summary strong {
+  background: rgba(139, 107, 206, 0.14);
+  color: #6e58bd;
 }
 
 .settings-content {
@@ -8636,6 +8739,11 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
     grid-template-columns: 66px minmax(0, 1fr);
   }
 
+  .history-item.is-workout,
+  .history-item.is-sleep {
+    grid-template-columns: 66px minmax(0, 1fr);
+  }
+
   .history-thumb {
     width: 66px;
     height: auto;
@@ -8657,6 +8765,11 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
   }
 
   .history-item.is-food .history-main {
+    grid-column: 2;
+  }
+
+  .history-item.is-workout .history-main,
+  .history-item.is-sleep .history-main {
     grid-column: 2;
   }
 
@@ -10103,7 +10216,7 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
 
 /* Dark history chips: food calories stay warm, body weight stays cool. */
 @media (prefers-color-scheme: dark) {
-  html[data-theme^="glass-"] .history-food-summary:not(.history-weight-summary) strong {
+  html[data-theme^="glass-"] .history-food-summary:not(.history-weight-summary):not(.history-workout-summary):not(.history-sleep-summary) strong {
     border: 1px solid rgba(229, 184, 104, 0.2);
     background:
       linear-gradient(145deg, rgba(84, 58, 28, 0.5), rgba(39, 31, 22, 0.42)),
@@ -10120,6 +10233,40 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
       radial-gradient(120% 120% at 100% 0%, rgba(111, 207, 226, 0.22), rgba(15, 36, 56, 0) 58%);
     color: #a8ecff;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  html[data-theme^="glass-"] .history-native-photo {
+    border-color: rgba(119, 209, 232, 0.22);
+    background:
+      linear-gradient(145deg, rgba(29, 55, 75, 0.58), rgba(12, 28, 45, 0.5)),
+      radial-gradient(120% 120% at 100% 0%, rgba(119, 209, 232, 0.2), rgba(12, 28, 45, 0) 58%);
+    color: #bdefff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  html[data-theme^="glass-"] .history-sync-badge {
+    border-color: rgba(119, 209, 232, 0.22);
+    background: rgba(23, 47, 66, 0.58);
+    color: #bdefff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  html[data-theme^="glass-"] .history-workout-summary strong {
+    border: 1px solid rgba(165, 180, 252, 0.22);
+    background:
+      linear-gradient(145deg, rgba(52, 63, 112, 0.5), rgba(28, 35, 69, 0.42)),
+      radial-gradient(120% 120% at 100% 0%, rgba(165, 180, 252, 0.17), rgba(28, 35, 69, 0) 58%);
+    color: #c8d0ff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  html[data-theme^="glass-"] .history-sleep-summary strong {
+    border: 1px solid rgba(196, 181, 253, 0.22);
+    background:
+      linear-gradient(145deg, rgba(70, 54, 112, 0.5), rgba(40, 30, 69, 0.42)),
+      radial-gradient(120% 120% at 100% 0%, rgba(196, 181, 253, 0.17), rgba(40, 30, 69, 0) 58%);
+    color: #d8ccff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
 }
 

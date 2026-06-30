@@ -18,6 +18,10 @@ final class HealthKitService {
                 types.insert(type)
             }
         }
+        types.insert(HKObjectType.workoutType())
+        if let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
+            types.insert(sleepType)
+        }
         return types
     }
 
@@ -94,6 +98,8 @@ final class HealthKitService {
         async let steps = optionalCumulativeQuantity(.stepCount, unit: .count(), start: start, end: end)
         async let energy = optionalCumulativeQuantity(.activeEnergyBurned, unit: .kilocalorie(), start: start, end: end)
         async let exercise = optionalCumulativeQuantity(.appleExerciseTime, unit: .minute(), start: start, end: end)
+        async let workouts = optionalWorkoutSummaries(start: start, end: end)
+        async let sleep = optionalSleepSummaries(start: start, end: end)
 
         return await NativeHealthDaySummary(
             date: Self.dayKey(start),
@@ -101,7 +107,9 @@ final class HealthKitService {
             weight: weight,
             steps: steps,
             activeEnergyKcal: energy,
-            exerciseMinutes: exercise
+            exerciseMinutes: exercise,
+            workouts: workouts,
+            sleep: sleep
         )
     }
 
@@ -115,6 +123,14 @@ final class HealthKitService {
 
     private func optionalCumulativeQuantity(_ identifier: HKQuantityTypeIdentifier, unit: HKUnit, start: Date, end: Date) async -> Double? {
         try? await cumulativeQuantity(identifier, unit: unit, start: start, end: end)
+    }
+
+    private func optionalWorkoutSummaries(start: Date, end: Date) async -> [NativeWorkoutSummary] {
+        (try? await workoutSummaries(start: start, end: end)) ?? []
+    }
+
+    private func optionalSleepSummaries(start: Date, end: Date) async -> [NativeSleepSummary] {
+        (try? await sleepSummaries(start: start, end: end)) ?? []
     }
 
     private func heartRateSummary(start: Date, end: Date) async throws -> NativeHeartRateSummary {
@@ -179,6 +195,95 @@ final class HealthKitService {
         }
     }
 
+    private func workoutSummaries(start: Date, end: Date) async throws -> [NativeWorkoutSummary] {
+        let samples: [HKWorkout] = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[HKWorkout], Error>) in
+            let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictEndDate)
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+            let query = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                continuation.resume(returning: (samples ?? []).compactMap { $0 as? HKWorkout })
+            }
+            healthStore.execute(query)
+        }
+
+        return samples.map { workout in
+            let energy = workout.totalEnergyBurned?.doubleValue(for: HKUnit.kilocalorie())
+            let distance = workout.totalDistance?.doubleValue(for: HKUnit.meter())
+            return NativeWorkoutSummary(
+                id: workout.uuid.uuidString,
+                activityType: workout.workoutActivityType.rawValue,
+                activityName: Self.workoutActivityName(workout.workoutActivityType),
+                startAt: Self.isoString(workout.startDate),
+                endAt: Self.isoString(workout.endDate),
+                durationMinutes: Self.roundDouble(workout.duration / 60, decimals: 1),
+                activeEnergyKcal: energy.map { Self.roundDouble($0, decimals: 1) },
+                distanceKm: distance.map { Self.roundDouble($0 / 1000, decimals: 2) },
+                sourceName: workout.sourceRevision.source.name
+            )
+        }
+    }
+
+    private func sleepSummaries(start: Date, end: Date) async throws -> [NativeSleepSummary] {
+        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            return []
+        }
+        let samples: [HKCategorySample] = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[HKCategorySample], Error>) in
+            let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictEndDate)
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                continuation.resume(returning: (samples ?? []).compactMap { $0 as? HKCategorySample })
+            }
+            healthStore.execute(query)
+        }
+
+        var sessions: [[HKCategorySample]] = []
+        let maxGap: TimeInterval = 90 * 60
+        for sample in samples {
+            guard sample.endDate > sample.startDate else { continue }
+            if let last = sessions.indices.last,
+               let previous = sessions[last].last,
+               sample.startDate.timeIntervalSince(previous.endDate) <= maxGap {
+                sessions[last].append(sample)
+            } else {
+                sessions.append([sample])
+            }
+        }
+
+        return sessions.compactMap { session in
+            guard !session.isEmpty else { return nil }
+            let startAt = session.map(\.startDate).min() ?? start
+            let endAt = session.map(\.endDate).max() ?? end
+            var asleepMinutes = 0.0
+            var inBedMinutes = 0.0
+            for sample in session {
+                let minutes = max(0, sample.endDate.timeIntervalSince(sample.startDate) / 60)
+                if Self.isAsleepValue(sample.value) {
+                    asleepMinutes += minutes
+                }
+                if sample.value == HKCategoryValueSleepAnalysis.inBed.rawValue {
+                    inBedMinutes += minutes
+                }
+            }
+            guard asleepMinutes > 0 || inBedMinutes > 0 else { return nil }
+            let sourceName = session.first?.sourceRevision.source.name ?? ""
+            return NativeSleepSummary(
+                id: Self.stableIdentifier(["sleep", Self.isoString(startAt), Self.isoString(endAt), sourceName]),
+                startAt: Self.isoString(startAt),
+                endAt: Self.isoString(endAt),
+                asleepMinutes: Self.roundDouble(asleepMinutes, decimals: 1),
+                inBedMinutes: inBedMinutes > 0 ? Self.roundDouble(inBedMinutes, decimals: 1) : nil,
+                sourceName: sourceName
+            )
+        }
+    }
+
     private static func dayKey(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -186,6 +291,83 @@ final class HealthKitService {
         formatter.timeZone = .current
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    private static func isoString(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
+    private static func roundDouble(_ value: Double, decimals: Int) -> Double {
+        let factor = pow(10.0, Double(decimals))
+        return (value * factor).rounded() / factor
+    }
+
+    private static func stableIdentifier(_ parts: [String]) -> String {
+        let joined = parts.joined(separator: "|")
+        return joined
+            .replacingOccurrences(of: "[^A-Za-z0-9_-]+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-_"))
+    }
+
+    private static func isAsleepValue(_ value: Int) -> Bool {
+        let legacyAsleepRawValue = 1
+        if value == legacyAsleepRawValue {
+            return true
+        }
+        if #available(iOS 16.0, *) {
+            return [
+                HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+                HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                HKCategoryValueSleepAnalysis.asleepREM.rawValue
+            ].contains(value)
+        }
+        return false
+    }
+
+    private static func workoutActivityName(_ type: HKWorkoutActivityType) -> String {
+        switch type {
+        case .running:
+            return "跑步"
+        case .walking:
+            return "步行"
+        case .cycling:
+            return "骑行"
+        case .swimming:
+            return "游泳"
+        case .traditionalStrengthTraining, .functionalStrengthTraining:
+            return "力量训练"
+        case .yoga:
+            return "瑜伽"
+        case .highIntensityIntervalTraining:
+            return "高强度间歇训练"
+        case .coreTraining:
+            return "核心训练"
+        case .dance:
+            return "舞蹈"
+        case .hiking:
+            return "徒步"
+        case .elliptical:
+            return "椭圆机"
+        case .rowing:
+            return "划船"
+        case .stairClimbing, .stairs:
+            return "爬楼"
+        case .basketball:
+            return "篮球"
+        case .soccer:
+            return "足球"
+        case .tennis:
+            return "网球"
+        case .badminton:
+            return "羽毛球"
+        case .mindAndBody:
+            return "身心训练"
+        default:
+            return "健身"
+        }
     }
 }
 
@@ -224,6 +406,8 @@ struct NativeHealthDaySummary: Codable {
     let steps: Double?
     let activeEnergyKcal: Double?
     let exerciseMinutes: Double?
+    let workouts: [NativeWorkoutSummary]
+    let sleep: [NativeSleepSummary]
 
     static func empty(date: String) -> NativeHealthDaySummary {
         NativeHealthDaySummary(
@@ -232,9 +416,32 @@ struct NativeHealthDaySummary: Codable {
             weight: .empty,
             steps: nil,
             activeEnergyKcal: nil,
-            exerciseMinutes: nil
+            exerciseMinutes: nil,
+            workouts: [],
+            sleep: []
         )
     }
+}
+
+struct NativeWorkoutSummary: Codable {
+    let id: String
+    let activityType: UInt
+    let activityName: String
+    let startAt: String
+    let endAt: String
+    let durationMinutes: Double
+    let activeEnergyKcal: Double?
+    let distanceKm: Double?
+    let sourceName: String
+}
+
+struct NativeSleepSummary: Codable {
+    let id: String
+    let startAt: String
+    let endAt: String
+    let asleepMinutes: Double
+    let inBedMinutes: Double?
+    let sourceName: String
 }
 
 struct NativeHeartRateSummary: Codable {
