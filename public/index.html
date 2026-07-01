@@ -240,12 +240,12 @@
               <button class="settings-option-button" id="accountProfileOption" type="button">
                 <span>
                   <small>账户</small>
-                  <strong>账户管理</strong>
-                  <em id="accountProfileSummary">资料、绑定账号、隐私协议与注销账户。</em>
+                  <strong>账户资料</strong>
+                  <em id="accountProfileSummary">查看昵称、性别和生日。</em>
                 </span>
                 <span class="settings-option-arrow" aria-hidden="true">›</span>
               </button>
-              <button class="settings-option-button" id="accountBindingsOption" type="button" hidden>
+              <button class="settings-option-button" id="accountBindingsOption" type="button">
                 <span>
                   <small>账户</small>
                   <strong>绑定账号</strong>
@@ -253,7 +253,7 @@
                 </span>
                 <span class="settings-option-arrow" aria-hidden="true">›</span>
               </button>
-              <button class="settings-option-button" id="privacySettingsOption" type="button" hidden>
+              <button class="settings-option-button" id="privacySettingsOption" type="button">
                 <span>
                   <small>隐私与数据</small>
                   <strong>隐私协议与使用模式</strong>
@@ -269,7 +269,7 @@
                 </span>
                 <span class="privacy-status" id="passkeySettingsStatus">未设置</span>
               </button>
-              <button class="settings-option-button" id="accountDeletionOption" type="button" hidden>
+              <button class="settings-option-button" id="accountDeletionOption" type="button">
                 <span>
                   <small>账户</small>
                   <strong>注销账户</strong>
@@ -309,9 +309,9 @@
               <div class="settings-group-heading">
                 <div>
                   <p class="settings-kicker">账户</p>
-                  <h2 id="accountProfileTitle">账户管理</h2>
+                  <h2 id="accountProfileTitle">账户资料</h2>
                 </div>
-                <span class="account-mode-badge" id="accountProfileBadge">资料</span>
+                <span class="account-mode-badge" id="accountProfileBadge">只读</span>
               </div>
 
               <div class="account-profile-card">
@@ -323,78 +323,18 @@
                 </span>
               </div>
 
-              <div class="account-profile-readonly account-management-list" id="accountProfileReadonly">
-                <button class="account-management-row" type="button" data-profile-edit-target="avatar">
-                  <span class="account-management-label">头像</span>
-                  <span class="account-management-value">
-                    <span class="settings-account-avatar account-management-avatar" id="profileAvatarRowPreview" aria-hidden="true"></span>
-                    <span class="settings-option-arrow" aria-hidden="true">›</span>
-                  </span>
-                </button>
-                <button class="account-management-row" type="button" data-profile-edit-target="name">
-                  <span class="account-management-label">昵称</span>
-                  <span class="account-management-value">
-                    <strong id="profileDisplayNameText">未设置</strong>
-                    <span class="settings-option-arrow" aria-hidden="true">›</span>
-                  </span>
-                </button>
-                <button class="account-management-row" type="button" data-profile-edit-target="gender">
-                  <span class="account-management-label">性别</span>
-                  <span class="account-management-value">
-                    <strong id="profileGenderText">未设置</strong>
-                    <span class="settings-option-arrow" aria-hidden="true">›</span>
-                  </span>
-                </button>
-                <button class="account-management-row" type="button" data-profile-edit-target="birthday">
-                  <span class="account-management-label">生日</span>
-                  <span class="account-management-value">
-                    <strong id="profileBirthdayText">未设置</strong>
-                    <span class="settings-option-arrow" aria-hidden="true">›</span>
-                  </span>
-                </button>
-                <button class="account-management-row" type="button" data-account-management-panel="bindings">
-                  <span class="account-management-label">绑定账号</span>
-                  <span class="account-management-value">
-                    <strong id="accountManagementBindingsText">管理 Apple ID、QQ 等登录方式</strong>
-                    <span class="settings-option-arrow" aria-hidden="true">›</span>
-                  </span>
-                </button>
-                <button class="account-management-row" type="button" data-account-management-panel="privacy">
-                  <span class="account-management-label">隐私协议</span>
-                  <span class="account-management-value">
-                    <strong id="accountManagementPrivacyText">查看签署状态</strong>
-                    <span class="settings-option-arrow" aria-hidden="true">›</span>
-                  </span>
-                </button>
-                <button class="account-management-row is-danger" type="button" data-account-management-panel="account">
-                  <span class="account-management-label">注销账户</span>
-                  <span class="account-management-value">
-                    <strong id="accountManagementDeletionText">进入后确认操作</strong>
-                    <span class="settings-option-arrow" aria-hidden="true">›</span>
-                  </span>
-                </button>
+              <div class="account-profile-readonly" id="accountProfileReadonly">
+                <span>
+                  <small>性别</small>
+                  <strong id="profileGenderText">未设置</strong>
+                </span>
+                <span>
+                  <small>生日</small>
+                  <strong id="profileBirthdayText">未设置</strong>
+                </span>
               </div>
 
               <div class="account-profile-form hidden" id="accountProfileForm">
-                <div class="account-profile-avatar-editor">
-                  <span class="settings-account-avatar profile-avatar-preview" id="accountProfileAvatarPreview" aria-hidden="true"></span>
-                  <div class="profile-avatar-controls">
-                    <strong>头像</strong>
-                    <small id="profileAvatarHint">点击更换头像，支持 JPG、PNG、WebP。</small>
-                    <div class="profile-avatar-actions">
-                      <button class="secondary-button" id="changeProfileAvatarButton" type="button">更换头像</button>
-                      <button class="secondary-button danger-subtle" id="removeProfileAvatarButton" type="button">移除</button>
-                    </div>
-                    <input class="visually-hidden" id="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp">
-                  </div>
-                </div>
-
-                <label class="account-profile-field profile-name-field" for="profileDisplayNameInput">
-                  <span>昵称</span>
-                  <input id="profileDisplayNameInput" type="text" maxlength="16" autocomplete="nickname" placeholder="2-16 个字符">
-                  <small>用于我的页面、社区、评论和管理台展示。</small>
-                </label>
-
                 <div class="account-profile-field">
                   <span>性别</span>
                   <div class="profile-gender-options" role="radiogroup" aria-label="性别">
@@ -433,7 +373,7 @@
           </div>
 
           <div class="settings-panel settings-detail-panel hidden" id="accountBindingsPanel">
-            <button class="settings-back-button" type="button" data-settings-panel="profile">返回账户管理</button>
+            <button class="settings-back-button" type="button" data-settings-panel="overview">返回设置</button>
             <section class="settings-group" aria-labelledby="accountBindingsTitle">
               <div class="settings-group-heading">
                 <div>
@@ -480,7 +420,7 @@
           </div>
 
           <div class="settings-panel settings-detail-panel hidden" id="privacySettingsPanel">
-            <button class="settings-back-button" type="button" data-settings-panel="profile">返回账户管理</button>
+            <button class="settings-back-button" type="button" data-settings-panel="overview">返回设置</button>
             <section class="settings-group" aria-labelledby="privacySettingsTitle">
               <div class="settings-group-heading">
                 <div>
@@ -537,7 +477,7 @@
           </div>
 
           <div class="settings-panel settings-detail-panel hidden" id="accountDeletionPanel">
-            <button class="settings-back-button" type="button" data-settings-panel="profile">返回账户管理</button>
+            <button class="settings-back-button" type="button" data-settings-panel="overview">返回设置</button>
             <section class="settings-group danger-zone" aria-labelledby="accountDangerTitle">
               <div>
                 <p class="settings-kicker">账户操作</p>

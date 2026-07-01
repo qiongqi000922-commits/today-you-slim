@@ -335,19 +335,12 @@ function accountDisplayCode(account) {
   return account.displayCode || account.code;
 }
 
-function accountDisplayName(account) {
-  return account.displayName || account.qqNickname || account.appleNickname || accountDisplayCode(account);
-}
-
 function accountSearchText(account) {
   return [
     account.code,
     account.displayCode,
-    account.displayName,
-    account.customDisplayName,
     account.uniqueId,
     account.qqNickname,
-    account.appleNickname,
     account.qqBindId,
     account.qqUnionIdDigest
   ].filter(Boolean).join(" ").toLowerCase();
@@ -358,18 +351,18 @@ function currentSelectedAccount() {
 }
 
 function accountInitial(account) {
-  const label = accountDisplayName(account) || "Q";
+  const label = account.qqNickname || accountDisplayCode(account) || "Q";
   const [first = "Q"] = Array.from(label.trim());
   return first.toUpperCase();
 }
 
 function renderQqAvatar(element, account) {
   if (!element) return;
-  const avatarUrl = account.avatarUrl || account.qqAvatarUrl || "";
+  const avatarUrl = account.qqAvatarUrl || "";
   element.textContent = avatarUrl ? "" : accountInitial(account);
   element.style.backgroundImage = avatarUrl ? `url("${avatarUrl.replace(/"/g, "%22")}")` : "";
   element.classList.toggle("has-image", Boolean(avatarUrl));
-  element.classList.toggle("is-hidden", false);
+  element.classList.toggle("is-hidden", account.source !== "qq");
 }
 
 async function copyTextToClipboard(text, button = null) {
@@ -2031,12 +2024,10 @@ function renderAccounts() {
 
   els.accountList.innerHTML = filtered.map((account) => `
     <button class="account-item${account.code === state.selectedCode ? " is-active" : ""}" type="button" data-code="${escapeHtml(account.code)}">
-      <span class="account-code">${escapeHtml(accountDisplayName(account))}</span>
+      <span class="account-code">${escapeHtml(accountDisplayCode(account))}</span>
         <span class="account-item-meta">
-          <span>${escapeHtml(accountDisplayCode(account))}</span>
           <span>${account.recordCount} 条 · ${account.photoCount} 张照片</span>
           <span>${formatDate(account.latestRecordAt)} · ${privacyModeLabel(account.privacy)}</span>
-          ${account.customDisplayName || account.customAvatarUrl ? '<span>自定义资料</span>' : ""}
           ${account.moderation?.status && account.moderation.status !== "active" ? `<span class="account-status-chip is-${escapeHtml(account.moderation.status)}">${escapeHtml(moderationStatusLabel(account.moderation.status))}</span>` : ""}
           ${account.source === "qq" ? `<span>绑定QQ ${escapeHtml(account.qqBindId || "-")}</span>` : ""}
         </span>
@@ -2186,17 +2177,11 @@ function handleAdminPullEnd() {
 function renderAccountDetail(account, records, privacyEvents = [], moderationEvents = [], moderationItems = []) {
   els.emptyDetail.classList.add("hidden");
   els.accountDetail.classList.remove("hidden");
-  els.detailCode.textContent = accountDisplayName(account);
-  els.detailSource.textContent = account.source === "preset"
-    ? "预置账户"
-    : account.source === "qq"
-      ? "QQ账户"
-      : account.source === "apple"
-        ? "Apple账户"
-        : "自建账户";
+  els.detailCode.textContent = accountDisplayCode(account);
+  els.detailSource.textContent = account.source === "preset" ? "预置账户" : account.source === "qq" ? "QQ账户" : "新建账户";
   els.detailActivity.textContent = account.latestRecordAt
-    ? `${accountDisplayCode(account)} · ${formatDate(account.firstRecordAt)} 开始记录 · 最近更新 ${formatDate(account.latestRecordAt)}`
-    : `${accountDisplayCode(account)} · 该账户尚未产生记录`;
+    ? `${formatDate(account.firstRecordAt)} 开始记录 · 最近更新 ${formatDate(account.latestRecordAt)}`
+    : "该账户尚未产生记录";
   els.detailUniqueId.textContent = account.uniqueId || account.code;
   els.detailQqBindId.textContent = account.qqBindId || "-";
   els.detailQqUnionId.textContent = account.qqUnionIdDigest || "-";

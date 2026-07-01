@@ -707,11 +707,9 @@ html[data-theme^="glass-"] .privacy-status.is-signed {
 }
 
 html[data-theme^="glass-"] .account-profile-card,
-html[data-theme^="glass-"] .account-profile-avatar-editor,
-html[data-theme^="glass-"] .account-management-list,
 html[data-theme^="glass-"] .account-binding-card,
 html[data-theme^="glass-"] .account-binding-icon,
-html[data-theme^="glass-"] .account-profile-readonly > span,
+html[data-theme^="glass-"] .account-profile-readonly span,
 html[data-theme^="glass-"] .passkey-card,
 html[data-theme^="glass-"] .native-health-card,
 html[data-theme^="glass-"] .native-health-json {
@@ -2817,16 +2815,11 @@ html[data-theme^="glass-"] .ranking-period.is-active:focus-visible {
   max-height: none;
 }
 
-.community-detail-history-section .history-item.is-body-record {
+.community-detail-history-section .history-item:not(.is-food) {
   grid-template-columns: 72px minmax(0, 1fr) auto;
 }
 
 .community-detail-history-section .history-item.is-food {
-  grid-template-columns: 72px minmax(0, 1fr);
-}
-
-.community-detail-history-section .history-item.is-workout,
-.community-detail-history-section .history-item.is-sleep {
   grid-template-columns: 72px minmax(0, 1fr);
 }
 
@@ -6006,12 +5999,6 @@ html[data-theme^="glass-"] .chart-y-axis {
   align-items: start;
 }
 
-.history-item.is-workout,
-.history-item.is-sleep {
-  grid-template-columns: 72px minmax(0, 1fr);
-  align-items: start;
-}
-
 .history-item.is-food .history-food-gallery {
   grid-column: 1;
   grid-row: 1;
@@ -6020,13 +6007,6 @@ html[data-theme^="glass-"] .chart-y-axis {
 .history-item.is-body-record .history-body-photo {
   grid-column: 1;
   grid-row: 1;
-}
-
-.history-item.is-workout .history-body-photo,
-.history-item.is-sleep .history-body-photo {
-  grid-column: 1;
-  grid-row: 1;
-  aspect-ratio: 1 / 1;
 }
 
 .history-food-gallery {
@@ -6093,39 +6073,6 @@ html[data-theme^="glass-"] .chart-y-axis {
   min-width: 0;
 }
 
-.history-item.is-workout .history-main,
-.history-item.is-sleep .history-main {
-  grid-column: 2;
-  min-width: 0;
-}
-
-.history-native-photo {
-  position: relative;
-  overflow: hidden;
-  gap: 4px;
-  border: 1px solid rgba(75, 159, 178, 0.14);
-  background:
-    linear-gradient(145deg, rgba(239, 250, 253, 0.92), rgba(235, 242, 255, 0.78)),
-    radial-gradient(120% 120% at 100% 0%, rgba(128, 194, 221, 0.22), transparent 60%);
-  color: #397c9f;
-}
-
-.history-native-photo svg {
-  width: 30px;
-  height: 30px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.history-native-photo span {
-  font-size: 10px;
-  font-weight: 820;
-  letter-spacing: 0;
-}
-
 .history-time {
   margin: 0;
   font-weight: 780;
@@ -6142,20 +6089,6 @@ html[data-theme^="glass-"] .chart-y-axis {
 .history-head .history-time {
   min-width: 0;
   padding-top: 3px;
-}
-
-.history-sync-badge {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  border: 1px solid rgba(75, 159, 178, 0.16);
-  border-radius: 999px;
-  padding: 3px 7px;
-  background: rgba(239, 250, 253, 0.72);
-  color: #397c9f;
-  font-size: 11px;
-  font-weight: 820;
-  white-space: nowrap;
 }
 
 .history-note {
@@ -6250,16 +6183,6 @@ html[data-theme^="glass-"] .chart-y-axis {
 .history-weight-summary strong {
   background: rgba(74, 147, 190, 0.13);
   color: #397c9f;
-}
-
-.history-workout-summary strong {
-  background: rgba(93, 118, 205, 0.13);
-  color: #4d64b8;
-}
-
-.history-sleep-summary strong {
-  background: rgba(137, 103, 205, 0.13);
-  color: #6b56b8;
 }
 
 .history-food-summary span {
@@ -6359,34 +6282,6 @@ html[data-theme^="glass-"] .history-food-summary strong {
 html[data-theme^="glass-"] .history-weight-summary strong {
   background: rgba(83, 158, 202, 0.16);
   color: #327894;
-}
-
-html[data-theme^="glass-"] .history-native-photo {
-  border-color: rgba(112, 190, 210, 0.22);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.64), rgba(225, 246, 252, 0.38)),
-    radial-gradient(120% 120% at 100% 0%, rgba(113, 190, 210, 0.18), transparent 58%);
-  color: #357f9a;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.68),
-    0 10px 24px rgba(78, 142, 159, 0.08);
-}
-
-html[data-theme^="glass-"] .history-sync-badge {
-  border-color: rgba(112, 190, 210, 0.2);
-  background: rgba(245, 254, 255, 0.6);
-  color: #357f9a;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
-}
-
-html[data-theme^="glass-"] .history-workout-summary strong {
-  background: rgba(97, 122, 210, 0.14);
-  color: #5067bd;
-}
-
-html[data-theme^="glass-"] .history-sleep-summary strong {
-  background: rgba(139, 107, 206, 0.14);
-  color: #6e58bd;
 }
 
 .settings-content {
@@ -6572,12 +6467,12 @@ html[data-theme^="glass-"] .history-sleep-summary strong {
 
 .account-profile-readonly {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
 
-.account-profile-readonly > span {
+.account-profile-readonly span {
   min-width: 0;
   display: grid;
   gap: 6px;
@@ -6599,171 +6494,15 @@ html[data-theme^="glass-"] .history-sleep-summary strong {
   font-size: 15px;
 }
 
-.account-profile-readonly.account-management-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.account-management-row {
-  min-width: 0;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  border: 0;
-  border-radius: 0;
-  padding: 16px 18px;
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-  box-shadow: none;
-  cursor: pointer;
-}
-
-.account-management-row + .account-management-row {
-  border-top: 1px solid var(--line);
-}
-
-.account-management-row:hover,
-.account-management-row:focus-visible {
-  background: rgba(255, 255, 255, 0.52);
-  transform: none;
-}
-
-html[data-theme^="glass-"] .account-management-row:hover,
-html[data-theme^="glass-"] .account-management-row:focus-visible {
-  background: rgba(255, 255, 255, 0.24);
-}
-
-.account-management-label {
-  flex: 0 0 auto;
-  color: var(--ink);
-  font-size: 16px;
-  font-weight: 780;
-}
-
-.account-management-value {
-  min-width: 0;
-  flex: 1 1 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 15px;
-  font-weight: 700;
-  text-align: right;
-}
-
-.account-management-value strong {
-  min-width: 0;
-  overflow: hidden;
-  color: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.account-management-avatar {
-  width: 46px;
-  height: 46px;
-  font-size: 18px;
-}
-
-.account-management-row.is-danger .account-management-label {
-  color: var(--danger);
-}
-
 .account-profile-form {
   display: grid;
   gap: 16px;
   margin-top: 16px;
 }
 
-.account-profile-avatar-editor {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 14px;
-  background: #fff;
-}
-
-.profile-avatar-preview {
-  width: 64px;
-  height: 64px;
-  font-size: 24px;
-}
-
-.profile-avatar-controls {
-  min-width: 0;
-  flex: 1 1 auto;
-  display: grid;
-  gap: 6px;
-}
-
-.profile-avatar-controls strong {
-  color: var(--ink);
-  font-size: 15px;
-}
-
-.profile-avatar-controls small,
-.profile-name-field small {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.profile-avatar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 3px;
-}
-
-.secondary-button.danger-subtle {
-  border-color: rgba(197, 73, 76, 0.18);
-  color: #c5494c;
-}
-
-.secondary-button.danger-subtle:hover:not(:disabled),
-.secondary-button.danger-subtle:focus-visible {
-  border-color: rgba(197, 73, 76, 0.28);
-  background: rgba(255, 242, 244, 0.9);
-  color: #b83f43;
-}
-
 .account-profile-field {
   display: grid;
   gap: 9px;
-}
-
-.profile-name-field input {
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid rgba(31, 122, 90, 0.14);
-  border-radius: 8px;
-  padding: 0 12px;
-  background: rgba(250, 253, 251, 0.92);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 760;
-  outline: none;
-  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
-}
-
-.profile-name-field input:focus {
-  border-color: rgba(31, 122, 90, 0.32);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(31, 122, 90, 0.1);
 }
 
 .profile-gender-options {
@@ -7999,8 +7738,7 @@ html[data-theme^="glass-"] .settings-back-button::before {
 html[data-theme^="glass-"] .account-profile-card,
 html[data-theme^="glass-"] .account-binding-card,
 html[data-theme^="glass-"] .account-binding-icon,
-html[data-theme^="glass-"] .account-management-list,
-html[data-theme^="glass-"] .account-profile-readonly > span,
+html[data-theme^="glass-"] .account-profile-readonly span,
 html[data-theme^="glass-"] .birthday-picker,
 html[data-theme^="glass-"] .birthday-picker-column,
 html[data-theme^="glass-"] .privacy-audit-summary,
@@ -8043,7 +7781,6 @@ html[data-theme^="glass-"] .profile-gender-options button,
 html[data-theme^="glass-"] .birthday-picker-toggle,
 html[data-theme^="glass-"] .birthday-picker-done,
 html[data-theme^="glass-"] .birthday-picker-head button,
-html[data-theme^="glass-"] .profile-name-field input,
 html[data-theme^="glass-"] .mode-selector button,
 html[data-theme^="glass-"] .qq-sync-button,
 html[data-theme^="glass-"] .account-bind-button,
@@ -8739,11 +8476,6 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
     grid-template-columns: 66px minmax(0, 1fr);
   }
 
-  .history-item.is-workout,
-  .history-item.is-sleep {
-    grid-template-columns: 66px minmax(0, 1fr);
-  }
-
   .history-thumb {
     width: 66px;
     height: auto;
@@ -8765,11 +8497,6 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
   }
 
   .history-item.is-food .history-main {
-    grid-column: 2;
-  }
-
-  .history-item.is-workout .history-main,
-  .history-item.is-sleep .history-main {
     grid-column: 2;
   }
 
@@ -9075,14 +8802,6 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
     grid-template-columns: 1fr;
   }
 
-  .account-profile-avatar-editor {
-    align-items: flex-start;
-  }
-
-  .profile-avatar-actions .secondary-button {
-    flex: 1 1 130px;
-  }
-
   .profile-gender-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -9269,8 +8988,7 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
   }
 
   html[data-theme^="glass-"] .account-binding-icon,
-  html[data-theme^="glass-"] .account-management-list,
-  html[data-theme^="glass-"] .account-profile-readonly > span,
+  html[data-theme^="glass-"] .account-profile-readonly span,
   html[data-theme^="glass-"] .birthday-picker,
   html[data-theme^="glass-"] .birthday-picker-column,
   html[data-theme^="glass-"] .privacy-audit-summary,
@@ -9330,8 +9048,7 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
   html[data-theme^="glass-"] .feedback-dialog label,
   html[data-theme^="glass-"] .confirmation-dialog > p:not(.danger-kicker):not(.confirmation-message),
   html[data-theme^="glass-"] .feedback-dialog > p:not(.eyebrow):not(.feedback-message),
-  html[data-theme^="glass-"] .account-profile-readonly > span,
-  html[data-theme^="glass-"] .account-management-value,
+  html[data-theme^="glass-"] .account-profile-readonly span,
   html[data-theme^="glass-"] .native-health-json {
     color: var(--muted);
   }
@@ -10216,7 +9933,7 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
 
 /* Dark history chips: food calories stay warm, body weight stays cool. */
 @media (prefers-color-scheme: dark) {
-  html[data-theme^="glass-"] .history-food-summary:not(.history-weight-summary):not(.history-workout-summary):not(.history-sleep-summary) strong {
+  html[data-theme^="glass-"] .history-food-summary:not(.history-weight-summary) strong {
     border: 1px solid rgba(229, 184, 104, 0.2);
     background:
       linear-gradient(145deg, rgba(84, 58, 28, 0.5), rgba(39, 31, 22, 0.42)),
@@ -10233,40 +9950,6 @@ html[data-theme^="glass-"] .community-comment-empty-icon {
       radial-gradient(120% 120% at 100% 0%, rgba(111, 207, 226, 0.22), rgba(15, 36, 56, 0) 58%);
     color: #a8ecff;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  html[data-theme^="glass-"] .history-native-photo {
-    border-color: rgba(119, 209, 232, 0.22);
-    background:
-      linear-gradient(145deg, rgba(29, 55, 75, 0.58), rgba(12, 28, 45, 0.5)),
-      radial-gradient(120% 120% at 100% 0%, rgba(119, 209, 232, 0.2), rgba(12, 28, 45, 0) 58%);
-    color: #bdefff;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  html[data-theme^="glass-"] .history-sync-badge {
-    border-color: rgba(119, 209, 232, 0.22);
-    background: rgba(23, 47, 66, 0.58);
-    color: #bdefff;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  html[data-theme^="glass-"] .history-workout-summary strong {
-    border: 1px solid rgba(165, 180, 252, 0.22);
-    background:
-      linear-gradient(145deg, rgba(52, 63, 112, 0.5), rgba(28, 35, 69, 0.42)),
-      radial-gradient(120% 120% at 100% 0%, rgba(165, 180, 252, 0.17), rgba(28, 35, 69, 0) 58%);
-    color: #c8d0ff;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  }
-
-  html[data-theme^="glass-"] .history-sleep-summary strong {
-    border: 1px solid rgba(196, 181, 253, 0.22);
-    background:
-      linear-gradient(145deg, rgba(70, 54, 112, 0.5), rgba(40, 30, 69, 0.42)),
-      radial-gradient(120% 120% at 100% 0%, rgba(196, 181, 253, 0.17), rgba(40, 30, 69, 0) 58%);
-    color: #d8ccff;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
 }
 

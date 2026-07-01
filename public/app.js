@@ -277,7 +277,7 @@ const state = {
   accountBindingLoading: "",
   profileSaving: false,
   profileEditing: false,
-  profileDraft: { displayName: "", avatarDataUrl: "", avatarPreviewUrl: "", removeAvatar: false, gender: "", birthday: "", year: null, month: null, day: null },
+  profileDraft: { gender: "", birthday: "", year: null, month: null, day: null },
   birthdayPickerOpen: false,
   moodAiContext: null,
   environmentContext: null,
@@ -318,30 +318,10 @@ const REPLAY_BUILD_VERSION = "20260626-cdnreplay1";
 const SOFT_OVERLAY_TRANSITION_MS = 190;
 const API_TIMEOUT_MS = 70000;
 const MAX_CLIENT_PHOTO_BYTES = 10 * 1024 * 1024;
-const PROFILE_DISPLAY_NAME_MAX_LENGTH = 16;
-const PROFILE_AVATAR_MAX_BYTES = Math.floor(1.7 * 1024 * 1024);
-const PROFILE_AVATAR_MAX_DIMENSION = 720;
-const PROFILE_AVATAR_QUALITY = 0.84;
 const FEEDBACK_IMAGE_LIMIT = 6;
 const FEEDBACK_IMAGE_MAX_BYTES = Math.floor(1.6 * 1024 * 1024);
 const FEEDBACK_IMAGE_MAX_DIMENSION = 1280;
 const FEEDBACK_IMAGE_QUALITY = 0.82;
-const PROFILE_DISPLAY_NAME_RESERVED_TERMS = [
-  "admin",
-  "administrator",
-  "root",
-  "system",
-  "official",
-  "support",
-  "service",
-  "wellecho",
-  "well echo",
-  "今天你瘦了吗",
-  "官方",
-  "管理员",
-  "客服",
-  "系统"
-];
 const MAX_FOOD_PHOTOS_PER_RECORD = 6;
 const MAX_FOOD_ITEMS_PER_RECORD = 12;
 const AI_ENVIRONMENT_CACHE_MS = 10 * 60 * 1000;
@@ -966,8 +946,6 @@ const els = {
   feedbackOption: document.querySelector("#feedbackOption"),
   passkeySettingsPanel: document.querySelector("#passkeySettingsPanel"),
   settingsBackButtons: [...document.querySelectorAll("[data-settings-panel]")],
-  accountProfileEditRows: [...document.querySelectorAll("[data-profile-edit-target]")],
-  accountManagementPanelRows: [...document.querySelectorAll("[data-account-management-panel]")],
   bottomTabs: document.querySelector("#bottomTabs"),
   personalTabButton: document.querySelector("#personalTabButton"),
   communityTabButton: document.querySelector("#communityTabButton"),
@@ -1007,9 +985,6 @@ const els = {
   accountProfileBadge: document.querySelector("#accountProfileBadge"),
   accountBindingsSummary: document.querySelector("#accountBindingsSummary"),
   accountBindingsBadge: document.querySelector("#accountBindingsBadge"),
-  accountManagementBindingsText: document.querySelector("#accountManagementBindingsText"),
-  accountManagementPrivacyText: document.querySelector("#accountManagementPrivacyText"),
-  accountManagementDeletionText: document.querySelector("#accountManagementDeletionText"),
   appleBindingState: document.querySelector("#appleBindingState"),
   appleBindingHint: document.querySelector("#appleBindingHint"),
   bindAppleAccountButton: document.querySelector("#bindAppleAccountButton"),
@@ -1018,14 +993,6 @@ const els = {
   bindQqAccountButton: document.querySelector("#bindQqAccountButton"),
   accountProfileReadonly: document.querySelector("#accountProfileReadonly"),
   accountProfileForm: document.querySelector("#accountProfileForm"),
-  profileAvatarRowPreview: document.querySelector("#profileAvatarRowPreview"),
-  profileDisplayNameText: document.querySelector("#profileDisplayNameText"),
-  profileDisplayNameInput: document.querySelector("#profileDisplayNameInput"),
-  accountProfileAvatarPreview: document.querySelector("#accountProfileAvatarPreview"),
-  profileAvatarHint: document.querySelector("#profileAvatarHint"),
-  changeProfileAvatarButton: document.querySelector("#changeProfileAvatarButton"),
-  removeProfileAvatarButton: document.querySelector("#removeProfileAvatarButton"),
-  profileAvatarInput: document.querySelector("#profileAvatarInput"),
   profileGenderText: document.querySelector("#profileGenderText"),
   profileBirthdayText: document.querySelector("#profileBirthdayText"),
   profileGenderButtons: [...document.querySelectorAll("[data-profile-gender]")],
@@ -2631,61 +2598,9 @@ function profileBirthdayFromParts(parts = state.profileDraft) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function sanitizeProfileDisplayNameDraft(value) {
-  return String(value || "")
-    .normalize("NFKC")
-    .replace(/[\u0000-\u001f\u007f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function profileDisplayNamePolicyKey(value) {
-  return String(value || "")
-    .normalize("NFKC")
-    .replace(/[\s_.·-]+/g, "")
-    .toLowerCase();
-}
-
-function validateProfileDisplayNameDraft(value) {
-  const displayName = sanitizeProfileDisplayNameDraft(value);
-  const length = Array.from(displayName).length;
-  if (!displayName) return { displayName: "", error: "请输入昵称。" };
-  if (length < 2 || length > PROFILE_DISPLAY_NAME_MAX_LENGTH) {
-    return { displayName: "", error: "昵称需为 2-16 个字符。" };
-  }
-  if (/https?:\/\//i.test(displayName) || /www\./i.test(displayName)) {
-    return { displayName: "", error: "昵称不能包含网址。" };
-  }
-  if (/[<>()[\]{}'"`~^=+\\|/:;，。！？、]/u.test(displayName)) {
-    return { displayName: "", error: "昵称不能包含特殊符号。" };
-  }
-  if (!/^[\p{Script=Han}\p{L}\p{N}_·.\- ]+$/u.test(displayName)) {
-    return { displayName: "", error: "昵称仅支持中英文、数字、空格和少量连接符。" };
-  }
-  const policyKey = profileDisplayNamePolicyKey(displayName);
-  if (PROFILE_DISPLAY_NAME_RESERVED_TERMS.some((term) => policyKey.includes(profileDisplayNamePolicyKey(term)))) {
-    return { displayName: "", error: "昵称不能使用官方、系统或客服相关保留词。" };
-  }
-  return { displayName, error: "" };
-}
-
-function inheritedProfileAvatarUrl(profile = state.profile) {
-  return profile?.qq?.avatarUrl || "";
-}
-
-function profileDraftAvatarUrl(profile = state.profile) {
-  if (state.profileDraft.avatarPreviewUrl) return state.profileDraft.avatarPreviewUrl;
-  if (state.profileDraft.removeAvatar) return inheritedProfileAvatarUrl(profile);
-  return safeAvatarUrl(profile);
-}
-
 function profileDraftFromProfile() {
   const parsedBirthday = parseProfileBirthday(state.profile?.demographics?.birthday || "");
   return {
-    displayName: state.profile?.customProfile?.displayName || profileDisplayName(state.profile),
-    avatarDataUrl: "",
-    avatarPreviewUrl: "",
-    removeAvatar: false,
     gender: state.profile?.demographics?.gender || "",
     birthday: parsedBirthday.birthday,
     year: parsedBirthday.year,
@@ -2698,20 +2613,8 @@ function profileSummaryText(profile = state.profile) {
   const demographics = profile?.demographics || {};
   const gender = genderLabel(demographics.gender);
   const birthday = birthdayLabel(demographics.birthday);
-  const hasCustomAvatar = Boolean(profile?.customProfile?.hasAvatar);
-  return `${profileDisplayName(profile)} · ${hasCustomAvatar ? "自定义头像" : "默认头像"} · 性别 ${gender} · 生日 ${birthday}`;
-}
-
-function accountBindingSummaryText(profile = state.profile) {
-  const linked = [];
-  if (profile?.apple) linked.push("Apple ID");
-  if (profile?.qq) linked.push("QQ");
-  return linked.length ? `已绑定 ${linked.join("、")}` : "未绑定正式登录方式";
-}
-
-function accountPrivacySummaryText(privacy = privacyStatus()) {
-  if (!privacy.agreementAccepted) return "尚未签署";
-  return `${privacyModeLabel()} · ${formatConsentTime(privacy.acceptedAt)}`;
+  if (gender === "未设置" && birthday === "未设置") return "尚未填写性别和生日。";
+  return `性别 ${gender} · 生日 ${birthday}`;
 }
 
 function birthdayPickerButton(value, label, type, selected) {
@@ -2783,26 +2686,14 @@ function renderAccountProfilePanel() {
   const demographics = state.profile.demographics || {};
   const editing = Boolean(state.profileEditing);
   const hasIdentity = Boolean(state.profile.qq || state.profile.apple);
-  const customProfile = state.profile.customProfile || {};
   renderAvatar(els.accountProfileAvatar, state.profile);
-  renderAvatar(els.profileAvatarRowPreview, state.profile);
   els.accountProfileName.textContent = profileDisplayName(state.profile);
-  els.accountProfileBinding.textContent = accountBindingSummaryText(state.profile);
-  els.profileDisplayNameText.textContent = profileDisplayName(state.profile);
+  els.accountProfileBinding.textContent = qqBindingLabel(state.profile);
   els.profileGenderText.textContent = genderLabel(demographics.gender);
   els.profileBirthdayText.textContent = birthdayLabel(demographics.birthday);
-  if (els.accountManagementBindingsText) {
-    els.accountManagementBindingsText.textContent = accountBindingSummaryText(state.profile);
-  }
-  if (els.accountManagementPrivacyText) {
-    els.accountManagementPrivacyText.textContent = accountPrivacySummaryText();
-  }
-  if (els.accountManagementDeletionText) {
-    els.accountManagementDeletionText.textContent = "进入后确认影响范围";
-  }
-  els.accountProfileSummary.textContent = `${profileSummaryText(state.profile)} · ${accountBindingSummaryText(state.profile)}`;
-  els.accountProfileBadge.textContent = editing ? "编辑中" : "账户";
-  els.accountProfileBadge.dataset.mode = editing ? "full" : hasIdentity ? "full" : "basic";
+  els.accountProfileSummary.textContent = profileSummaryText(state.profile);
+  els.accountProfileBadge.textContent = editing ? "编辑中" : "只读";
+  els.accountProfileBadge.dataset.mode = editing ? "full" : "basic";
   els.accountProfileReadonly.classList.toggle("hidden", editing);
   els.accountProfileForm.classList.toggle("hidden", !editing);
   els.editProfileButton.classList.toggle("hidden", editing);
@@ -2811,32 +2702,6 @@ function renderAccountProfilePanel() {
   els.editProfileButton.disabled = !hasIdentity || state.profileSaving;
   els.cancelProfileEditButton.disabled = state.profileSaving;
   els.saveProfileButton.disabled = state.profileSaving || !hasIdentity;
-
-  if (els.profileDisplayNameInput) {
-    els.profileDisplayNameInput.value = state.profileDraft.displayName || "";
-    els.profileDisplayNameInput.disabled = !editing || state.profileSaving;
-  }
-  if (els.accountProfileAvatarPreview) {
-    renderAvatarElement(els.accountProfileAvatarPreview, profileDraftAvatarUrl(state.profile), profileInitial({
-      ...state.profile,
-      displayName: state.profileDraft.displayName || profileDisplayName(state.profile)
-    }));
-  }
-  if (els.profileAvatarHint) {
-    els.profileAvatarHint.textContent = state.profileDraft.avatarDataUrl
-      ? "已选择新头像，保存后生效。"
-      : state.profileDraft.removeAvatar
-        ? "保存后会移除自定义头像，并回到绑定头像或默认头像。"
-        : customProfile.hasAvatar
-          ? "当前使用自定义头像，可更换或移除。"
-          : "点击更换头像，支持 JPG、PNG、WebP。";
-  }
-  if (els.changeProfileAvatarButton) {
-    els.changeProfileAvatarButton.disabled = !editing || state.profileSaving;
-  }
-  if (els.removeProfileAvatarButton) {
-    els.removeProfileAvatarButton.disabled = !editing || state.profileSaving || (!customProfile.hasAvatar && !state.profileDraft.avatarDataUrl);
-  }
 
   for (const button of els.profileGenderButtons) {
     const active = button.dataset.profileGender === (state.profileDraft.gender || "");
@@ -2886,7 +2751,6 @@ function startProfileEdit() {
   state.profileEditing = true;
   state.profileDraft = profileDraftFromProfile();
   state.birthdayPickerOpen = false;
-  if (els.profileAvatarInput) els.profileAvatarInput.value = "";
   setProfileSettingsMessage("", "");
   renderSettings();
 }
@@ -2895,72 +2759,8 @@ function cancelProfileEdit() {
   state.profileEditing = false;
   state.profileDraft = profileDraftFromProfile();
   state.birthdayPickerOpen = false;
-  if (els.profileAvatarInput) els.profileAvatarInput.value = "";
   setProfileSettingsMessage("", "");
   renderSettings();
-}
-
-function openProfileEditSection(target) {
-  if (state.profileSaving) return;
-  startProfileEdit();
-  if (!state.profileEditing) return;
-  const section = target || "name";
-  const scrollToForm = () => {
-    els.accountProfileForm?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  };
-  if (section === "avatar") {
-    scrollToForm();
-    els.profileAvatarInput?.click();
-    return;
-  }
-  if (section === "birthday") {
-    state.birthdayPickerOpen = true;
-    renderAccountProfilePanel();
-    window.requestAnimationFrame(() => {
-      scrollToForm();
-      els.profileBirthdayToggle?.focus({ preventScroll: true });
-    });
-    return;
-  }
-  window.requestAnimationFrame(() => {
-    scrollToForm();
-    if (section === "name") {
-      els.profileDisplayNameInput?.focus({ preventScroll: true });
-      els.profileDisplayNameInput?.select();
-      return;
-    }
-    if (section === "gender") {
-      const activeGender = els.profileGenderButtons.find((button) => button.classList.contains("is-active"));
-      activeGender?.focus({ preventScroll: true });
-    }
-  });
-}
-
-async function handleProfileAvatarSelection(file) {
-  if (!state.profileEditing || state.profileSaving) return;
-  setProfileSettingsMessage("正在处理头像...", "");
-  try {
-    const dataUrl = await normalizeProfileAvatarFile(file);
-    state.profileDraft.avatarDataUrl = dataUrl;
-    state.profileDraft.avatarPreviewUrl = dataUrl;
-    state.profileDraft.removeAvatar = false;
-    setProfileSettingsMessage("头像已准备好，保存后生效。", "success");
-  } catch (error) {
-    setProfileSettingsMessage(error.message || "头像处理失败。", "error");
-  } finally {
-    if (els.profileAvatarInput) els.profileAvatarInput.value = "";
-    renderAccountProfilePanel();
-  }
-}
-
-function removeProfileAvatarDraft() {
-  if (!state.profileEditing || state.profileSaving) return;
-  state.profileDraft.avatarDataUrl = "";
-  state.profileDraft.avatarPreviewUrl = "";
-  state.profileDraft.removeAvatar = true;
-  if (els.profileAvatarInput) els.profileAvatarInput.value = "";
-  setProfileSettingsMessage("保存后会移除当前自定义头像。", "");
-  renderAccountProfilePanel();
 }
 
 function renderPrivacyHighlights(items) {
@@ -3136,7 +2936,7 @@ function showLogin() {
   state.accountBindingLoading = "";
   state.profileSaving = false;
   state.profileEditing = false;
-  state.profileDraft = { displayName: "", avatarDataUrl: "", avatarPreviewUrl: "", removeAvatar: false, gender: "", birthday: "", year: null, month: null, day: null };
+  state.profileDraft = { gender: "", birthday: "", year: null, month: null, day: null };
   state.birthdayPickerOpen = false;
   state.privacyConsentStep = "full";
 }
@@ -3447,19 +3247,6 @@ function nativeHealthHeartRateFromDay(day) {
   };
 }
 
-function nativeHealthWorkoutCount(snapshot) {
-  const days = Array.isArray(snapshot?.recent) ? snapshot.recent : [];
-  return days.reduce((sum, day) => sum + (Array.isArray(day?.workouts) ? day.workouts.length : 0), 0);
-}
-
-function nativeHealthSleepCount(snapshot) {
-  const days = Array.isArray(snapshot?.recent) ? snapshot.recent : [];
-  return days.reduce((sum, day) => {
-    const items = Array.isArray(day?.sleep) ? day.sleep : Array.isArray(day?.sleeps) ? day.sleeps : [];
-    return sum + items.length;
-  }, 0);
-}
-
 function applyNativeHealthSnapshot(snapshot) {
   const days = Array.isArray(snapshot?.recent) ? snapshot.recent : [];
   state.nativeHealthWeightRecords = days
@@ -3578,10 +3365,6 @@ async function syncNativeHealthSnapshotToCloud(snapshot) {
     });
     applyWeightPredictionResponse(data);
     if (shouldPollWeightPrediction(data)) scheduleWeightPredictionPoll();
-    if (data?.health?.records?.total) {
-      state.recordsLoaded = false;
-      await loadRecords({ force: true });
-    }
     return data;
   } catch (error) {
     console.warn("Native health cloud sync failed:", error);
@@ -3592,13 +3375,13 @@ async function syncNativeHealthSnapshotToCloud(snapshot) {
 function nativeHealthDescriptionText(bridge) {
   if (!bridge) {
     return APP_LOCALE_ENGLISH
-      ? "Open in the iOS app to sync weight, heart rate, workouts, and sleep."
-      : "当前不是 iOS App 环境，真机 App 内会自动同步体重、心率、健身和睡眠。";
+      ? "Open in the iOS app to sync weight and heart rate."
+      : "当前不是 iOS App 环境，真机 App 内会自动同步体重和心率。";
   }
   if (state.nativeHealthLoading) {
     return APP_LOCALE_ENGLISH
-      ? `Syncing recent ${clampNativeHealthDays(state.nativeHealthLoadedDays || NATIVE_HEALTH_INITIAL_DAYS)} days of health data...`
-      : `正在同步近 ${clampNativeHealthDays(state.nativeHealthLoadedDays || NATIVE_HEALTH_INITIAL_DAYS)} 天体重、心率、健身和睡眠...`;
+      ? `Syncing recent ${clampNativeHealthDays(state.nativeHealthLoadedDays || NATIVE_HEALTH_INITIAL_DAYS)} days...`
+      : `正在同步近 ${clampNativeHealthDays(state.nativeHealthLoadedDays || NATIVE_HEALTH_INITIAL_DAYS)} 天体重和心率...`;
   }
   if (state.nativeHealthError) {
     return APP_LOCALE_ENGLISH
@@ -3609,11 +3392,9 @@ function nativeHealthDescriptionText(bridge) {
     const range = nativeHealthRecordDateLabel(state.nativeHealthSnapshot);
     const weightCount = state.nativeHealthWeightRecords.length;
     const heartCount = state.nativeHealthHeartRateRecords.length;
-    const workoutCount = nativeHealthWorkoutCount(state.nativeHealthSnapshot);
-    const sleepCount = nativeHealthSleepCount(state.nativeHealthSnapshot);
     return APP_LOCALE_ENGLISH
-      ? `Synced ${range || `recent ${state.nativeHealthLoadedDays} days`}. Weight ${weightCount}, heart rate ${heartCount}, workouts ${workoutCount}, sleep ${sleepCount}.`
-      : `已同步 ${range || `近 ${state.nativeHealthLoadedDays} 天`}，体重 ${weightCount} 条，心率 ${heartCount} 天，健身 ${workoutCount} 条，睡眠 ${sleepCount} 条。`;
+      ? `Synced ${range || `recent ${state.nativeHealthLoadedDays} days`}. Weight ${weightCount}, heart rate ${heartCount}.`
+      : `已同步 ${range || `近 ${state.nativeHealthLoadedDays} 天`}，体重 ${weightCount} 条，心率 ${heartCount} 天。`;
   }
   return APP_LOCALE_ENGLISH
     ? "Tap to request Health permission and sync."
@@ -3747,12 +3528,6 @@ function renderSettings() {
 
 async function saveProfileSettings() {
   if ((!state.profile?.qq && !state.profile?.apple) || state.profileSaving) return;
-  const nameResult = validateProfileDisplayNameDraft(state.profileDraft.displayName);
-  if (nameResult.error) {
-    setProfileSettingsMessage(nameResult.error, "error");
-    els.profileDisplayNameInput?.focus();
-    return;
-  }
   const gender = state.profileDraft.gender || "";
   const birthday = state.profileDraft.birthday || "";
   state.profileSaving = true;
@@ -3762,9 +3537,6 @@ async function saveProfileSettings() {
     const data = await api("/api/profile", {
       method: "PATCH",
       body: JSON.stringify({
-        displayName: nameResult.displayName,
-        avatarDataUrl: state.profileDraft.avatarDataUrl || "",
-        removeAvatar: Boolean(state.profileDraft.removeAvatar),
         gender,
         birthday
       })
@@ -3773,12 +3545,6 @@ async function saveProfileSettings() {
     state.profileEditing = false;
     state.birthdayPickerOpen = false;
     state.profileDraft = profileDraftFromProfile();
-    if (els.profileAvatarInput) els.profileAvatarInput.value = "";
-    renderProfileIdentity(state.profile);
-    if (state.community) {
-      state.community = await api("/api/community").catch(() => state.community);
-      renderCommunity();
-    }
     setProfileSettingsMessage("个人资料已保存。", "success");
   } catch (error) {
     setProfileSettingsMessage(error.message || "个人资料保存失败。", "error");
@@ -4585,7 +4351,11 @@ function renderCommunityDetailRecordsSection(member, records) {
     ? `最近更新 ${dateTimeFormat.format(new Date(visibleRecords[0].timestamp))}`
     : "按时间自动保存";
   const listMarkup = visibleRecords.length
-    ? visibleRecords.map((record) => renderHistoryRecord(record, { readonly: true })).join("")
+    ? visibleRecords.map((record) => (
+      record.type === "food"
+        ? renderFoodHistoryItem(record, { readonly: true })
+        : renderBodyHistoryItem(record, { readonly: true })
+    )).join("")
     : '<div class="chart-empty">暂无公开记录。</div>';
 
   return `
@@ -5183,51 +4953,6 @@ async function compressFeedbackImage(dataUrl) {
     }
   }
   return dataUrl;
-}
-
-function compressProfileAvatarCanvasToDataUrl(canvas) {
-  let quality = PROFILE_AVATAR_QUALITY;
-  let dataUrl = canvas.toDataURL("image/jpeg", quality);
-  while (dataUrlByteLength(dataUrl) > PROFILE_AVATAR_MAX_BYTES && quality > 0.5) {
-    quality = Math.max(0.5, quality - 0.08);
-    dataUrl = canvas.toDataURL("image/jpeg", quality);
-  }
-  return dataUrl;
-}
-
-async function normalizeProfileAvatarFile(file) {
-  if (!file || !["image/jpeg", "image/png", "image/webp"].includes(String(file.type || "").toLowerCase())) {
-    throw new Error("请选择 JPG、PNG 或 WebP 图片。");
-  }
-  if (file.size > MAX_CLIENT_PHOTO_BYTES) {
-    throw new Error("头像图片太大，请换一张小于 10MB 的图片。");
-  }
-  const rawDataUrl = await readFileAsDataUrl(file);
-  const image = await loadDataUrlImage(rawDataUrl);
-  let width = image.naturalWidth || image.width;
-  let height = image.naturalHeight || image.height;
-  if (!width || !height) throw new Error("头像尺寸不正确。");
-  const scale = Math.min(1, PROFILE_AVATAR_MAX_DIMENSION / Math.max(width, height));
-  width = Math.max(1, Math.round(width * scale));
-  height = Math.max(1, Math.round(height * scale));
-
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(width * (0.88 ** attempt)));
-    canvas.height = Math.max(1, Math.round(height * (0.88 ** attempt)));
-    const context = canvas.getContext("2d", { alpha: false });
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const dataUrl = compressProfileAvatarCanvasToDataUrl(canvas);
-    if (dataUrlByteLength(dataUrl) <= PROFILE_AVATAR_MAX_BYTES || attempt === 3) {
-      if (dataUrlByteLength(dataUrl) > PROFILE_AVATAR_MAX_BYTES) {
-        throw new Error("头像压缩后仍然过大，请换一张更小的图片。");
-      }
-      return dataUrl;
-    }
-  }
-  throw new Error("头像处理失败，请重新选择。");
 }
 
 async function normalizeFeedbackImageFile(file) {
@@ -6865,131 +6590,6 @@ function renderBodyHistoryItem(record, { readonly = false } = {}) {
   `;
 }
 
-function recordNativeLabel(record) {
-  if (record?.nativeLabel || record?.source === "ios_health") {
-    return APP_LOCALE_ENGLISH ? "iOS Sync" : "iOS 同步";
-  }
-  return "";
-}
-
-function formatNativeMetric(value, digits = 1) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "";
-  return number.toFixed(digits).replace(/\.0$/, "");
-}
-
-function formatNativeMinutes(value) {
-  const minutes = Number(value);
-  if (!Number.isFinite(minutes) || minutes <= 0) return "";
-  const rounded = Math.round(minutes);
-  const hours = Math.floor(rounded / 60);
-  const rest = rounded % 60;
-  if (!hours) return APP_LOCALE_ENGLISH ? `${rest} min` : `${rest} 分钟`;
-  if (!rest) return APP_LOCALE_ENGLISH ? `${hours} hr` : `${hours} 小时`;
-  return APP_LOCALE_ENGLISH ? `${hours} hr ${rest} min` : `${hours} 小时 ${rest} 分钟`;
-}
-
-function formatNativeTimeRange(startAt, endAt) {
-  const start = new Date(startAt);
-  const end = new Date(endAt);
-  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return "";
-  const options = { hour: "2-digit", minute: "2-digit", hour12: false };
-  return `${start.toLocaleTimeString("zh-CN", options)} - ${end.toLocaleTimeString("zh-CN", options)}`;
-}
-
-function nativeHistoryIconMarkup(type) {
-  const isSleep = type === "sleep";
-  const label = isSleep ? (APP_LOCALE_ENGLISH ? "Sleep" : "睡眠") : (APP_LOCALE_ENGLISH ? "Workout" : "健身");
-  const icon = isSleep
-    ? '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M22.5 23.5A10.5 10.5 0 0 1 12 13c0-3.1 1.35-5.9 3.5-7.82A10.51 10.51 0 1 0 26.82 16.5 10.46 10.46 0 0 1 22.5 23.5Z"/><path d="M21.5 8.5h5l-5 6h5"/></svg>'
-    : '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 21.5 21.5 8"/><path d="M5.5 18.5 13.5 26.5"/><path d="M18.5 5.5 26.5 13.5"/><path d="m12 17 3 3"/></svg>';
-  return `<div class="history-body-photo history-native-photo is-${type}">${icon}<span>${label}</span></div>`;
-}
-
-function renderWorkoutHistoryItem(record) {
-  const workout = record.workout || {};
-  const activityName = workout.activityName || (APP_LOCALE_ENGLISH ? "Workout" : "健身");
-  const label = recordNativeLabel(record);
-  const duration = formatNativeMinutes(workout.durationMinutes);
-  const energy = formatNativeMetric(workout.activeEnergyKcal, 0);
-  const distance = formatNativeMetric(workout.distanceKm, 2);
-  const summary = [
-    duration,
-    energy ? `${energy} kcal` : "",
-    distance ? `${distance} km` : ""
-  ].filter(Boolean);
-  const sourceText = [
-    formatNativeTimeRange(workout.startAt, workout.endAt),
-    workout.sourceName || ""
-  ].filter(Boolean).join(" · ") || (APP_LOCALE_ENGLISH ? "Synced from Apple Health" : "来自 iOS 健康同步");
-  return `
-    <article class="history-item is-workout">
-      ${nativeHistoryIconMarkup("workout")}
-      <div class="history-main">
-        <div class="history-head">
-          <p class="history-time">${dateTimeFormat.format(new Date(record.timestamp))}</p>
-          ${label ? `<span class="history-sync-badge">${escapeAttribute(label)}</span>` : ""}
-        </div>
-        <p class="history-note">${APP_LOCALE_ENGLISH ? "Workout record" : "健身记录"}</p>
-        <div class="history-food-summary history-workout-summary">
-          <strong>${escapeAttribute(activityName)}</strong>
-          ${summary.map((item) => `<span>${escapeAttribute(item)}</span>`).join("")}
-        </div>
-        <div class="history-food-list">
-          <div class="history-food-entry">
-            <strong>${escapeAttribute(activityName)}</strong>
-            <span>${escapeAttribute(sourceText)}</span>
-          </div>
-        </div>
-      </div>
-    </article>
-  `;
-}
-
-function renderSleepHistoryItem(record) {
-  const sleep = record.sleep || {};
-  const label = recordNativeLabel(record);
-  const asleep = formatNativeMinutes(sleep.asleepMinutes);
-  const inBed = formatNativeMinutes(sleep.inBedMinutes);
-  const summary = [
-    asleep ? `${APP_LOCALE_ENGLISH ? "Sleep" : "睡眠"} ${asleep}` : "",
-    inBed ? `${APP_LOCALE_ENGLISH ? "In bed" : "在床"} ${inBed}` : ""
-  ].filter(Boolean);
-  const sourceText = [
-    formatNativeTimeRange(sleep.startAt, sleep.endAt),
-    sleep.sourceName || ""
-  ].filter(Boolean).join(" · ") || (APP_LOCALE_ENGLISH ? "Synced from Apple Health" : "来自 iOS 健康同步");
-  return `
-    <article class="history-item is-sleep">
-      ${nativeHistoryIconMarkup("sleep")}
-      <div class="history-main">
-        <div class="history-head">
-          <p class="history-time">${dateTimeFormat.format(new Date(record.timestamp))}</p>
-          ${label ? `<span class="history-sync-badge">${escapeAttribute(label)}</span>` : ""}
-        </div>
-        <p class="history-note">${APP_LOCALE_ENGLISH ? "Sleep record" : "睡眠记录"}</p>
-        <div class="history-food-summary history-sleep-summary">
-          <strong>${APP_LOCALE_ENGLISH ? "Sleep" : "睡眠"}</strong>
-          ${summary.map((item) => `<span>${escapeAttribute(item)}</span>`).join("")}
-        </div>
-        <div class="history-food-list">
-          <div class="history-food-entry">
-            <strong>${APP_LOCALE_ENGLISH ? "Sleep" : "睡眠"}</strong>
-            <span>${escapeAttribute(sourceText)}</span>
-          </div>
-        </div>
-      </div>
-    </article>
-  `;
-}
-
-function renderHistoryRecord(record, options = {}) {
-  if (record.type === "food") return renderFoodHistoryItem(record, options);
-  if (record.type === "workout") return renderWorkoutHistoryItem(record, options);
-  if (record.type === "sleep") return renderSleepHistoryItem(record, options);
-  return renderBodyHistoryItem(record, options);
-}
-
 function renderHistory() {
   if (!state.historyExpanded) {
     renderHistoryCollapsed();
@@ -7006,7 +6606,9 @@ function renderHistory() {
     return;
   }
 
-  els.historyList.innerHTML = state.historyRecords.map((record) => renderHistoryRecord(record)).join("");
+  els.historyList.innerHTML = state.historyRecords.map((record) => (
+    record.type === "food" ? renderFoodHistoryItem(record) : renderBodyHistoryItem(record)
+  )).join("");
   bindHistoryFoodGalleries();
   els.historyList.querySelectorAll("[data-history-food-gallery] img").forEach((image) => {
     if (image.complete) return;
@@ -9485,25 +9087,6 @@ els.syncQqProfileButton?.addEventListener("click", startQqProfileSync);
 els.editProfileButton?.addEventListener("click", startProfileEdit);
 els.cancelProfileEditButton?.addEventListener("click", cancelProfileEdit);
 els.saveProfileButton?.addEventListener("click", saveProfileSettings);
-els.profileDisplayNameInput?.addEventListener("input", () => {
-  if (!state.profileEditing || state.profileSaving) return;
-  state.profileDraft.displayName = sanitizeProfileDisplayNameDraft(els.profileDisplayNameInput.value);
-  if (els.accountProfileAvatarPreview) {
-    renderAvatarElement(els.accountProfileAvatarPreview, profileDraftAvatarUrl(state.profile), profileInitial({
-      ...state.profile,
-      displayName: state.profileDraft.displayName || profileDisplayName(state.profile)
-    }));
-  }
-});
-els.changeProfileAvatarButton?.addEventListener("click", () => {
-  if (!state.profileEditing || state.profileSaving) return;
-  els.profileAvatarInput?.click();
-});
-els.profileAvatarInput?.addEventListener("change", () => {
-  const [file] = els.profileAvatarInput.files || [];
-  if (file) handleProfileAvatarSelection(file);
-});
-els.removeProfileAvatarButton?.addEventListener("click", removeProfileAvatarDraft);
 for (const button of els.profileGenderButtons) {
   button.addEventListener("click", () => {
     if (!state.profileEditing || state.profileSaving) return;
@@ -9563,18 +9146,6 @@ els.accountBindingsOption?.addEventListener("click", () => showSettingsPanel("bi
 els.privacySettingsOption.addEventListener("click", () => showSettingsPanel("privacy"));
 els.passkeySettingsOption.addEventListener("click", () => showSettingsPanel("passkey"));
 els.accountDeletionOption.addEventListener("click", () => showSettingsPanel("account"));
-for (const row of els.accountProfileEditRows) {
-  row.addEventListener("click", (event) => {
-    event.currentTarget.blur();
-    openProfileEditSection(row.dataset.profileEditTarget);
-  });
-}
-for (const row of els.accountManagementPanelRows) {
-  row.addEventListener("click", (event) => {
-    event.currentTarget.blur();
-    showSettingsPanel(row.dataset.accountManagementPanel || "overview");
-  });
-}
 els.feedbackOption.addEventListener("click", () => openFeedbackModal({ type: "feedback", targetType: "system" }));
 els.nativeHealthSyncOption?.addEventListener("click", () => {
   const days = Math.max(state.nativeHealthLoadedDays || 0, NATIVE_HEALTH_INITIAL_DAYS);

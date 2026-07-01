@@ -13,8 +13,6 @@ photos/
 .env
 .env.*
 !.env.example
-secrets/
-*.p8
 *.pem
 *.key
 *.crt

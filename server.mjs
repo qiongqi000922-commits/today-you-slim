@@ -53,9 +53,6 @@ const RUNTIME_EVENTS_PATH = path.join(DATA_DIR, "runtime-events.json");
 const PERFORMANCE_EVENTS_PATH = path.join(DATA_DIR, "performance-events.json");
 const WEIGHT_PREDICTIONS_PATH = path.join(DATA_DIR, "weight-predictions.json");
 const NATIVE_HEALTH_SNAPSHOTS_PATH = path.join(DATA_DIR, "native-health-snapshots.json");
-const USER_PROFILES_PATH = path.join(DATA_DIR, "user-profiles.json");
-const PROFILE_AVATAR_DIR = path.join(DATA_DIR, "profile-avatars");
-const APP_NOTICES_PATH = path.join(DATA_DIR, "app-notices.json");
 const LOCAL_DB_ENABLED = String(process.env.LOCAL_DB_ENABLED || "1").trim() !== "0";
 const LOCAL_DB_PATH = String(process.env.LOCAL_DB_PATH || path.join(DATA_DIR, "wellecho.sqlite3")).trim();
 const LOCAL_DB_BACKUP_DIR = String(process.env.LOCAL_DB_BACKUP_DIR || path.join(DATA_DIR, "backups")).trim();
@@ -98,24 +95,6 @@ const MAX_NATIVE_HEALTH_SYNC_DAYS = Math.min(60, Math.max(7, positiveNumber(proc
 const WEIGHT_PREDICTION_QUEUE_MAX = positiveNumber(process.env.WEIGHT_PREDICTION_QUEUE_MAX, 2000);
 const WEIGHT_PREDICTION_QUEUE_CONCURRENCY = Math.min(2, Math.max(1, positiveNumber(process.env.WEIGHT_PREDICTION_QUEUE_CONCURRENCY, 1)));
 const MAX_PHOTO_BYTES = positiveNumber(process.env.MAX_PHOTO_BYTES, 10 * 1024 * 1024);
-const MAX_PROFILE_AVATAR_BYTES = Math.min(MAX_PHOTO_BYTES, positiveNumber(process.env.MAX_PROFILE_AVATAR_BYTES, 2 * 1024 * 1024));
-const MAX_APP_NOTICES = positiveNumber(process.env.MAX_APP_NOTICES, 200);
-const PROFILE_DISPLAY_NAME_RESERVED_TERMS = [
-  "admin",
-  "administrator",
-  "root",
-  "system",
-  "official",
-  "support",
-  "service",
-  "wellecho",
-  "well echo",
-  "今天你瘦了吗",
-  "官方",
-  "管理员",
-  "客服",
-  "系统"
-];
 const MAX_DAILY_BODY_RECORDS_PER_USER = positiveNumber(process.env.MAX_DAILY_BODY_RECORDS_PER_USER, 20);
 const MAX_DAILY_FOOD_RECORDS_PER_USER = positiveNumber(process.env.MAX_DAILY_FOOD_RECORDS_PER_USER, 20);
 const CAPACITY_REFERENCE_ACCOUNT_CODE = String(process.env.CAPACITY_REFERENCE_ACCOUNT_CODE || "").trim();
@@ -283,8 +262,6 @@ let runtimeEvents = [];
 let performanceEvents = [];
 let weightPredictions = { users: {} };
 let nativeHealthSnapshots = { users: {} };
-let userProfiles = { users: {} };
-let appNotices = { notices: [], dismissed: {}, userNotices: {} };
 let logmealQuotaCache = null;
 let deepseekBalanceCache = null;
 const adminSessions = new Map();
@@ -329,7 +306,6 @@ async function initializeStorage() {
   await fsp.mkdir(DATA_DIR, { recursive: true });
   await fsp.mkdir(PHOTO_DIR, { recursive: true });
   await fsp.mkdir(MODERATION_ATTACHMENT_DIR, { recursive: true });
-  await fsp.mkdir(PROFILE_AVATAR_DIR, { recursive: true });
 
   records = await readJson(RECORDS_PATH, {});
   sessions = await readJson(SESSIONS_PATH, {});
@@ -354,8 +330,6 @@ async function initializeStorage() {
   performanceEvents = sanitizePerformanceEvents(await readJson(PERFORMANCE_EVENTS_PATH, []));
   weightPredictions = sanitizeWeightPredictionStore(await readJson(WEIGHT_PREDICTIONS_PATH, {}));
   nativeHealthSnapshots = sanitizeNativeHealthStore(await readJson(NATIVE_HEALTH_SNAPSHOTS_PATH, {}));
-  userProfiles = sanitizeUserProfiles(await readJson(USER_PROFILES_PATH, {}));
-  appNotices = sanitizeAppNotices(await readJson(APP_NOTICES_PATH, {}));
   deletedAccessCodes = sanitizeAccessCodes(await readJson(DELETED_ACCESS_CODES_PATH, []));
   customAccessCodes = sanitizeAccessCodes(await readJson(ACCESS_CODES_PATH, []))
     .filter((code) => !DEFAULT_ACCESS_CODES.includes(code) && !deletedAccessCodes.includes(code));
@@ -398,8 +372,6 @@ async function initializeStorage() {
   await writeJson(PERFORMANCE_EVENTS_PATH, performanceEvents);
   await writeJson(WEIGHT_PREDICTIONS_PATH, weightPredictions);
   await writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots);
-  await writeJson(USER_PROFILES_PATH, userProfiles);
-  await writeJson(APP_NOTICES_PATH, appNotices);
   storageInitialized = true;
 }
 
@@ -458,9 +430,7 @@ const LOCAL_DB_MIRRORED_PATHS = new Set([
   RUNTIME_EVENTS_PATH,
   PERFORMANCE_EVENTS_PATH,
   WEIGHT_PREDICTIONS_PATH,
-  NATIVE_HEALTH_SNAPSHOTS_PATH,
-  USER_PROFILES_PATH,
-  APP_NOTICES_PATH
+  NATIVE_HEALTH_SNAPSHOTS_PATH
 ].map((filePath) => path.resolve(filePath)));
 
 function isLocalDatabaseMirroredPath(filePath) {
@@ -492,9 +462,7 @@ function localDatabaseDatasets() {
     { key: "runtimeEvents", category: "observability", filePath: RUNTIME_EVENTS_PATH, value: runtimeEvents },
     { key: "performanceEvents", category: "observability", filePath: PERFORMANCE_EVENTS_PATH, value: performanceEvents },
     { key: "weightPredictions", category: "prediction", filePath: WEIGHT_PREDICTIONS_PATH, value: weightPredictions },
-    { key: "nativeHealthSnapshots", category: "health", filePath: NATIVE_HEALTH_SNAPSHOTS_PATH, value: nativeHealthSnapshots },
-    { key: "userProfiles", category: "identity", filePath: USER_PROFILES_PATH, value: userProfiles },
-    { key: "appNotices", category: "engagement", filePath: APP_NOTICES_PATH, value: appNotices }
+    { key: "nativeHealthSnapshots", category: "health", filePath: NATIVE_HEALTH_SNAPSHOTS_PATH, value: nativeHealthSnapshots }
   ];
 }
 
@@ -1233,160 +1201,15 @@ function sanitizeCommunityInteractions(value) {
         ? entries.flatMap((entry) => {
           const id = String(entry?.id || "");
           const authorCode = String(entry?.authorCode || "");
-          const parentId = String(entry?.parentId || "");
-          const replyToCode = String(entry?.replyToCode || "");
           const text = String(entry?.text || "").replace(/\s+/g, " ").trim().slice(0, MAX_COMMENT_LENGTH);
           const createdAt = String(entry?.createdAt || "");
           return /^[A-Za-z0-9_-]{12,64}$/.test(id) && CODE_PATTERN.test(authorCode) && text && Number.isFinite(Date.parse(createdAt))
-            ? [{
-                id,
-                authorCode,
-                text,
-                createdAt,
-                parentId: /^[A-Za-z0-9_-]{12,64}$/.test(parentId) && parentId !== id ? parentId : "",
-                replyToCode: CODE_PATTERN.test(replyToCode) && replyToCode !== authorCode ? replyToCode : ""
-              }]
+            ? [{ id, authorCode, text, createdAt }]
             : [];
         })
         : []
     ]))
   };
-}
-
-function sanitizeProfileAvatarFile(value) {
-  const file = String(value || "").trim();
-  return /^[a-f0-9]{24,80}\.(?:jpg|jpeg|png|webp)$/.test(file) ? file : "";
-}
-
-function sanitizeProfileDisplayName(value) {
-  const text = String(value || "")
-    .normalize("NFKC")
-    .replace(/[\u0000-\u001f\u007f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text || "";
-}
-
-function truncateProfileDisplayName(value) {
-  return Array.from(sanitizeProfileDisplayName(value)).slice(0, 16).join("");
-}
-
-function profileDisplayNamePolicyKey(value) {
-  return String(value || "")
-    .normalize("NFKC")
-    .replace(/[\s_.·-]+/g, "")
-    .toLowerCase();
-}
-
-function validateProfileDisplayName(value) {
-  const displayName = sanitizeProfileDisplayName(value);
-  const length = Array.from(displayName).length;
-  if (!displayName) return { displayName: "", error: "请输入昵称。" };
-  if (length < 2 || length > 16) return { displayName: "", error: "昵称需为 2-16 个字符。" };
-  if (/https?:\/\//i.test(displayName) || /www\./i.test(displayName)) {
-    return { displayName: "", error: "昵称不能包含网址。" };
-  }
-  if (/[<>()[\]{}'"`~^=+\\|/:;，。！？、]/u.test(displayName)) {
-    return { displayName: "", error: "昵称不能包含特殊符号。" };
-  }
-  if (!/^[\p{Script=Han}\p{L}\p{N}_·.\- ]+$/u.test(displayName)) {
-    return { displayName: "", error: "昵称仅支持中英文、数字、空格和少量连接符。" };
-  }
-  const policyKey = profileDisplayNamePolicyKey(displayName);
-  if (PROFILE_DISPLAY_NAME_RESERVED_TERMS.some((term) => policyKey.includes(profileDisplayNamePolicyKey(term)))) {
-    return { displayName: "", error: "昵称不能使用官方、系统或客服相关保留词。" };
-  }
-  return { displayName, error: "" };
-}
-
-function sanitizeUserProfiles(value) {
-  const users = {};
-  const source = value && typeof value === "object" && value.users && typeof value.users === "object"
-    ? value.users
-    : {};
-  for (const [code, profile] of Object.entries(source)) {
-    if (!CODE_PATTERN.test(code) || !profile || typeof profile !== "object") continue;
-    const displayName = truncateProfileDisplayName(profile.displayName);
-    const avatarFile = sanitizeProfileAvatarFile(profile.avatarFile);
-    users[code] = {
-      displayName,
-      avatarFile,
-      avatarUpdatedAt: Number.isFinite(Date.parse(profile.avatarUpdatedAt)) ? new Date(profile.avatarUpdatedAt).toISOString() : null,
-      gender: sanitizeProfileGender(profile.gender),
-      birthday: sanitizeProfileBirthday(profile.birthday),
-      updatedAt: Number.isFinite(Date.parse(profile.updatedAt)) ? new Date(profile.updatedAt).toISOString() : null
-    };
-  }
-  return { users };
-}
-
-function sanitizeNoticeText(value, maxLength = 160) {
-  return String(value || "").replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
-}
-
-function sanitizeNoticeActionUrl(value) {
-  const text = sanitizeNoticeText(value, 200);
-  if (!text || /^\s*javascript:/i.test(text)) return "";
-  return text;
-}
-
-function sanitizeNoticeDismissedIds(values) {
-  const ids = Array.isArray(values)
-    ? values
-    : values && typeof values === "object"
-      ? Object.entries(values).flatMap(([id, flag]) => flag ? [id] : [])
-      : [];
-  return [...new Set(ids.map((id) => String(id || "")).filter((id) => /^[A-Za-z0-9_-]{8,80}$/.test(id)))]
-    .slice(-MAX_APP_NOTICES);
-}
-
-function sanitizeAppNotices(value) {
-  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const normalizeNotice = (notice, fallbackType = "broadcast") => {
-    const id = String(notice?.id || "");
-    const createdAt = String(notice?.createdAt || "");
-    if (!/^[A-Za-z0-9_-]{8,80}$/.test(id) || !Number.isFinite(Date.parse(createdAt))) return null;
-    return {
-      id,
-      type: sanitizeNoticeText(notice.type || fallbackType, 32) || fallbackType,
-      title: sanitizeNoticeText(notice.title, 40) || "通知",
-      body: sanitizeNoticeText(notice.body, 240),
-      active: notice.active !== false,
-      createdAt: new Date(createdAt).toISOString(),
-      expiresAt: Number.isFinite(Date.parse(notice?.expiresAt)) ? new Date(notice.expiresAt).toISOString() : null,
-      actionLabel: sanitizeNoticeText(notice?.actionLabel, 20),
-      actionUrl: sanitizeNoticeActionUrl(notice?.actionUrl),
-      targetType: sanitizeRiskTargetType(notice?.targetType),
-      targetMemberId: normalizeCommunityLikeTarget(notice?.targetMemberId || notice?.memberId),
-      commentId: /^[A-Za-z0-9_-]{12,80}$/.test(String(notice?.commentId || "")) ? String(notice.commentId) : ""
-    };
-  };
-  const notices = (Array.isArray(source.notices) ? source.notices : [])
-    .map((notice) => normalizeNotice(notice, "broadcast"))
-    .filter(Boolean)
-    .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))
-    .slice(0, MAX_APP_NOTICES);
-  const dismissed = {};
-  const dismissedSource = source.dismissed && typeof source.dismissed === "object" && !Array.isArray(source.dismissed)
-    ? source.dismissed
-    : {};
-  for (const [code, values] of Object.entries(dismissedSource)) {
-    if (!CODE_PATTERN.test(code)) continue;
-    dismissed[code] = sanitizeNoticeDismissedIds(values);
-  }
-  const userNotices = {};
-  const userNoticeSource = source.userNotices && typeof source.userNotices === "object" && !Array.isArray(source.userNotices)
-    ? source.userNotices
-    : {};
-  for (const [code, noticesForUser] of Object.entries(userNoticeSource)) {
-    if (!CODE_PATTERN.test(code) || !Array.isArray(noticesForUser)) continue;
-    userNotices[code] = noticesForUser
-      .map((notice) => normalizeNotice(notice, "community"))
-      .filter(Boolean)
-      .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))
-      .slice(0, MAX_APP_NOTICES);
-  }
-  return { notices, dismissed, userNotices };
 }
 
 function normalizeCommunityLikeTarget(value) {
@@ -1561,33 +1384,6 @@ function publicProfileDemographics(account) {
   };
 }
 
-function userProfileForCode(code) {
-  if (!CODE_PATTERN.test(String(code || ""))) return {};
-  return userProfiles.users[code] || {};
-}
-
-function profileAvatarUrlForCode(code) {
-  const profile = userProfileForCode(code);
-  if (!profile.avatarFile) return "";
-  const version = encodeURIComponent(profile.avatarUpdatedAt || profile.avatarFile);
-  return withBasePath(`/api/profile/avatar/${encodeURIComponent(code)}?v=${version}`);
-}
-
-function publicProfileDemographicsForCode(code) {
-  const identity = identityAccountForCode(code);
-  const profile = userProfileForCode(code);
-  const base = publicProfileDemographics(identity.account || {});
-  const gender = sanitizeProfileGender(profile.gender || base.gender);
-  const birthday = sanitizeProfileBirthday(profile.birthday || base.birthday);
-  return {
-    gender,
-    genderLabel: profileGenderLabel(gender),
-    birthday,
-    age: ageFromBirthday(birthday),
-    zodiac: zodiacFromBirthday(birthday)
-  };
-}
-
 function qqAccountForCode(code) {
   return Object.values(qqAccounts).find((account) => account.code === code) || null;
 }
@@ -1605,10 +1401,6 @@ function identityAccountForCode(code) {
 }
 
 function identityDisplayNameForCode(code) {
-  const profile = userProfileForCode(code);
-  if (profile.displayName) {
-    return profile.displayName;
-  }
   const identity = identityAccountForCode(code);
   if (identity.provider === "qq") {
     return identity.account.nickname || "QQ用户";
@@ -1620,8 +1412,6 @@ function identityDisplayNameForCode(code) {
 }
 
 function identityAvatarUrlForCode(code) {
-  const profileAvatarUrl = profileAvatarUrlForCode(code);
-  if (profileAvatarUrl) return profileAvatarUrl;
   const identity = identityAccountForCode(code);
   return identity.provider === "qq" ? identity.account.avatarUrl || "" : "";
 }
@@ -2464,83 +2254,9 @@ function publicCommunityComment(comment, viewerCode) {
     id: comment.id,
     ...identity,
     text: comment.text,
-    parentId: comment.parentId || "",
-    replyToName: comment.replyToCode ? communityDisplayNameForCode(comment.replyToCode) : "",
     createdAt: comment.createdAt,
     isOwn: comment.authorCode === viewerCode
   };
-}
-
-function publicAppNotice(notice) {
-  return {
-    id: notice.id,
-    type: notice.type || "system",
-    title: notice.title || "",
-    body: notice.body || "",
-    actionLabel: notice.actionLabel || "",
-    actionUrl: notice.actionUrl || "",
-    targetType: notice.targetType || "system",
-    targetMemberId: notice.targetMemberId || "",
-    commentId: notice.commentId || "",
-    expiresAt: notice.expiresAt || null,
-    createdAt: notice.createdAt || new Date().toISOString()
-  };
-}
-
-async function writeAppNotices() {
-  appNotices = sanitizeAppNotices(appNotices);
-  await writeJson(APP_NOTICES_PATH, appNotices);
-}
-
-function activeNoticesForUser(code) {
-  const dismissed = new Set(appNotices.dismissed?.[code] || []);
-  const globalNotices = Array.isArray(appNotices.notices) ? appNotices.notices : [];
-  const userNotices = Array.isArray(appNotices.userNotices?.[code]) ? appNotices.userNotices[code] : [];
-  const now = Date.now();
-  return [...globalNotices, ...userNotices]
-    .filter((notice) => notice.active !== false)
-    .filter((notice) => !dismissed.has(notice.id))
-    .filter((notice) => !notice.expiresAt || Date.parse(notice.expiresAt) > now)
-    .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))
-    .slice(0, 10)
-    .map(publicAppNotice);
-}
-
-async function dismissNoticeForUser(code, noticeId) {
-  if (!CODE_PATTERN.test(String(code || "")) || !/^[A-Za-z0-9_-]{8,80}$/.test(String(noticeId || ""))) {
-    const error = new Error("通知参数不正确。");
-    error.statusCode = 400;
-    throw error;
-  }
-  const list = Array.isArray(appNotices.dismissed[code]) ? appNotices.dismissed[code] : [];
-  if (!list.includes(noticeId)) {
-    list.push(noticeId);
-  }
-  appNotices.dismissed[code] = list.slice(-MAX_APP_NOTICES);
-  await writeAppNotices();
-}
-
-async function queueUserNotice(code, notice) {
-  if (!CODE_PATTERN.test(String(code || ""))) return;
-  const now = new Date().toISOString();
-  const item = {
-    id: /^[A-Za-z0-9_-]{8,80}$/.test(String(notice?.id || "")) ? String(notice.id) : crypto.randomUUID(),
-    type: String(notice?.type || "system").slice(0, 40),
-    title: sanitizeNoticeText(notice?.title || "", 40),
-    body: sanitizeNoticeText(notice?.body || "", 160),
-    actionLabel: sanitizeNoticeText(notice?.actionLabel || "", 20),
-    actionUrl: sanitizeNoticeActionUrl(notice?.actionUrl || ""),
-    createdAt: Number.isFinite(Date.parse(notice?.createdAt)) ? new Date(notice.createdAt).toISOString() : now,
-    expiresAt: Number.isFinite(Date.parse(notice?.expiresAt)) ? new Date(notice.expiresAt).toISOString() : null,
-    targetType: sanitizeRiskTargetType(notice?.targetType),
-    targetMemberId: normalizeCommunityLikeTarget(notice?.targetMemberId) || "",
-    commentId: /^[A-Za-z0-9_-]{12,80}$/.test(String(notice?.commentId || "")) ? String(notice.commentId) : ""
-  };
-  if (!item.title && !item.body) return;
-  const list = Array.isArray(appNotices.userNotices[code]) ? appNotices.userNotices[code] : [];
-  list.push(item);
-  appNotices.userNotices[code] = list.slice(-MAX_APP_NOTICES);
-  await writeAppNotices();
 }
 
 function normalizeCommunityComment(value) {
@@ -6168,13 +5884,15 @@ function publicProfile(code) {
   const identity = identityAccountForCode(code);
   const qqAccount = qqAccountForCode(code);
   const appleAccount = appleAccountForCode(code);
-  const profile = userProfileForCode(code);
-  const displayName = identityDisplayNameForCode(code);
-  const avatarUrl = identityAvatarUrlForCode(code);
+  const displayName = identity.provider === "qq"
+    ? qqAccount?.nickname || "QQ用户"
+    : identity.provider === "apple"
+      ? appleAccount?.nickname || "Apple用户"
+      : "我的";
   return {
     label: identity.account ? displayName : `档案 ${code}`,
     displayName,
-    avatarUrl,
+    avatarUrl: qqAccount?.avatarUrl || "",
     accountCode: code,
     codeSuffix: code.slice(-3),
     authProvider: identity.provider,
@@ -6194,13 +5912,7 @@ function publicProfile(code) {
       emailVerified: appleAccount.emailVerified === true,
       displayId: appleDisplayCode(appleAccount)
     } : null,
-    customProfile: {
-      displayName: profile.displayName || "",
-      avatarUrl: profileAvatarUrlForCode(code),
-      hasAvatar: Boolean(profile.avatarFile),
-      updatedAt: profile.updatedAt || null
-    },
-    demographics: publicProfileDemographicsForCode(code),
+    demographics: publicProfileDemographics(qqAccount || appleAccount),
     passkeys: publicUserPasskeySummary(code),
     privacy: publicPrivacyStatus(code),
     accountStatus: publicAccountStatus(code),
@@ -6223,13 +5935,8 @@ function adminPrivacySummary(code) {
   };
 }
 
-const RECORD_TYPES = new Set(["body", "food", "workout", "sleep"]);
-const IOS_HEALTH_RECORD_SOURCE = "ios_health";
-const IOS_HEALTH_RECORD_TYPES = new Set(["workout", "sleep"]);
-
 function recordType(record) {
-  const type = String(record?.type || "body").trim().toLowerCase();
-  return RECORD_TYPES.has(type) ? type : "body";
+  return record?.type === "food" ? "food" : "body";
 }
 
 function parseNumberLike(value) {
@@ -6239,121 +5946,6 @@ function parseNumberLike(value) {
   if (!match) return null;
   const parsed = Number(match[0]);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function nativeHealthText(value, max = 80) {
-  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
-}
-
-function nativeHealthNumber(value, min = -Infinity, max = Infinity) {
-  const number = parseNumberLike(value);
-  return Number.isFinite(number) && number >= min && number <= max ? number : null;
-}
-
-function nativeHealthIso(value) {
-  const date = new Date(value);
-  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
-}
-
-function isNativeHealthSyncRecord(record) {
-  return record?.source === IOS_HEALTH_RECORD_SOURCE && IOS_HEALTH_RECORD_TYPES.has(recordType(record));
-}
-
-function publicWorkoutPayload(workout) {
-  if (!workout || typeof workout !== "object") return null;
-  return {
-    id: nativeHealthText(workout.id, 96),
-    activityType: nativeHealthNumber(workout.activityType, 0, 100000),
-    activityName: nativeHealthText(workout.activityName || "健身", 40) || "健身",
-    startAt: nativeHealthIso(workout.startAt),
-    endAt: nativeHealthIso(workout.endAt),
-    durationMinutes: nativeHealthNumber(workout.durationMinutes, 0, 1440),
-    activeEnergyKcal: nativeHealthNumber(workout.activeEnergyKcal, 0, 10000),
-    distanceKm: nativeHealthNumber(workout.distanceKm, 0, 500),
-    sourceName: nativeHealthText(workout.sourceName, 60)
-  };
-}
-
-function publicSleepPayload(sleep) {
-  if (!sleep || typeof sleep !== "object") return null;
-  return {
-    id: nativeHealthText(sleep.id, 96),
-    startAt: nativeHealthIso(sleep.startAt),
-    endAt: nativeHealthIso(sleep.endAt),
-    asleepMinutes: nativeHealthNumber(sleep.asleepMinutes, 0, 1440),
-    inBedMinutes: nativeHealthNumber(sleep.inBedMinutes, 0, 1440),
-    sourceName: nativeHealthText(sleep.sourceName, 60)
-  };
-}
-
-function nativeHealthRecordId(kind, item) {
-  return `${kind}_${crypto.createHash("sha256").update(JSON.stringify([
-    item?.id,
-    item?.startAt,
-    item?.endAt,
-    item?.activityType,
-    item?.sourceName
-  ])).digest("hex").slice(0, 24)}`;
-}
-
-function normalizeNativeWorkoutRecord(item) {
-  const workout = publicWorkoutPayload(item);
-  if (!workout?.startAt || !workout?.endAt) return null;
-  return {
-    id: nativeHealthRecordId("workout", workout),
-    type: "workout",
-    source: IOS_HEALTH_RECORD_SOURCE,
-    locked: true,
-    nativeLabel: "iOS 同步",
-    timestamp: workout.startAt,
-    workout
-  };
-}
-
-function normalizeNativeSleepRecord(item) {
-  const sleep = publicSleepPayload(item);
-  if (!sleep?.startAt || !sleep?.endAt) return null;
-  return {
-    id: nativeHealthRecordId("sleep", sleep),
-    type: "sleep",
-    source: IOS_HEALTH_RECORD_SOURCE,
-    locked: true,
-    nativeLabel: "iOS 同步",
-    timestamp: sleep.endAt || sleep.startAt,
-    sleep
-  };
-}
-
-function nativeHealthGeneratedRecords(snapshot) {
-  const days = Array.isArray(snapshot?.days) ? snapshot.days : [];
-  const generated = [];
-  const seen = new Set();
-  for (const day of days) {
-    const workouts = Array.isArray(day?.workouts) ? day.workouts : [];
-    const sleepItems = Array.isArray(day?.sleep) ? day.sleep : [];
-    for (const record of [
-      ...workouts.map(normalizeNativeWorkoutRecord),
-      ...sleepItems.map(normalizeNativeSleepRecord)
-    ].filter(Boolean)) {
-      if (seen.has(record.id)) continue;
-      seen.add(record.id);
-      generated.push(record);
-    }
-  }
-  return generated.sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
-}
-
-function replaceNativeHealthGeneratedRecords(code, snapshot) {
-  const generated = nativeHealthGeneratedRecords(snapshot);
-  const existing = Array.isArray(records[code]) ? records[code] : [];
-  const kept = existing.filter((record) => !isNativeHealthSyncRecord(record));
-  records[code] = [...kept, ...generated]
-    .sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
-  return {
-    total: generated.length,
-    workoutCount: generated.filter((record) => recordType(record) === "workout").length,
-    sleepCount: generated.filter((record) => recordType(record) === "sleep").length
-  };
 }
 
 function parseBooleanLike(value) {
@@ -6673,8 +6265,6 @@ function publicRecord(record) {
   const type = recordType(record);
   const foodItems = type === "food" ? normalizeFoodItems(record.foods) : [];
   const foodPhotos = type === "food" ? publicFoodPhotos(record) : [];
-  const workout = type === "workout" ? publicWorkoutPayload(record.workout) : null;
-  const sleep = type === "sleep" ? publicSleepPayload(record.sleep) : null;
   const totalCalories = foodItems.reduce((sum, item) => (
     Number.isFinite(item.calorie) ? sum + item.calorie : sum
   ), 0);
@@ -6682,18 +6272,13 @@ function publicRecord(record) {
     id: record.id,
     type,
     timestamp: record.timestamp,
-    source: nativeHealthText(record.source, 40) || null,
-    locked: Boolean(record.locked),
-    nativeLabel: nativeHealthText(record.nativeLabel, 24),
-    weight: type === "body" ? record.weight : null,
+    weight: record.weight,
     mood: typeof record.mood === "string" ? record.mood : "",
-    photoUrl: type === "body" && record.photoFile ? withBasePath(`/api/photos/${encodeURIComponent(record.id)}`) : null,
-    thumbnailUrl: type === "body" && record.thumbnailFile ? withBasePath(`/api/thumbnails/${encodeURIComponent(record.id)}`) : null,
+    photoUrl: record.photoFile ? withBasePath(`/api/photos/${encodeURIComponent(record.id)}`) : null,
+    thumbnailUrl: record.thumbnailFile ? withBasePath(`/api/thumbnails/${encodeURIComponent(record.id)}`) : null,
     foods: foodItems,
     foodPhotos,
-    foodCalories: Math.round(totalCalories * 10) / 10,
-    workout,
-    sleep
+    foodCalories: Math.round(totalCalories * 10) / 10
   };
 }
 
@@ -6701,8 +6286,6 @@ function communityPublicRecord(memberId, record) {
   const type = recordType(record);
   const foodItems = type === "food" ? normalizeFoodItems(record.foods) : [];
   const foodPhotos = type === "food" ? communityPublicFoodPhotos(memberId, record) : [];
-  const workout = type === "workout" ? publicWorkoutPayload(record.workout) : null;
-  const sleep = type === "sleep" ? publicSleepPayload(record.sleep) : null;
   const totalCalories = foodItems.reduce((sum, item) => (
     Number.isFinite(item.calorie) ? sum + item.calorie : sum
   ), 0);
@@ -6710,22 +6293,17 @@ function communityPublicRecord(memberId, record) {
     id: record.id,
     type,
     timestamp: record.timestamp,
-    source: nativeHealthText(record.source, 40) || null,
-    locked: Boolean(record.locked),
-    nativeLabel: nativeHealthText(record.nativeLabel, 24),
-    weight: type === "body" ? record.weight : null,
+    weight: type === "food" ? null : record.weight,
     mood: typeof record.mood === "string" ? record.mood : "",
-    photoUrl: type === "body" && record.photoFile
+    photoUrl: type !== "food" && record.photoFile
       ? withBasePath(`/api/community/photos/${encodeURIComponent(memberId)}/${encodeURIComponent(record.id)}`)
       : null,
-    thumbnailUrl: type === "body" && record.thumbnailFile
+    thumbnailUrl: type !== "food" && record.thumbnailFile
       ? withBasePath(`/api/community/thumbnails/${encodeURIComponent(memberId)}/${encodeURIComponent(record.id)}`)
       : null,
     foods: foodItems,
     foodPhotos,
-    foodCalories: Math.round(totalCalories * 10) / 10,
-    workout,
-    sleep
+    foodCalories: Math.round(totalCalories * 10) / 10
   };
 }
 
@@ -6827,7 +6405,7 @@ function communityMemberSummary(code, viewerCode, { fullTrend = false } = {}) {
   const allUserRecords = [...(records[code] || [])]
     .sort((left, right) => new Date(left.timestamp) - new Date(right.timestamp));
   const userRecords = allUserRecords
-    .filter((record) => recordType(record) === "body");
+    .filter((record) => recordType(record) !== "food");
   const foodRecords = allUserRecords.filter((record) => recordType(record) === "food");
   const photoRecords = userRecords.filter((record) => record.photoFile);
   const weightRecords = userRecords.filter((record) => Number.isFinite(record.weight));
@@ -6864,8 +6442,6 @@ function adminPublicRecord(code, record) {
   const type = recordType(record);
   const foodItems = type === "food" ? normalizeFoodItems(record.foods) : [];
   const foodPhotos = type === "food" ? adminPublicFoodPhotos(code, record) : [];
-  const workout = type === "workout" ? publicWorkoutPayload(record.workout) : null;
-  const sleep = type === "sleep" ? publicSleepPayload(record.sleep) : null;
   const totalCalories = foodItems.reduce((sum, item) => (
     Number.isFinite(item.calorie) ? sum + item.calorie : sum
   ), 0);
@@ -6873,22 +6449,17 @@ function adminPublicRecord(code, record) {
     id: record.id,
     type,
     timestamp: record.timestamp,
-    source: nativeHealthText(record.source, 40) || null,
-    locked: Boolean(record.locked),
-    nativeLabel: nativeHealthText(record.nativeLabel, 24),
-    weight: type === "body" ? record.weight : null,
+    weight: type === "food" ? null : record.weight,
     mood: typeof record.mood === "string" ? record.mood : "",
     hasPhoto: recordPhotoCount(record) > 0,
     photoCount: recordPhotoCount(record),
-    photoUrl: type === "body" && record.photoFile
+    photoUrl: record.photoFile
       ? `${BASE_PATH}${ADMIN_PATH}/api/photos/${encodeURIComponent(code)}/${encodeURIComponent(record.id)}`
       : null,
     foods: foodItems,
     foodPhotos,
     foodCalories: Math.round(totalCalories * 10) / 10,
-    foodNutrition: type === "food" ? sumFoodNutrition(foodItems, "nutrition") : {},
-    workout,
-    sleep
+    foodNutrition: type === "food" ? sumFoodNutrition(foodItems, "nutrition") : {}
   };
 }
 
@@ -6907,10 +6478,6 @@ function adminAccountSummary(code) {
   return {
     code,
     displayCode: qqAccount ? qqDisplayCode(qqAccount) : appleAccount ? appleDisplayCode(appleAccount) : code,
-    displayName: identityDisplayNameForCode(code),
-    avatarUrl: identityAvatarUrlForCode(code),
-    customDisplayName: userProfileForCode(code).displayName || "",
-    customAvatarUrl: profileAvatarUrlForCode(code),
     uniqueId: qqAccount?.openidDigest || appleAccount?.subjectDigest || code,
     qqUnionIdDigest: qqAccount?.unionIdDigest || "",
     source: qqAccount ? "qq" : appleAccount ? "apple" : DEFAULT_ACCESS_CODES.includes(code) ? "preset" : "custom",
@@ -8311,55 +7878,6 @@ function parsePhotoDataUrl(dataUrl) {
     contentType: match[1],
     buffer: Buffer.from(match[2].replace(/\s/g, ""), "base64")
   };
-}
-
-function parseProfileAvatarDataUrl(dataUrl) {
-  if (!dataUrl) return null;
-  const match = String(dataUrl).match(/^data:(image\/(?:jpe?g|png|webp));base64,([a-zA-Z0-9+/=\s]+)$/i);
-  if (!match) {
-    const error = new Error("头像格式不支持，请上传 JPG、PNG 或 WebP 图片。");
-    error.statusCode = 400;
-    throw error;
-  }
-  const contentType = match[1].toLowerCase().replace("image/jpg", "image/jpeg");
-  const kind = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
-  const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
-  if (!isPhotoBuffer(kind, buffer)) {
-    const error = new Error("头像图片无法识别，请换一张图片。");
-    error.statusCode = 400;
-    throw error;
-  }
-  if (buffer.length < 100 || buffer.length > MAX_PROFILE_AVATAR_BYTES) {
-    const error = new Error(`头像大小不合适，单张必须小于 ${Math.round(MAX_PROFILE_AVATAR_BYTES / 1024 / 1024)}MB。`);
-    error.statusCode = 400;
-    throw error;
-  }
-  return { contentType, kind, buffer };
-}
-
-async function saveProfileAvatarFile(code, parsed) {
-  if (!parsed?.buffer || !CODE_PATTERN.test(String(code || ""))) {
-    const error = new Error("头像保存参数不正确。");
-    error.statusCode = 400;
-    throw error;
-  }
-  await fsp.mkdir(PROFILE_AVATAR_DIR, { recursive: true });
-  const digest = crypto
-    .createHash("sha256")
-    .update(`${code}:${Date.now()}:${crypto.randomUUID()}`)
-    .digest("hex")
-    .slice(0, 32);
-  const filename = `${digest}.${parsed.kind}`;
-  await fsp.writeFile(path.join(PROFILE_AVATAR_DIR, filename), parsed.buffer);
-  return filename;
-}
-
-async function deleteProfileAvatarFile(filename) {
-  const safeFilename = sanitizeProfileAvatarFile(filename);
-  if (!safeFilename) return;
-  await fsp.unlink(path.join(PROFILE_AVATAR_DIR, safeFilename)).catch((error) => {
-    if (error.code !== "ENOENT") throw error;
-  });
 }
 
 async function savePhotoFromDataUrl(code, recordId, dataUrl) {
@@ -10218,31 +9736,6 @@ async function handleApi(req, res, pathname) {
     return sendJson(res, 200, { ok: true, name: "今天你瘦了吗" });
   }
 
-  const profileAvatarMatch = pathname.match(/^\/api\/profile\/avatar\/([^/]+)$/);
-  if (["GET", "HEAD"].includes(req.method) && profileAvatarMatch) {
-    const code = safeDecodeURIComponent(profileAvatarMatch[1]);
-    const profile = userProfileForCode(code);
-    const filename = sanitizeProfileAvatarFile(profile.avatarFile);
-    if (!filename) {
-      return sendError(res, 404, "没有找到头像。");
-    }
-    const ext = path.extname(filename).toLowerCase();
-    const contentType = MIME_TYPES[ext] || "application/octet-stream";
-    const fullPath = path.join(PROFILE_AVATAR_DIR, filename);
-    try {
-      const stat = await fsp.stat(fullPath);
-      writeResponseHead(res, 200, {
-        "Content-Type": contentType,
-        "Content-Length": stat.size,
-        "Cache-Control": "public, max-age=604800, immutable"
-      });
-      if (req.method === "HEAD") return res.end();
-      return fs.createReadStream(fullPath).pipe(res);
-    } catch (error) {
-      return sendError(res, 404, "没有找到头像。");
-    }
-  }
-
   if (["GET", "HEAD"].includes(req.method) && pathname === "/api/auth/qq/start") {
     if (!qqLoginConfigured()) {
       return redirectWithQqStatus(req, res, "setup");
@@ -11267,20 +10760,6 @@ async function handleApi(req, res, pathname) {
     });
   }
 
-  if (req.method === "GET" && pathname === "/api/notices") {
-    return sendJson(res, 200, { ok: true, notices: activeNoticesForUser(session.code) });
-  }
-
-  const noticeDismissMatch = pathname.match(/^\/api\/notices\/([^/]+)\/dismiss$/);
-  if (req.method === "POST" && noticeDismissMatch) {
-    try {
-      await dismissNoticeForUser(session.code, safeDecodeURIComponent(noticeDismissMatch[1]));
-      return sendJson(res, 200, { ok: true, notices: activeNoticesForUser(session.code) });
-    } catch (error) {
-      return sendError(res, error.statusCode || 400, error.message);
-    }
-  }
-
   if (req.method === "PATCH" && pathname === "/api/profile") {
     const qqAccount = qqAccountForCode(session.code);
     const appleAccount = appleAccountForCode(session.code);
@@ -11300,59 +10779,7 @@ async function handleApi(req, res, pathname) {
     if (rawBirthday && !birthday) {
       return sendError(res, 400, "生日格式不正确。");
     }
-    let displayName = userProfileForCode(session.code).displayName || identityDisplayNameForCode(session.code);
-    if (Object.prototype.hasOwnProperty.call(body, "displayName")) {
-      const result = validateProfileDisplayName(body.displayName);
-      if (result.error) {
-        return sendError(res, 400, result.error);
-      }
-      displayName = result.displayName;
-      try {
-        await moderateUserTextOrThrow(req, session.code, "profile-name", displayName);
-      } catch (moderationError) {
-        return sendError(res, moderationError.statusCode || 400, moderationError.message);
-      }
-    }
-    const currentProfile = userProfileForCode(session.code);
-    let avatarFile = currentProfile.avatarFile || "";
-    let avatarUpdatedAt = currentProfile.avatarUpdatedAt || currentProfile.updatedAt || null;
-    let oldAvatarFile = "";
-    if (body.removeAvatar === true) {
-      oldAvatarFile = avatarFile;
-      avatarFile = "";
-      avatarUpdatedAt = null;
-    }
-    if (body.avatarDataUrl) {
-      let parsedAvatar;
-      try {
-        parsedAvatar = parseProfileAvatarDataUrl(body.avatarDataUrl);
-        await moderateUserImageOrThrow(req, session.code, "profile-avatar", parsedAvatar.buffer);
-      } catch (error) {
-        return sendError(res, error.statusCode || 400, error.message);
-      }
-      oldAvatarFile = avatarFile;
-      avatarFile = await saveProfileAvatarFile(session.code, parsedAvatar);
-      avatarUpdatedAt = new Date().toISOString();
-    }
     const now = new Date().toISOString();
-    userProfiles.users[session.code] = sanitizeUserProfiles({
-      users: {
-        ...userProfiles.users,
-        [session.code]: {
-          ...currentProfile,
-          displayName,
-          avatarFile,
-          avatarUpdatedAt,
-          gender,
-          birthday,
-          updatedAt: now
-        }
-      }
-    }).users[session.code];
-    await writeJson(USER_PROFILES_PATH, userProfiles);
-    if (oldAvatarFile && oldAvatarFile !== avatarFile) {
-      await deleteProfileAvatarFile(oldAvatarFile);
-    }
     if (qqAccount) {
       qqAccount.gender = gender;
       qqAccount.birthday = birthday;
@@ -11642,43 +11069,19 @@ async function handleApi(req, res, pathname) {
       return sendError(res, moderationError.statusCode || 400, moderationError.message);
     }
     communityPreferenceFor(session.code, true);
-    const bucket = communityInteractionBucket(memberId);
-    const rawParentId = String(body.parentId || "").trim();
-    const parentComment = rawParentId
-      ? bucket.comments.find((entry) => entry.id === rawParentId || entry.parentId === rawParentId)
-      : null;
-    if (rawParentId && !parentComment) {
-      return sendError(res, 404, "没有找到要回复的评论。");
-    }
-    const parentId = parentComment ? (parentComment.parentId || parentComment.id) : "";
-    const replyToCode = parentComment?.authorCode && parentComment.authorCode !== session.code ? parentComment.authorCode : "";
     const comment = {
       id: crypto.randomUUID(),
       authorCode: session.code,
       text,
-      parentId,
-      replyToCode,
       createdAt: new Date().toISOString()
     };
+    const bucket = communityInteractionBucket(memberId);
     bucket.comments.push(comment);
     if (bucket.comments.length > MAX_COMMENTS_PER_MEMBER) {
       bucket.comments.splice(0, bucket.comments.length - MAX_COMMENTS_PER_MEMBER);
     }
     await writeJson(COMMUNITY_PATH, communityPreferences);
     await writeJson(COMMUNITY_INTERACTIONS_PATH, communityInteractions);
-    const noticeTarget = replyToCode || (member.code !== session.code ? member.code : "");
-    if (noticeTarget) {
-      await queueUserNotice(noticeTarget, {
-        type: "comment",
-        title: replyToCode ? "有人回复了你的评论" : "有人评论了你的变化",
-        body: `${communityDisplayNameForCode(session.code)}：${text}`.slice(0, 120),
-        actionLabel: "查看",
-        actionUrl: `/?tab=community&member=${encodeURIComponent(memberId)}`,
-        targetType: "comment",
-        targetMemberId: memberId,
-        commentId: comment.id
-      });
-    }
     return sendJson(res, 201, { ok: true, comment: publicCommunityComment(comment, session.code) });
   }
 
@@ -11699,14 +11102,7 @@ async function handleApi(req, res, pathname) {
     if (index === -1) {
       return sendError(res, 404, "没有找到可删除的评论。");
     }
-    const [deleted] = comments.splice(index, 1);
-    if (deleted && !deleted.parentId) {
-      for (let i = comments.length - 1; i >= 0; i -= 1) {
-        if (comments[i]?.parentId === deleted.id) {
-          comments.splice(i, 1);
-        }
-      }
-    }
+    comments.splice(index, 1);
     await writeJson(COMMUNITY_INTERACTIONS_PATH, communityInteractions);
     return sendJson(res, 200, { ok: true });
   }
@@ -11829,19 +11225,14 @@ async function handleApi(req, res, pathname) {
       const compact = compactNativeHealthSnapshot(body.snapshot || body, {
         maxDays: MAX_NATIVE_HEALTH_SYNC_DAYS
       });
-      const generatedRecords = replaceNativeHealthGeneratedRecords(session.code, compact);
       nativeHealthSnapshots.users[session.code] = compact;
-      await Promise.all([
-        writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots),
-        writeJson(RECORDS_PATH, records)
-      ]);
+      await writeJson(NATIVE_HEALTH_SNAPSHOTS_PATH, nativeHealthSnapshots);
       enqueueWeightPrediction(session.code, "native_health_sync");
       return sendJson(res, 200, {
         ok: true,
         health: {
           updatedAt: compact.updatedAt,
-          range: compact.range,
-          records: generatedRecords
+          range: compact.range
         },
         prediction: publicWeightPrediction(weightPredictions.users[session.code] || null),
         queue: weightPredictionQueueStatus(session.code)
@@ -12238,10 +11629,6 @@ async function handleApi(req, res, pathname) {
 
     if (index === -1) {
       return sendError(res, 404, "没有找到这条记录。");
-    }
-
-    if (isNativeHealthSyncRecord(userRecords[index])) {
-      return sendError(res, 409, "iOS 同步记录需要在 Apple 健康中删除后重新同步。");
     }
 
     const [deletedRecord] = userRecords.splice(index, 1);
